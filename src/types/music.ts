@@ -1,4 +1,4 @@
-export type AudioSourceType = 'itunes' | 'audius' | 'youtube' | 'radio' | 'custom';
+export type AudioSourceType = 'youtube' | 'audius' | 'radio' | 'custom';
 
 export interface Track {
   id: string;

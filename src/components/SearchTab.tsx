@@ -76,22 +76,16 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
 
   const getSourceBadge = (source: AudioSourceType) => {
     switch (source) {
-      case 'itunes':
+      case 'youtube':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500/20 text-pink-400 border border-pink-500/30">
-            Apple Music
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+            YouTube
           </span>
         );
       case 'audius':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
             Audius (Libre)
-          </span>
-        );
-      case 'youtube':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-            YouTube
           </span>
         );
       default:
@@ -112,7 +106,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             Buscar Música
           </h1>
           <span className="text-xs text-zinc-400 hidden sm:inline">
-            Multi-fuente: Apple Music • Audius • YouTube
+            Fuentes: YouTube • Audius (Canciones completas)
           </span>
         </div>
 
@@ -149,14 +143,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             Todas las fuentes
           </button>
           <button
-            onClick={() => handleFilterChange('itunes')}
+            onClick={() => handleFilterChange('youtube')}
             className={`px-3 py-1.5 rounded-xl font-medium transition ${
-              selectedFilter === 'itunes'
-                ? 'bg-pink-600 text-white font-semibold'
+              selectedFilter === 'youtube'
+                ? 'bg-red-600 text-white font-semibold'
                 : 'bg-white/5 text-zinc-400 hover:text-white'
             }`}
           >
-            Apple Music
+            YouTube (Completa)
           </button>
           <button
             onClick={() => handleFilterChange('audius')}
@@ -166,7 +160,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
                 : 'bg-white/5 text-zinc-400 hover:text-white'
             }`}
           >
-            Audius (Completo)
+            Audius (Completa)
           </button>
         </div>
       </div>
@@ -201,7 +195,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Resultados ({results.length})
             </p>
-            <span className="text-xs text-zinc-500">Pulsa en una canción para reproducir</span>
+            <span className="text-xs text-zinc-500">Canciones completas sin anuncios</span>
           </div>
 
           <div className="space-y-1.5">

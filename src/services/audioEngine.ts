@@ -15,10 +15,12 @@ class AudioEngine {
   private audio: HTMLAudioElement;
   private ytPlayer: any = null;
   private ytPlayerReady: boolean = false;
+  private pendingTrack: Track | null = null;
   private isUsingYouTube: boolean = false;
   private currentTrack: Track | null = null;
   private sponsorSegments: SponsorSegment[] = [];
   private skipSponsors: boolean = true;
+  private volume: number = 1.0;
   private syncTimer: any = null;
 
   private onTrackEndCallbacks: PlaybackCallback[] = [];
@@ -81,15 +83,15 @@ class AudioEngine {
     if (!ytContainer) {
       ytContainer = document.createElement('div');
       ytContainer.id = 'pulse-yt-container';
-      // YouTube requires at least 200x200 and visible in viewport for autoplay
+      // YouTube requires positive viewport dimensions and visibility for audio playback
       ytContainer.style.position = 'fixed';
-      ytContainer.style.bottom = '10px';
-      ytContainer.style.right = '10px';
-      ytContainer.style.width = '240px';
-      ytContainer.style.height = '140px';
-      ytContainer.style.opacity = '0.01';
+      ytContainer.style.bottom = '4px';
+      ytContainer.style.right = '4px';
+      ytContainer.style.width = '180px';
+      ytContainer.style.height = '100px';
+      ytContainer.style.opacity = '0.02';
       ytContainer.style.pointerEvents = 'none';
-      ytContainer.style.zIndex = '-10';
+      ytContainer.style.zIndex = '1';
       document.body.appendChild(ytContainer);
     }
 
@@ -97,8 +99,8 @@ class AudioEngine {
       if (this.ytPlayer) return;
       try {
         this.ytPlayer = new window.YT.Player('pulse-yt-container', {
-          height: '140',
-          width: '240',
+          height: '100',
+          width: '180',
           playerVars: {
             playsinline: 1,
             controls: 0,
@@ -110,13 +112,20 @@ class AudioEngine {
           events: {
             onReady: () => {
               this.ytPlayerReady = true;
+              if (this.pendingTrack) {
+                const track = this.pendingTrack;
+                this.pendingTrack = null;
+                this.playTrack(track);
+              }
             },
             onStateChange: (event: any) => {
               this.handleYouTubeStateChange(event.data);
             },
             onError: (err: any) => {
-              console.warn('YouTube Player error:', err);
-              this.onErrorCallbacks.forEach((cb) => cb('Error al reproducir desde YouTube'));
+              console.warn('YouTube Player error code:', err.data);
+              this.onErrorCallbacks.forEach((cb) =>
+                cb('Este vídeo de YouTube tiene restricciones de reproducción externa.')
+              );
             },
           },
         });
@@ -231,14 +240,12 @@ class AudioEngine {
 
   public getSourceLabel(source: string): string {
     switch (source) {
-      case 'itunes':
-        return 'Apple Music';
-      case 'audius':
-        return 'Audius (Libre)';
       case 'youtube':
-        return 'YouTube';
+        return 'YouTube (Canción Completa)';
+      case 'audius':
+        return 'Audius (Libre Completa)';
       case 'radio':
-        return 'Radio Web';
+        return 'Radio en Vivo';
       default:
         return 'Audio Directo';
     }
@@ -258,13 +265,38 @@ class AudioEngine {
   }
 
   /**
-   * Play a track with instant audio feedback
+   * Play a track (Full YouTube song or Full Audius stream)
    */
   public async playTrack(track: Track): Promise<boolean> {
     this.currentTrack = track;
     this.updateMediaSessionMetadata(track);
 
-    // 1. Direct audio stream (Apple Music AAC preview, Audius MP3, Radio, Custom)
+    // 1. YouTube playback
+    if (track.source === 'youtube' && track.youtubeId) {
+      this.isUsingYouTube = true;
+      this.audio.pause();
+
+      if (!this.ytPlayerReady || !this.ytPlayer) {
+        this.pendingTrack = track;
+        return true;
+      }
+
+      try {
+        this.ytPlayer.loadVideoById({
+          videoId: track.youtubeId,
+          suggestedQuality: 'small',
+        });
+        this.ytPlayer.unMute();
+        this.ytPlayer.setVolume(Math.round(this.volume * 100));
+        this.ytPlayer.playVideo();
+        this.notifyState();
+        return true;
+      } catch (err) {
+        console.warn('YouTube loadVideoById error:', err);
+      }
+    }
+
+    // 2. Direct Audius or custom audio stream
     if (track.audioUrl) {
       this.isUsingYouTube = false;
       this.stopYouTubeSync();
@@ -275,25 +307,12 @@ class AudioEngine {
       try {
         this.audio.src = track.audioUrl;
         this.audio.currentTime = 0;
+        this.audio.volume = this.volume;
         await this.audio.play();
         this.notifyState();
         return true;
       } catch (err) {
-        console.warn('Native audio play error (browser policy):', err);
-      }
-    }
-
-    // 2. YouTube Video stream
-    if (track.source === 'youtube' && track.youtubeId && this.ytPlayerReady && this.ytPlayer) {
-      this.isUsingYouTube = true;
-      this.audio.pause();
-
-      try {
-        this.ytPlayer.loadVideoById(track.youtubeId);
-        this.notifyState();
-        return true;
-      } catch (err) {
-        console.warn('YouTube loadVideoById error:', err);
+        console.warn('Native audio play error (user interaction required on iOS):', err);
       }
     }
 
@@ -331,11 +350,11 @@ class AudioEngine {
   }
 
   public setVolume(volume: number): void {
-    const clamped = Math.max(0, Math.min(1, volume));
+    this.volume = Math.max(0, Math.min(1, volume));
     if (this.ytPlayer && typeof this.ytPlayer.setVolume === 'function') {
-      this.ytPlayer.setVolume(Math.round(clamped * 100));
+      this.ytPlayer.setVolume(Math.round(this.volume * 100));
     }
-    this.audio.volume = clamped;
+    this.audio.volume = this.volume;
   }
 
   public isPlaying(): boolean {

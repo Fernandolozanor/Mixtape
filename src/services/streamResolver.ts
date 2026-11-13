@@ -2,7 +2,7 @@ import type { Track, AudioSourceType, SponsorSegment } from '../types/music';
 
 class StreamResolver {
   /**
-   * Search tracks across multiple sources: Apple Music, Audius, YouTube
+   * Search full-length tracks across YouTube and Audius (No fragments/previews)
    */
   async search(query: string, filterSource: AudioSourceType | 'all' = 'all'): Promise<Track[]> {
     const term = query.trim();
@@ -19,6 +19,7 @@ class StreamResolver {
           id: videoId,
           title: `Vídeo de YouTube (${videoId})`,
           artist: 'YouTube',
+          album: 'YouTube Music',
           duration: 240,
           thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
           source: 'youtube',
@@ -27,35 +28,20 @@ class StreamResolver {
       ];
     }
 
-    // 1. Search Apple Music / iTunes (HQ previews, covers, global catalog)
-    if (filterSource === 'all' || filterSource === 'itunes') {
+    // 1. Search YouTube (Full Songs)
+    if (filterSource === 'all' || filterSource === 'youtube') {
       try {
-        const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=25`;
-        const res = await fetch(itunesUrl, { signal: AbortSignal.timeout(4000) });
+        const res = await fetch(`/api/yt/search?q=${encodeURIComponent(term)}`, {
+          signal: AbortSignal.timeout(5000),
+        });
         if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.results)) {
-            for (const item of data.results) {
-              if (!item.trackName || !item.artistName || !item.previewUrl) continue;
-              const hiResCover = item.artworkUrl100
-                ? item.artworkUrl100.replace('100x100bb', '600x600bb')
-                : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80';
-
-              tracks.push({
-                id: `itunes_${item.trackId}`,
-                title: item.trackName,
-                artist: item.artistName,
-                album: item.collectionName || 'Sencillo',
-                duration: Math.round((item.trackTimeMillis || 180000) / 1000),
-                thumbnail: hiResCover,
-                source: 'itunes',
-                audioUrl: item.previewUrl,
-              });
-            }
+          const ytVideos = await res.json();
+          if (Array.isArray(ytVideos) && ytVideos.length > 0) {
+            tracks.push(...ytVideos);
           }
         }
       } catch (e) {
-        console.warn('iTunes search error:', e);
+        console.warn('Local YouTube search endpoint unavailable, trying fallback:', e);
       }
     }
 
@@ -67,7 +53,7 @@ class StreamResolver {
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.data)) {
-            for (const item of data.data.slice(0, 15)) {
+            for (const item of data.data.slice(0, 10)) {
               if (!item.title) continue;
               const cover =
                 item.artwork?.['480x480'] ||
@@ -99,7 +85,7 @@ class StreamResolver {
    * Fetch SponsorBlock segments
    */
   async getSponsorSegments(videoId: string): Promise<SponsorSegment[]> {
-    if (!videoId || videoId.startsWith('audius_') || videoId.startsWith('itunes_')) {
+    if (!videoId || videoId.startsWith('audius_')) {
       return [];
     }
 
