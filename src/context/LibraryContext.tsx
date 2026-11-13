@@ -8,10 +8,15 @@ interface LibraryContextType {
   likedTracks: Track[];
   settings: UserSettings;
   createPlaylist: (name: string, description?: string) => Playlist;
+  updatePlaylist: (id: string, updates: { name?: string; description?: string; coverUrl?: string }) => void;
   deletePlaylist: (id: string) => void;
   addTrackToPlaylist: (playlistId: string, track: Track) => void;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
+  reorderPlaylistTracks: (playlistId: string, fromIndex: number, toIndex: number) => void;
+  reorderLikedTracks: (fromIndex: number, toIndex: number) => void;
   toggleLike: (track: Track) => void;
+  removeLikedTrack: (trackId: string) => void;
+  clearLikedTracks: () => void;
   isLiked: (trackId: string) => boolean;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
   saveFirebaseCredentials: (config: any) => Promise<boolean>;
@@ -74,11 +79,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const success = firebaseService.initialize(config);
     if (success) {
       updateSettings({ firebaseConfig: config });
-      // Automatically attempt anonymous login if not logged in
       if (!firebaseService.getCurrentUser()) {
         await firebaseService.loginAnonymously();
       }
-      // Sync current playlists & liked tracks
       await firebaseService.savePlaylists(playlists);
       await firebaseService.saveLikedTracks(likedTracks);
       return true;
@@ -105,6 +108,28 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return newPlaylist;
   };
 
+  const updatePlaylist = (
+    id: string,
+    updates: { name?: string; description?: string; coverUrl?: string }
+  ) => {
+    setPlaylists((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          return {
+            ...p,
+            name: updates.name !== undefined ? updates.name.trim() || p.name : p.name,
+            description: updates.description !== undefined ? updates.description : p.description,
+            coverUrl: updates.coverUrl !== undefined ? updates.coverUrl : p.coverUrl,
+            updatedAt: Date.now(),
+          };
+        }
+        return p;
+      });
+      firebaseService.savePlaylists(updated);
+      return updated;
+    });
+  };
+
   const deletePlaylist = (id: string) => {
     setPlaylists((prev) => {
       const updated = prev.filter((p) => p.id !== id);
@@ -117,7 +142,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setPlaylists((prev) => {
       const updated = prev.map((p) => {
         if (p.id === playlistId) {
-          // Prevent duplicates
           if (p.tracks.some((t) => t.id === track.id)) return p;
           const updatedTracks = [...p.tracks, { ...track, addedAt: Date.now() }];
           return {
@@ -151,6 +175,42 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const reorderPlaylistTracks = (playlistId: string, fromIndex: number, toIndex: number) => {
+    setPlaylists((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === playlistId) {
+          const list = [...p.tracks];
+          if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) {
+            return p;
+          }
+          const [moved] = list.splice(fromIndex, 1);
+          list.splice(toIndex, 0, moved);
+          return {
+            ...p,
+            tracks: list,
+            updatedAt: Date.now(),
+          };
+        }
+        return p;
+      });
+      firebaseService.savePlaylists(updated);
+      return updated;
+    });
+  };
+
+  const reorderLikedTracks = (fromIndex: number, toIndex: number) => {
+    setLikedTracks((prev) => {
+      const list = [...prev];
+      if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) {
+        return prev;
+      }
+      const [moved] = list.splice(fromIndex, 1);
+      list.splice(toIndex, 0, moved);
+      firebaseService.saveLikedTracks(list);
+      return list;
+    });
+  };
+
   const toggleLike = (track: Track) => {
     setLikedTracks((prev) => {
       const exists = prev.some((t) => t.id === track.id);
@@ -165,6 +225,19 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const removeLikedTrack = (trackId: string) => {
+    setLikedTracks((prev) => {
+      const updated = prev.filter((t) => t.id !== trackId);
+      firebaseService.saveLikedTracks(updated);
+      return updated;
+    });
+  };
+
+  const clearLikedTracks = () => {
+    setLikedTracks([]);
+    firebaseService.saveLikedTracks([]);
+  };
+
   const isLiked = (trackId: string): boolean => {
     return likedTracks.some((t) => t.id === trackId);
   };
@@ -176,10 +249,15 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         likedTracks,
         settings,
         createPlaylist,
+        updatePlaylist,
         deletePlaylist,
         addTrackToPlaylist,
         removeTrackFromPlaylist,
+        reorderPlaylistTracks,
+        reorderLikedTracks,
         toggleLike,
+        removeLikedTrack,
+        clearLikedTracks,
         isLiked,
         updateSettings,
         saveFirebaseCredentials,
