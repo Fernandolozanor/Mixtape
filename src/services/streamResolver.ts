@@ -2,9 +2,13 @@ import type { Track, AudioSourceType, SponsorSegment } from '../types/music';
 
 class StreamResolver {
   /**
-   * Search full-length tracks across YouTube and Audius (No fragments/previews)
+   * Search full-length tracks across YouTube and Audius, sorted by most played/prominent
    */
-  async search(query: string, filterSource: AudioSourceType | 'all' = 'all'): Promise<Track[]> {
+  async search(
+    query: string,
+    filterSource: AudioSourceType | 'all' = 'all',
+    expand: boolean = true
+  ): Promise<Track[]> {
     const term = query.trim();
     if (!term) return [];
 
@@ -24,16 +28,19 @@ class StreamResolver {
           thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
           source: 'youtube',
           youtubeId: videoId,
+          views: 1_000_000,
+          viewsFormatted: 'Enlace Directo',
         },
       ];
     }
 
-    // 1. Search YouTube (Full Songs)
+    // 1. Search YouTube (Full Songs with view counts)
     if (filterSource === 'all' || filterSource === 'youtube') {
       try {
-        const res = await fetch(`/api/yt/search?q=${encodeURIComponent(term)}`, {
-          signal: AbortSignal.timeout(5000),
-        });
+        const res = await fetch(
+          `/api/yt/search?q=${encodeURIComponent(term)}&expand=${expand ? 'true' : 'false'}`,
+          { signal: AbortSignal.timeout(6000) }
+        );
         if (res.ok) {
           const ytVideos = await res.json();
           if (Array.isArray(ytVideos) && ytVideos.length > 0) {
@@ -41,7 +48,7 @@ class StreamResolver {
           }
         }
       } catch (e) {
-        console.warn('Local YouTube search endpoint unavailable, trying fallback:', e);
+        console.warn('Local YouTube search endpoint unavailable:', e);
       }
     }
 
@@ -53,12 +60,20 @@ class StreamResolver {
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.data)) {
-            for (const item of data.data.slice(0, 10)) {
+            for (const item of data.data.slice(0, 15)) {
               if (!item.title) continue;
               const cover =
                 item.artwork?.['480x480'] ||
                 item.artwork?.['150x150'] ||
                 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80';
+
+              const plays = item.play_count || 10000;
+              let viewsFormatted = '';
+              if (plays >= 1_000_000) {
+                viewsFormatted = (plays / 1_000_000).toFixed(1) + 'M reprod.';
+              } else if (plays >= 1000) {
+                viewsFormatted = Math.round(plays / 1000) + 'K reprod.';
+              }
 
               tracks.push({
                 id: `audius_${item.id}`,
@@ -69,6 +84,8 @@ class StreamResolver {
                 thumbnail: cover,
                 source: 'audius',
                 audioUrl: `https://discoveryprovider.audius.co/v1/tracks/${item.id}/stream?app_name=pulse_music`,
+                views: plays,
+                viewsFormatted,
               });
             }
           }
@@ -77,6 +94,9 @@ class StreamResolver {
         console.warn('Audius search error:', e);
       }
     }
+
+    // Sort combined results by views descending
+    tracks.sort((a, b) => (b.views || 0) - (a.views || 0));
 
     return tracks;
   }

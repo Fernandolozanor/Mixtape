@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// Custom Vite plugin to search YouTube directly without CORS restrictions during local development
+// Custom Vite plugin to search YouTube directly with view counts and popularity ranking
 function youtubeSearchPlugin(): Plugin {
   return {
     name: 'youtube-search-middleware',
@@ -11,6 +11,7 @@ function youtubeSearchPlugin(): Plugin {
       server.middlewares.use('/api/yt/search', async (req, res) => {
         const urlObj = new URL(req.url || '', 'http://localhost:3030');
         const query = urlObj.searchParams.get('q') || '';
+        const expand = urlObj.searchParams.get('expand') === 'true';
 
         if (!query.trim()) {
           res.setHeader('Content-Type', 'application/json');
@@ -19,57 +20,123 @@ function youtubeSearchPlugin(): Plugin {
         }
 
         try {
-          const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-          const response = await fetch(ytUrl, {
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-              'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
-            },
-          });
-          const html = await response.text();
-          const jsonMatch =
-            html.match(/var ytInitialData = ({.*?});<\/script>/s) ||
-            html.match(/ytInitialData\s*=\s*({.*?});/s);
-
-          if (!jsonMatch) {
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify([]));
-            return;
+          const searchUrls = [
+            `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+          ];
+          if (expand) {
+            searchUrls.push(
+              `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' songs full')}`
+            );
           }
 
-          const data = JSON.parse(jsonMatch[1]);
-          const contents =
-            data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents;
-          const items = contents?.[0]?.itemSectionRenderer?.contents || [];
+          const map = new Map<string, any>();
 
-          const videos = [];
-          for (const item of items) {
-            const v = item.videoRenderer;
-            if (v && v.videoId) {
-              const durText = v.lengthText?.simpleText || '3:30';
-              const parts = durText.split(':').map(Number);
-              let durSec = 210;
-              if (parts.length === 2) durSec = parts[0] * 60 + parts[1];
-              else if (parts.length === 3) durSec = parts[0] * 3600 + parts[1] * 60 + parts[2];
-
-              // Clean high-res thumbnail
-              const thumb =
-                v.thumbnail?.thumbnails?.[v.thumbnail.thumbnails.length - 1]?.url ||
-                `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
-
-              videos.push({
-                id: v.videoId,
-                title: v.title?.runs?.[0]?.text || '',
-                artist: v.ownerText?.runs?.[0]?.text || 'YouTube',
-                album: 'YouTube Music',
-                duration: durSec,
-                thumbnail: thumb,
-                source: 'youtube',
-                youtubeId: v.videoId,
+          for (const sUrl of searchUrls) {
+            try {
+              const response = await fetch(sUrl, {
+                headers: {
+                  'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                  'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+                },
               });
+              const html = await response.text();
+              const jsonMatch =
+                html.match(/var ytInitialData = ({.*?});<\/script>/s) ||
+                html.match(/ytInitialData\s*=\s*({.*?});/s);
+
+              if (!jsonMatch) continue;
+
+              const data = JSON.parse(jsonMatch[1]);
+              const sectionList =
+                data.contents?.twoColumnSearchResultsRenderer?.primaryContents?.sectionListRenderer?.contents || [];
+
+              for (const sec of sectionList) {
+                const items = sec.itemSectionRenderer?.contents || [];
+                for (const item of items) {
+                  // 1. Direct videoRenderer
+                  const v = item.videoRenderer;
+                  if (v && v.videoId && !map.has(v.videoId)) {
+                    const durText = v.lengthText?.simpleText || '3:30';
+                    const parts = durText.split(':').map(Number);
+                    let durSec = 210;
+                    if (parts.length === 2) durSec = parts[0] * 60 + parts[1];
+                    else if (parts.length === 3) durSec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+
+                    const viewRaw = v.viewCountText?.simpleText || v.shortViewCountText?.simpleText || '';
+                    let viewNum = 0;
+                    const clean = viewRaw.toLowerCase().replace(/visualizaciones|vistas|views/g, '').trim();
+                    if (clean.includes('b')) viewNum = parseFloat(clean.replace(',', '.')) * 1_000_000_000;
+                    else if (clean.includes('m')) viewNum = parseFloat(clean.replace(',', '.')) * 1_000_000;
+                    else if (clean.includes('k')) viewNum = parseFloat(clean.replace(',', '.')) * 1_000;
+                    else viewNum = parseInt(clean.replace(/\D/g, ''), 10) || 0;
+
+                    let viewsFormatted = '';
+                    if (viewNum >= 1_000_000_000) {
+                      viewsFormatted = (viewNum / 1_000_000_000).toFixed(1) + 'B vistas';
+                    } else if (viewNum >= 1_000_000) {
+                      viewsFormatted = (viewNum / 1_000_000).toFixed(1) + 'M vistas';
+                    } else if (viewNum >= 1_000) {
+                      viewsFormatted = Math.round(viewNum / 1_000) + 'K vistas';
+                    } else if (viewNum > 0) {
+                      viewsFormatted = viewNum + ' vistas';
+                    }
+
+                    const thumb =
+                      v.thumbnail?.thumbnails?.[v.thumbnail.thumbnails.length - 1]?.url ||
+                      `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
+
+                    map.set(v.videoId, {
+                      id: v.videoId,
+                      title: v.title?.runs?.[0]?.text || '',
+                      artist: v.ownerText?.runs?.[0]?.text || 'YouTube',
+                      album: 'YouTube Music',
+                      duration: durSec,
+                      thumbnail: thumb,
+                      source: 'youtube',
+                      youtubeId: v.videoId,
+                      views: viewNum,
+                      viewsFormatted,
+                    });
+                  }
+
+                  // 2. ShelfRenderer items
+                  const shelf = item.shelfRenderer?.content?.verticalListRenderer?.items;
+                  if (Array.isArray(shelf)) {
+                    for (const sub of shelf) {
+                      const sv = sub.videoRenderer;
+                      if (sv && sv.videoId && !map.has(sv.videoId)) {
+                        const sDurText = sv.lengthText?.simpleText || '3:30';
+                        const sParts = sDurText.split(':').map(Number);
+                        let sDurSec = 210;
+                        if (sParts.length === 2) sDurSec = sParts[0] * 60 + sParts[1];
+                        else if (sParts.length === 3) sDurSec = sParts[0] * 3600 + sParts[1] * 60 + sParts[2];
+
+                        map.set(sv.videoId, {
+                          id: sv.videoId,
+                          title: sv.title?.runs?.[0]?.text || '',
+                          artist: sv.ownerText?.runs?.[0]?.text || 'YouTube',
+                          album: 'YouTube Music',
+                          duration: sDurSec,
+                          thumbnail: `https://i.ytimg.com/vi/${sv.videoId}/hqdefault.jpg`,
+                          source: 'youtube',
+                          youtubeId: sv.videoId,
+                          views: 50_000_000,
+                          viewsFormatted: 'Destacado',
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (err: any) {
+              console.warn('Sub-query fetch failed:', err.message);
             }
           }
+
+          const videos = Array.from(map.values());
+          // Sort by views descending (Most played first!)
+          videos.sort((a, b) => (b.views || 0) - (a.views || 0));
 
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify(videos));

@@ -10,6 +10,8 @@ export interface Track {
   source: AudioSourceType;
   audioUrl?: string;
   youtubeId?: string;
+  views?: number;
+  viewsFormatted?: string;
   streamExpiry?: number;
   addedAt?: number;
 }

@@ -11,6 +11,9 @@ import {
   ListPlus,
   Check,
   X,
+  ChevronDown,
+  Flame,
+  ArrowUpDown,
 } from 'lucide-react';
 import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
@@ -45,8 +48,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 }) => {
   const [query, setQuery] = useState(initialQuery);
   const [selectedFilter, setSelectedFilter] = useState<AudioSourceType | 'all'>('all');
+  const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title'>('views');
   const [results, setResults] = useState<Track[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [visibleCount, setVisibleCount] = useState<number>(10);
 
   // Multi-selection state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -57,14 +62,19 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const { isLiked, toggleLike, addMultipleToLiked } = useLibrary();
   const { currentTheme } = useTheme();
 
-  const handleSearch = async (searchTerm: string, filter: AudioSourceType | 'all' = selectedFilter) => {
+  const handleSearch = async (
+    searchTerm: string,
+    filter: AudioSourceType | 'all' = selectedFilter,
+    expand: boolean = true
+  ) => {
     const term = searchTerm.trim();
     if (!term) return;
 
     recommendationService.recordSearch(term);
     setIsSearching(true);
+    setVisibleCount(10); // reset page
     try {
-      const tracks = await streamResolver.search(term, filter);
+      const tracks = await streamResolver.search(term, filter, expand);
       setResults(tracks);
       setSelectedIds(new Set()); // reset selection on new search
     } catch (e) {
@@ -94,6 +104,27 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     }
   };
 
+  // Sort results
+  const sortedResults = [...results].sort((a, b) => {
+    if (sortBy === 'views') {
+      return (b.views || 0) - (a.views || 0);
+    }
+    if (sortBy === 'duration') {
+      return (b.duration || 0) - (a.duration || 0);
+    }
+    if (sortBy === 'title') {
+      return a.title.localeCompare(b.title);
+    }
+    return 0;
+  });
+
+  const visibleResults = sortedResults.slice(0, visibleCount);
+  const hasMore = visibleCount < sortedResults.length;
+
+  const handleShowMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 10, sortedResults.length));
+  };
+
   const toggleSelectTrack = (trackId: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -107,15 +138,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   const selectAll = () => {
-    if (selectedIds.size === results.length) {
+    if (selectedIds.size === sortedResults.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(results.map((t) => t.id)));
+      setSelectedIds(new Set(sortedResults.map((t) => t.id)));
     }
   };
 
   const getSelectedTracks = (): Track[] => {
-    return results.filter((t) => selectedIds.has(t.id));
+    return sortedResults.filter((t) => selectedIds.has(t.id));
   };
 
   const handleBatchAddToPlaylist = () => {
@@ -178,7 +209,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-40 relative">
+    <div className="space-y-6 max-w-5xl mx-auto pb-44 relative">
       {/* Header and Search Box */}
       <div>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -194,7 +225,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   onClick={selectAll}
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition flex items-center gap-1.5"
                 >
-                  {selectedIds.size === results.length ? (
+                  {selectedIds.size === sortedResults.length ? (
                     <>
                       <Square className="w-3.5 h-3.5" />
                       <span>Deseleccionar Todo</span>
@@ -202,7 +233,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   ) : (
                     <>
                       <CheckSquare className="w-3.5 h-3.5" />
-                      <span>Seleccionar Todo ({results.length})</span>
+                      <span>Seleccionar Todo ({sortedResults.length})</span>
                     </>
                   )}
                 </button>
@@ -254,41 +285,66 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </button>
         </div>
 
-        {/* Source Filter Switcher */}
-        <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 text-xs">
-          <span className="text-zinc-500 font-semibold mr-1">Fuente:</span>
-          <button
-            onClick={() => handleFilterChange('all')}
-            className={`px-3 py-1.5 rounded-xl font-medium transition ${
-              selectedFilter === 'all'
-                ? 'bg-white text-black font-semibold'
-                : 'bg-white/5 text-zinc-400 hover:text-white'
-            }`}
-          >
-            Todas las fuentes
-          </button>
-          <button
-            onClick={() => handleFilterChange('youtube')}
-            className="px-3 py-1.5 rounded-xl font-medium transition"
-            style={
-              selectedFilter === 'youtube'
-                ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
-                : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
-            }
-          >
-            YouTube (Completa)
-          </button>
-          <button
-            onClick={() => handleFilterChange('audius')}
-            className="px-3 py-1.5 rounded-xl font-medium transition"
-            style={
-              selectedFilter === 'audius'
-                ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
-                : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
-            }
-          >
-            Audius (Completa)
-          </button>
+        {/* Source Filter Switcher & Sort Options */}
+        <div className="flex items-center justify-between gap-3 mt-3 overflow-x-auto pb-1 text-xs flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-500 font-semibold mr-1">Fuente:</span>
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`px-3 py-1.5 rounded-xl font-medium transition ${
+                selectedFilter === 'all'
+                  ? 'bg-white text-black font-semibold'
+                  : 'bg-white/5 text-zinc-400 hover:text-white'
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => handleFilterChange('youtube')}
+              className="px-3 py-1.5 rounded-xl font-medium transition"
+              style={
+                selectedFilter === 'youtube'
+                  ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
+                  : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
+              }
+            >
+              YouTube
+            </button>
+            <button
+              onClick={() => handleFilterChange('audius')}
+              className="px-3 py-1.5 rounded-xl font-medium transition"
+              style={
+                selectedFilter === 'audius'
+                  ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
+                  : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
+              }
+            >
+              Audius
+            </button>
+          </div>
+
+          {/* Sort By Dropdown */}
+          {results.length > 0 && (
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="text-zinc-500 font-semibold">Orden:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none"
+              >
+                <option value="views" className="bg-zinc-900 text-white">
+                  Más reproducidos (Destacados)
+                </option>
+                <option value="duration" className="bg-zinc-900 text-white">
+                  Mayor duración
+                </option>
+                <option value="title" className="bg-zinc-900 text-white">
+                  Título (A-Z)
+                </option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -320,29 +376,30 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Resultados ({results.length})
+              Mostrando {visibleResults.length} de {sortedResults.length} resultados ordenados por popularidad
             </p>
             <span className="text-xs text-zinc-500">
               {isMultiSelectMode
-                ? 'Toca cualquier canción para marcarla o desmarcarla'
-                : 'Canciones completas sin anuncios'}
+                ? 'Toca cualquier canción para marcarla'
+                : 'Canciones completas'}
             </span>
           </div>
 
           <div className="space-y-1.5">
-            {results.map((track) => {
+            {visibleResults.map((track, index) => {
               const isCurrent = currentTrack?.id === track.id;
               const isSelected = selectedIds.has(track.id);
               const liked = isLiked(track.id);
+              const isTop3 = index < 3 && sortBy === 'views';
 
               return (
                 <div
-                  key={track.id}
+                  key={`${track.id}-${index}`}
                   onClick={() => {
                     if (isMultiSelectMode) {
                       toggleSelectTrack(track.id);
                     } else {
-                      playTrack(track, results);
+                      playTrack(track, sortedResults);
                     }
                   }}
                   className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition group ${
@@ -397,6 +454,18 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
                     <div className="overflow-hidden">
                       <div className="flex items-center gap-2">
+                        {isTop3 && (
+                          <span
+                            className="text-[10px] font-bold px-1.5 py-0.2 rounded border"
+                            style={{
+                              backgroundColor: `rgba(${currentTheme.rgb}, 0.25)`,
+                              color: currentTheme.accent,
+                              borderColor: `rgba(${currentTheme.rgb}, 0.4)`,
+                            }}
+                          >
+                            #{index + 1}
+                          </span>
+                        )}
                         <p
                           className="text-sm font-semibold truncate"
                           style={{
@@ -414,6 +483,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                         <span className="truncate">{track.artist}</span>
                         <span>•</span>
                         {getSourceBadge(track.source)}
+                        {track.viewsFormatted && (
+                          <>
+                            <span>•</span>
+                            <span className="text-[10px] font-medium text-zinc-400 flex items-center gap-0.5">
+                              <Flame className="w-3 h-3 text-amber-400" />
+                              {track.viewsFormatted}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -459,6 +537,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 </div>
               );
             })}
+          </div>
+
+          {/* Show More Results Control */}
+          <div className="pt-4 flex flex-col items-center justify-center gap-2">
+            {hasMore ? (
+              <button
+                onClick={handleShowMore}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold transition border border-white/10 text-sm shadow-md"
+              >
+                <ChevronDown className="w-4 h-4" />
+                <span>Mostrar más resultados (+10)</span>
+              </button>
+            ) : (
+              <p className="text-xs text-zinc-500 italic pt-2">
+                Has visto todos los resultados destacados disponibles para esta búsqueda.
+              </p>
+            )}
           </div>
         </div>
       )}
