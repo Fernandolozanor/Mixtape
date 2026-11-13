@@ -39,13 +39,15 @@ class StreamResolver {
       ];
     }
 
-    // 1. Search YouTube (Local Dev Proxy OR Built-in 80s Rock Anthology for Static/Mobile)
+    // 1. Search YouTube (Live Invidious search on GitHub Pages + Local Dev Middleware + Curated Local Matches)
     if (filterSource === 'all' || filterSource === 'youtube') {
       let ytEndpointLoaded = false;
+
+      // 1a. Try local dev server proxy if available (localhost)
       try {
         const res = await fetch(
           `/api/yt/search?q=${encodeURIComponent(term)}&page=${page}`,
-          { signal: AbortSignal.timeout(5000) }
+          { signal: AbortSignal.timeout(2000) }
         );
         if (res.ok) {
           const ytVideos = await res.json();
@@ -58,59 +60,42 @@ class StreamResolver {
         // Expected on GitHub Pages / Static production
       }
 
-      // If local dev server proxy was not available (e.g. deployed on GitHub Pages),
-      // match against our curated, instant Rock Anthology catalog!
+      // 1b. If on static deployment (GitHub Pages), query live YouTube via public API
       if (!ytEndpointLoaded) {
-        const lower = term.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        const words = lower.split(/[\s,.-]+/).filter((w) => w.length > 1);
+        const liveYtTracks = await this.searchYouTubeLive(term, page);
+        if (liveYtTracks.length > 0) {
+          tracks.push(...liveYtTracks);
+          ytEndpointLoaded = true;
+        }
+      }
 
-        const isBroadQuery =
-          words.length === 0 ||
-          lower.includes('rock') ||
-          lower.includes('80') ||
-          lower.includes('hit') ||
-          lower.includes('exito') ||
-          lower.includes('clasic') ||
-          lower.includes('top') ||
-          lower.includes('metal') ||
-          lower.includes('music') ||
-          lower.includes('cancion') ||
-          lower.includes('directo') ||
-          lower.includes('live') ||
-          lower.includes('concert');
+      // 1c. Match against curated Rock Anthology (only when relevant to the actual query)
+      const lower = term.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const words = lower.split(/[\s,.-]+/).filter((w) => w.length > 2);
 
-        const matched = ROCK_ANTHOLOGY.filter((t) => {
-          const text = `${t.title} ${t.artist} ${t.album || ''}`
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
+      const isStrictRockCatalogQuery =
+        lower.includes('rock 80') ||
+        lower.includes('rock clasico') ||
+        lower.includes('rock anthology') ||
+        lower === 'rock';
 
-          if (isBroadQuery) return true;
-          return words.some((w) => text.includes(w));
-        });
+      const matchedLocal = ROCK_ANTHOLOGY.filter((t) => {
+        const text = `${t.title} ${t.artist} ${t.album || ''}`
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
 
-        if (matched.length > 0) {
-          // Sort by relevance to user query words and views
-          matched.sort((a, b) => {
-            const textA = `${a.title} ${a.artist}`.toLowerCase();
-            const textB = `${b.title} ${b.artist}`.toLowerCase();
-            const scoreA =
-              words.reduce((acc, w) => acc + (textA.includes(w) ? 3 : 0), 0) +
-              (a.views ? a.views / 1e9 : 0);
-            const scoreB =
-              words.reduce((acc, w) => acc + (textB.includes(w) ? 3 : 0), 0) +
-              (b.views ? b.views / 1e9 : 0);
-            return scoreB - scoreA;
-          });
+        if (isStrictRockCatalogQuery) return true;
+        return words.length > 0 && words.some((w) => text.includes(w));
+      });
 
-          // Slice pagination for anthology
-          const pageSize = 20;
-          const start = (page - 1) * pageSize;
-          const paged = matched.slice(start, start + pageSize);
-          tracks.push(...paged);
-        } else if (filterSource === 'youtube') {
-          // Return sample of top classics if nothing strictly matched
-          tracks.push(...ROCK_ANTHOLOGY.slice(0, 15));
+      if (matchedLocal.length > 0) {
+        const existingIds = new Set(tracks.map((t) => t.youtubeId || t.id));
+        for (const localTrack of matchedLocal) {
+          if (!existingIds.has(localTrack.youtubeId || localTrack.id)) {
+            tracks.push(localTrack);
+            existingIds.add(localTrack.youtubeId || localTrack.id);
+          }
         }
       }
     }
@@ -163,6 +148,64 @@ class StreamResolver {
     tracks.sort((a, b) => (b.views || 0) - (a.views || 0));
 
     return tracks;
+  }
+
+  /**
+   * Live YouTube Search via open Invidious instances with CORS support for static hosting (GitHub Pages)
+   */
+  private async searchYouTubeLive(query: string, page: number = 1): Promise<Track[]> {
+    const instances = [
+      'https://yt.chocolatemoo53.com',
+      'https://invidious.jing.rocks',
+      'https://invidious.nerdvpn.de',
+    ];
+
+    for (const inst of instances) {
+      try {
+        const url = `${inst}/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=${page}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(5500) });
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            return data
+              .filter((item: any) => item.videoId && item.title)
+              .map((item: any) => {
+                const vidId = item.videoId;
+                const dur = item.lengthSeconds || 210;
+                const views = item.viewCount || 0;
+                let viewsFormatted = '';
+                if (views >= 1_000_000_000) {
+                  viewsFormatted = (views / 1_000_000_000).toFixed(1) + 'B reprod.';
+                } else if (views >= 1_000_000) {
+                  viewsFormatted = (views / 1_000_000).toFixed(1) + 'M reprod.';
+                } else if (views >= 1_000) {
+                  viewsFormatted = Math.round(views / 1_000) + 'K reprod.';
+                }
+
+                const thumb =
+                  item.videoThumbnails?.find((t: any) => t.quality === 'medium' || t.quality === 'high')?.url ||
+                  `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+
+                return {
+                  id: vidId,
+                  title: item.title,
+                  artist: item.author || 'YouTube Music',
+                  album: 'YouTube',
+                  duration: dur,
+                  thumbnail: thumb,
+                  source: 'youtube' as const,
+                  youtubeId: vidId,
+                  views,
+                  viewsFormatted,
+                };
+              });
+          }
+        }
+      } catch {
+        // Try next instance
+      }
+    }
+    return [];
   }
 
   /**
