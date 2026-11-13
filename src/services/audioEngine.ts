@@ -22,6 +22,7 @@ class AudioEngine {
   private skipSponsors: boolean = true;
   private volume: number = 1.0;
   private syncTimer: any = null;
+  private isAdActive: boolean = false;
 
   private onTrackEndCallbacks: PlaybackCallback[] = [];
   private onTimeUpdateCallbacks: TimeUpdateCallback[] = [];
@@ -106,6 +107,7 @@ class AudioEngine {
         this.ytPlayer = new window.YT.Player('pulse-yt-container', {
           height: '120',
           width: '200',
+          host: 'https://www.youtube-nocookie.com',
           playerVars: {
             playsinline: 1,
             controls: 0,
@@ -115,6 +117,9 @@ class AudioEngine {
             autoplay: 1,
             enablejsapi: 1,
             origin: originUrl,
+            widget_referrer: originUrl,
+            iv_load_policy: 3,
+            modestbranding: 1,
           },
           events: {
             onReady: () => {
@@ -159,6 +164,54 @@ class AudioEngine {
     }
   }
 
+  /**
+   * Automatically detects and skips/mutes YouTube pre-roll & mid-roll advertisements
+   */
+  private checkAndSkipYouTubeAds() {
+    if (!this.ytPlayer || !this.isUsingYouTube || !this.currentTrack) return;
+
+    try {
+      const videoData = typeof this.ytPlayer.getVideoData === 'function' ? this.ytPlayer.getVideoData() : null;
+      const curDur = typeof this.ytPlayer.getDuration === 'function' ? this.ytPlayer.getDuration() : 0;
+      const curTime = typeof this.ytPlayer.getCurrentTime === 'function' ? this.ytPlayer.getCurrentTime() : 0;
+      const expectedId = this.currentTrack.youtubeId;
+      const expectedDur = this.currentTrack.duration || 0;
+
+      // An ad is identified if:
+      // a) The currently loaded video_id is different from the desired song ID
+      // b) The video duration is an ad length (<= 35s) while our song is longer (> 80s)
+      const isAd =
+        (videoData && videoData.video_id && expectedId && videoData.video_id !== expectedId) ||
+        (expectedDur > 80 && curDur > 0 && curDur <= 35 && Math.abs(curDur - expectedDur) > 10);
+
+      if (isAd) {
+        if (!this.isAdActive) {
+          this.isAdActive = true;
+          // Instantly mute ad so the user hears zero advertising noise
+          this.ytPlayer.mute();
+          if (typeof this.ytPlayer.setPlaybackRate === 'function') {
+            this.ytPlayer.setPlaybackRate(2.0);
+          }
+        }
+
+        // Fast-forward to the very end of the ad to trigger completion
+        if (typeof this.ytPlayer.seekTo === 'function' && curDur > 0 && curTime < curDur) {
+          this.ytPlayer.seekTo(curDur + 1, true);
+        }
+      } else if (this.isAdActive) {
+        // Song has started! Restore normal volume and playback rate
+        this.isAdActive = false;
+        this.ytPlayer.unMute();
+        this.ytPlayer.setVolume(Math.round(this.volume * 100));
+        if (typeof this.ytPlayer.setPlaybackRate === 'function') {
+          this.ytPlayer.setPlaybackRate(1.0);
+        }
+      }
+    } catch {
+      // Ignored
+    }
+  }
+
   private handleYouTubeStateChange(state: number) {
     this.notifyState();
 
@@ -177,6 +230,8 @@ class AudioEngine {
     this.stopYouTubeSync();
     this.syncTimer = setInterval(() => {
       if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+        this.checkAndSkipYouTubeAds();
+
         const cur = this.ytPlayer.getCurrentTime() || 0;
         const dur = this.ytPlayer.getDuration() || 0;
         this.checkSponsorSkip(cur);
