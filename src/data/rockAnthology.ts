@@ -672,14 +672,14 @@ export const ROCK_ANTHOLOGY: Track[] = [
 
   // --- MICHAEL JACKSON ---
   {
-    id: 'Zi_XLOBDo_Y',
+    id: 'k4V3mFe0w1Y',
     title: 'Billie Jean',
     artist: 'Michael Jackson',
     album: 'Thriller (1982)',
     duration: 295,
-    thumbnail: 'https://i.ytimg.com/vi/Zi_XLOBDo_Y/hqdefault.jpg',
+    thumbnail: 'https://i.ytimg.com/vi/k4V3mFe0w1Y/hqdefault.jpg',
     source: 'youtube',
-    youtubeId: 'Zi_XLOBDo_Y',
+    youtubeId: 'k4V3mFe0w1Y',
     views: 1550000000,
     viewsFormatted: '1.5B reprod.',
   },

@@ -23,6 +23,7 @@ class AudioEngine {
   private volume: number = 1.0;
   private syncTimer: any = null;
   private isAdActive: boolean = false;
+  private hasPostMessageListener: boolean = false;
 
   private onTrackEndCallbacks: PlaybackCallback[] = [];
   private onTimeUpdateCallbacks: TimeUpdateCallback[] = [];
@@ -79,6 +80,30 @@ class AudioEngine {
 
   private initYouTubeIFrameAPI() {
     if (typeof window === 'undefined') return;
+
+    if (!this.hasPostMessageListener && typeof window !== 'undefined') {
+      this.hasPostMessageListener = true;
+      window.addEventListener('message', (event) => {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (data && data.event === 'infoDelivery' && data.info) {
+            const info = data.info;
+            const isAd =
+              info.adState === 1 ||
+              info.isAdPlaying === true ||
+              (typeof info.adDuration === 'number' && info.adDuration > 0 && info.adDuration < 60);
+
+            if (isAd) {
+              this.handleAdDetected(info);
+            } else if (info.adState === 0 || info.isAdPlaying === false) {
+              this.handleAdFinished();
+            }
+          }
+        } catch {
+          // Ignored
+        }
+      });
+    }
 
     let ytContainer = document.getElementById('pulse-yt-container');
     if (!ytContainer) {
@@ -165,47 +190,92 @@ class AudioEngine {
   }
 
   /**
+   * Instantly silences and fast-forwards ads when detected via postMessage or player inspect
+   */
+  private handleAdDetected(info?: any) {
+    if (!this.ytPlayer) return;
+    this.isAdActive = true;
+    try {
+      // 1. Instantly mute so ad audio never reaches the user's ears
+      this.ytPlayer.mute();
+
+      // 2. Accelerate ad to maximum rate (2.0x)
+      if (typeof this.ytPlayer.setPlaybackRate === 'function') {
+        this.ytPlayer.setPlaybackRate(2.0);
+      }
+
+      // 3. Programmatic skip if supported by player version
+      if (typeof (this.ytPlayer as any).skipAd === 'function') {
+        (this.ytPlayer as any).skipAd();
+      }
+
+      // 4. Seek past the ad
+      if (info && typeof info.adDuration === 'number' && info.adDuration > 0) {
+        if (typeof this.ytPlayer.seekTo === 'function') {
+          this.ytPlayer.seekTo(info.adDuration + 2, true);
+        }
+      }
+    } catch {
+      // Ignored
+    }
+  }
+
+  private handleAdFinished() {
+    if (!this.ytPlayer || !this.isAdActive) return;
+    this.isAdActive = false;
+    try {
+      this.ytPlayer.unMute();
+      this.ytPlayer.setVolume(Math.round(this.volume * 100));
+      if (typeof this.ytPlayer.setPlaybackRate === 'function') {
+        this.ytPlayer.setPlaybackRate(1.0);
+      }
+    } catch {
+      // Ignored
+    }
+  }
+
+  /**
    * Automatically detects and skips/mutes YouTube pre-roll & mid-roll advertisements
    */
   private checkAndSkipYouTubeAds() {
     if (!this.ytPlayer || !this.isUsingYouTube || !this.currentTrack) return;
 
     try {
-      const videoData = typeof this.ytPlayer.getVideoData === 'function' ? this.ytPlayer.getVideoData() : null;
-      const curDur = typeof this.ytPlayer.getDuration === 'function' ? this.ytPlayer.getDuration() : 0;
-      const curTime = typeof this.ytPlayer.getCurrentTime === 'function' ? this.ytPlayer.getCurrentTime() : 0;
+      const adState =
+        typeof (this.ytPlayer as any).getAdState === 'function'
+          ? (this.ytPlayer as any).getAdState()
+          : 0;
+      const isAdPlaying =
+        typeof (this.ytPlayer as any).isAdPlaying === 'function'
+          ? (this.ytPlayer as any).isAdPlaying()
+          : false;
+
+      const videoData =
+        typeof this.ytPlayer.getVideoData === 'function' ? this.ytPlayer.getVideoData() : null;
+      const curDur =
+        typeof this.ytPlayer.getDuration === 'function' ? this.ytPlayer.getDuration() : 0;
+      const curTime =
+        typeof this.ytPlayer.getCurrentTime === 'function' ? this.ytPlayer.getCurrentTime() : 0;
       const expectedId = this.currentTrack.youtubeId;
       const expectedDur = this.currentTrack.duration || 0;
 
       // An ad is identified if:
-      // a) The currently loaded video_id is different from the desired song ID
-      // b) The video duration is an ad length (<= 35s) while our song is longer (> 80s)
+      // a) adState is active (1) or isAdPlaying is true
+      // b) The currently loaded video_id is different from the desired song ID
+      // c) The video duration is an ad length (<= 45s) while our song is longer (> 80s)
       const isAd =
+        adState === 1 ||
+        isAdPlaying === true ||
         (videoData && videoData.video_id && expectedId && videoData.video_id !== expectedId) ||
-        (expectedDur > 80 && curDur > 0 && curDur <= 35 && Math.abs(curDur - expectedDur) > 10);
+        (expectedDur > 80 && curDur > 0 && curDur <= 45 && Math.abs(curDur - expectedDur) > 10);
 
       if (isAd) {
-        if (!this.isAdActive) {
-          this.isAdActive = true;
-          // Instantly mute ad so the user hears zero advertising noise
-          this.ytPlayer.mute();
-          if (typeof this.ytPlayer.setPlaybackRate === 'function') {
-            this.ytPlayer.setPlaybackRate(2.0);
-          }
-        }
-
-        // Fast-forward to the very end of the ad to trigger completion
+        this.handleAdDetected();
         if (typeof this.ytPlayer.seekTo === 'function' && curDur > 0 && curTime < curDur) {
           this.ytPlayer.seekTo(curDur + 1, true);
         }
       } else if (this.isAdActive) {
-        // Song has started! Restore normal volume and playback rate
-        this.isAdActive = false;
-        this.ytPlayer.unMute();
-        this.ytPlayer.setVolume(Math.round(this.volume * 100));
-        if (typeof this.ytPlayer.setPlaybackRate === 'function') {
-          this.ytPlayer.setPlaybackRate(1.0);
-        }
+        this.handleAdFinished();
       }
     } catch {
       // Ignored
@@ -349,6 +419,7 @@ class AudioEngine {
       try {
         this.ytPlayer.loadVideoById({
           videoId: track.youtubeId,
+          startSeconds: 0.1,
           suggestedQuality: 'small',
         });
         this.ytPlayer.unMute();
