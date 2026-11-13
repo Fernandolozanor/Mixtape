@@ -216,6 +216,50 @@
   display: none !important;
 }
 
+/* ==========================================================================
+   VINTAGE 80s HI-FI & BRUSHED STEEL STYLING (Sony TA-1150 / SQD-2020)
+   ========================================================================== */
+
+/* Authentic Brushed Stainless Steel / Anodized Aluminum Faceplate */
+.retro-brushed-steel {
+  background-color: #d8dce3;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.12) 0px,
+      rgba(255, 255, 255, 0.12) 1px,
+      rgba(0, 0, 0, 0.035) 1px,
+      rgba(0, 0, 0, 0.035) 2px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(203, 213, 225, 0.1) 12%,
+      rgba(255, 255, 255, 0.55) 28%,
+      rgba(148, 163, 184, 0.2) 48%,
+      rgba(255, 255, 255, 0.5) 68%,
+      rgba(148, 163, 184, 0.25) 86%,
+      rgba(255, 255, 255, 0.35) 100%
+    ),
+    linear-gradient(180deg, #f8fafc 0%, #e2e8f0 22%, #cbd5e1 55%, #94a3b8 100%);
+  border: 1px solid #94a3b8;
+  border-top-color: #f1f5f9;
+  border-bottom-color: #64748b;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.45),
+    0 16px 36px rgba(0, 0, 0, 0.7);
+}
+
+/* Crisp Engraved Dark Silkscreened Typography */
+.retro-engraved-text {
+  color: #1e293b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 -0.5px 0.5px rgba(0, 0, 0, 0.4);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
 /* Milled Aluminum Rotary Knob */
 .retro-knob-aluminum {
   background: conic-gradient(
