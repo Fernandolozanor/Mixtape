@@ -15,10 +15,14 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   onExpand,
   className = '',
 }) => {
-  const { currentTrack, isPlaying, togglePlay, currentTime } = usePlayer();
+  const { currentTrack, isPlaying, togglePlay, currentTime, volume } = usePlayer();
   const { currentTheme } = useTheme();
   const isSteel = currentTheme.id === 'retro-rock-80s';
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Moving analog VU needles for Left and Right channels (direct DOM refs for 60fps physics)
+  const needleLeftRef = useRef<HTMLDivElement>(null);
+  const needleRightRef = useRef<HTMLDivElement>(null);
 
   // Simulated VU Meter bouncing levels
   const [vuLeft, setVuLeft] = useState<number>(0);
@@ -94,7 +98,106 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     };
   }, [currentTrack?.id]);
 
-  // Animate vintage VU Meter bars during playback
+  // Ultra-realistic Ballistic Analog VU Needle Physics Engine (ANSI C16.5-1954 standard)
+  useEffect(() => {
+    let animId: number;
+    let lastTime = performance.now();
+
+    // Needle positions and angular velocities (degrees & deg/s)
+    let angleL = -34;
+    let angleR = -34;
+    let velL = 0;
+    let velR = 0;
+
+    const MIN_ANGLE = -34; // Rest stop pin (-20dB)
+    const MAX_ANGLE = 34;  // Peak saturation stop pin (+3dB)
+
+    const updatePhysics = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.05); // Cap delta time at 50ms
+      lastTime = now;
+
+      let targetL = MIN_ANGLE;
+      let targetR = MIN_ANGLE;
+
+      if (isPlaying && volume > 0) {
+        const t = now / 1000;
+
+        // 1. Bass / Kick drum pulse (approx 125 BPM = 2.08 Hz)
+        const kickPhase = (t * 2.08) % 1;
+        const kick = Math.pow(Math.max(0, 1 - kickPhase * 2.8), 2.2) * 29;
+
+        // 2. Snare / backbeat hit on alternating beats
+        const snarePhase = ((t * 2.08 + 0.5) % 1);
+        const snare = Math.pow(Math.max(0, 1 - snarePhase * 3.2), 2.5) * 23;
+
+        // 3. Fast high-frequency hi-hat & guitar flutter
+        const flutter = (Math.sin(t * 19.3) * 0.5 + 0.5) * (Math.cos(t * 8.7) * 0.5 + 0.5) * 15;
+
+        // 4. Musical dynamic swell (measures of verse/chorus)
+        const swell = (Math.sin(t * 0.45) * 0.5 + 0.5) * 12 + 6;
+
+        // 5. Stereo panning differences
+        const panDiff = Math.sin(t * 1.9) * 6;
+
+        // Combine components scaled by volume
+        const volScale = Math.min(1, Math.max(0.25, volume));
+        const rawTargetL = MIN_ANGLE + (kick + snare * 0.75 + flutter + swell + panDiff) * volScale * 1.15;
+        const rawTargetR = MIN_ANGLE + (kick * 0.95 + snare + flutter * 1.1 + swell - panDiff) * volScale * 1.15;
+
+        targetL = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetL));
+        targetR = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetR));
+      }
+
+      // Ballistic spring-damper physics with authentic mechanical inertia & overshoot
+      const isRisingL = targetL > angleL;
+      const kSpringL = isRisingL ? 360 : 190;
+      const dampingL = isRisingL ? 25 : 19;
+      const forceL = (targetL - angleL) * kSpringL - velL * dampingL;
+      velL += forceL * dt;
+      angleL += velL * dt;
+
+      if (angleL < MIN_ANGLE) {
+        angleL = MIN_ANGLE;
+        velL = 0;
+      } else if (angleL > MAX_ANGLE) {
+        angleL = MAX_ANGLE;
+        velL = -velL * 0.35; // Authentic mechanical pin bounce
+      }
+
+      const isRisingR = targetR > angleR;
+      const kSpringR = isRisingR ? 360 : 190;
+      const dampingR = isRisingR ? 25 : 19;
+      const forceR = (targetR - angleR) * kSpringR - velR * dampingR;
+      velR += forceR * dt;
+      angleR += velR * dt;
+
+      if (angleR < MIN_ANGLE) {
+        angleR = MIN_ANGLE;
+        velR = 0;
+      } else if (angleR > MAX_ANGLE) {
+        angleR = MAX_ANGLE;
+        velR = -velR * 0.35;
+      }
+
+      // Direct DOM update: ultra-smooth 60fps/120fps with zero React re-render!
+      if (needleLeftRef.current) {
+        needleLeftRef.current.style.transform = `translateX(-50%) rotate(${angleL.toFixed(2)}deg)`;
+      }
+      if (needleRightRef.current) {
+        needleRightRef.current.style.transform = `translateX(-50%) rotate(${angleR.toFixed(2)}deg)`;
+      }
+
+      animId = requestAnimationFrame(updatePhysics);
+    };
+
+    animId = requestAnimationFrame(updatePhysics);
+
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [isPlaying, volume]);
+
+  // Periodic update for LED Segment Meters (Sidebar / Lateral variants)
   useEffect(() => {
     if (!isPlaying) {
       setVuLeft(0);
@@ -150,11 +253,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
   /**
    * Warm Analog Backlit Incandescent Needle VU Meter (Sony SQD-2020 / TA-1150 style)
+   * Direct DOM ref driven with physical ballistic spring inertia.
    */
-  const renderNeedleMeter = (level: number, label: string) => {
-    // Needle deflection angle between -34deg and +34deg
-    const angle = -34 + Math.min(1, Math.max(0, level)) * 68;
-
+  const renderNeedleMeter = (channel: 'left' | 'right', label: string) => {
     return (
       <div className="flex flex-col items-center">
         <div className="w-16 sm:w-24 h-8 sm:h-11 retro-vu-meter-incandescent rounded-md p-0.5 sm:p-1 relative flex flex-col justify-between overflow-hidden shadow-inner border border-zinc-900 select-none">
@@ -169,11 +270,12 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             <span className="text-rose-700 font-extrabold">+3dB</span>
           </div>
 
-          {/* Moving Needle */}
+          {/* Moving Physical Needle */}
           <div
-            className="absolute bottom-[-1px] left-1/2 w-[1.5px] sm:w-[2px] h-6 sm:h-9 bg-zinc-950 origin-bottom transition-transform duration-75 z-10"
+            ref={channel === 'left' ? needleLeftRef : needleRightRef}
+            className="absolute bottom-[-1px] left-1/2 w-[1.5px] sm:w-[2px] h-6 sm:h-9 bg-zinc-950 origin-bottom z-10 will-change-transform"
             style={{
-              transform: `translateX(-50%) rotate(${angle}deg)`,
+              transform: 'translateX(-50%) rotate(-34deg)',
               boxShadow: '0 0 1.5px rgba(0,0,0,0.9)',
             }}
           />
@@ -631,8 +733,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         {/* Authentic Analog Backlit Incandescent VU Meters when in Steel mode, or LED meters */}
         {isSteel ? (
           <div className="flex items-center gap-1.5 sm:gap-2.5">
-            {renderNeedleMeter(vuLeft, 'LEFT')}
-            {renderNeedleMeter(vuRight, 'RIGHT')}
+            {renderNeedleMeter('left', 'LEFT')}
+            {renderNeedleMeter('right', 'RIGHT')}
           </div>
         ) : (
           <div className="space-y-0.5">
