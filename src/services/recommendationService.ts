@@ -8,6 +8,16 @@ export interface RecommendationGroup {
   tracks: Track[];
 }
 
+export interface FeaturedCollection {
+  id: string;
+  title: string;
+  subtitle: string;
+  gradient: string;
+  accent: string;
+  query: string;
+  badge?: string;
+}
+
 class RecommendationService {
   private cachedRecommendations: RecommendationGroup[] = [];
   private lastAnalyzedSignature: string = '';
@@ -191,6 +201,164 @@ class RecommendationService {
     this.cachedRecommendations = groups;
     this.lastAnalyzedSignature = signature;
     return groups;
+  }
+
+  /**
+   * Generate personalized featured collections based on user tastes
+   */
+  getPersonalizedCollections(
+    likedTracks: Track[],
+    playlists: Playlist[]
+  ): FeaturedCollection[] {
+    const searchHistory = this.getSearchHistory();
+    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory);
+
+    if (tastes.length > 0) {
+      const top1 = tastes[0].artist;
+      const top2 = tastes.length > 1 ? tastes[1].artist : null;
+      const top3 = tastes.length > 2 ? tastes[2].artist : null;
+
+      return [
+        {
+          id: `col_${top1.replace(/\s+/g, '_')}`,
+          title: `Esenciales de ${top1}`,
+          subtitle: `Grandes éxitos, himnos y discografía cumbre de tu artista preferido`,
+          gradient: 'from-blue-950/80 via-slate-900/60 to-black',
+          accent: '#38bdf8',
+          query: `${top1} greatest hits`,
+          badge: 'Basado en tus gustos',
+        },
+        {
+          id: `col_live_${(top2 || top1).replace(/\s+/g, '_')}`,
+          title: `Directos & Giras: ${top2 || top1}`,
+          subtitle: `Actuaciones legendarias en vivo, festivales y conciertos completos`,
+          gradient: 'from-amber-950/80 via-stone-900/60 to-black',
+          accent: '#f59e0b',
+          query: `${top2 || top1} live concert`,
+          badge: 'Conciertos en vivo',
+        },
+        {
+          id: `col_era_${top1.replace(/\s+/g, '_')}`,
+          title: top3 ? `Rock Mix: ${top1} & ${top3}` : `Rock & Clásicos de la Época`,
+          subtitle: `Música contemporánea y artistas afines para expandir tu biblioteca`,
+          gradient: 'from-cyan-950/80 via-slate-900/60 to-black',
+          accent: '#06b6d4',
+          query: top3 ? `${top1} ${top3} playlist` : `${top1} 80s rock classics playlist`,
+          badge: 'Mix de Época',
+        },
+      ];
+    }
+
+    // Default / Cold-start rock collections
+    return [
+      {
+        id: 'col_rock_anthems',
+        title: 'Grandes Himnos del Rock 80s',
+        subtitle: 'Queen, AC/DC, Scorpions, Bon Jovi y los riffs que marcaron la historia',
+        gradient: 'from-blue-950/80 via-slate-900/60 to-black',
+        accent: '#38bdf8',
+        query: '80s rock anthems greatest hits',
+        badge: 'Colección Rock',
+      },
+      {
+        id: 'col_rock_ballads',
+        title: 'Baladas Legendarias del Rock',
+        subtitle: 'Guns N Roses, Aerosmith, Whitesnake y clásicos lentos atemporales',
+        gradient: 'from-amber-950/80 via-stone-900/60 to-black',
+        accent: '#f59e0b',
+        query: '80s power ballads rock',
+        badge: 'Pletina Dorada',
+      },
+      {
+        id: 'col_live_concerts',
+        title: 'Conciertos Míticos en Directo',
+        subtitle: 'Live Aid 1985, Wembley Stadium y directos que hicieron temblar al mundo',
+        gradient: 'from-cyan-950/80 via-slate-900/60 to-black',
+        accent: '#06b6d4',
+        query: '80s rock full concert live',
+        badge: 'En Vivo',
+      },
+    ];
+  }
+
+  /**
+   * Fetch continuous channels (long-play concerts, radio mixes) based on preferences
+   */
+  async getPersonalizedChannels(
+    likedTracks: Track[],
+    playlists: Playlist[]
+  ): Promise<Track[]> {
+    const searchHistory = this.getSearchHistory();
+    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory);
+
+    let query1 = '80s rock greatest hits full album';
+    let query2 = 'Queen Live at Wembley full concert';
+    let query3 = 'Classic rock radio live continuous';
+
+    if (tastes.length > 0) {
+      const top1 = tastes[0].artist;
+      const top2 = tastes.length > 1 ? tastes[1].artist : top1;
+      query1 = `${top1} full concert live`;
+      query2 = `${top2} greatest hits full album`;
+      query3 = `${top1} ${top2} radio mix continuous`;
+    }
+
+    const channels: Track[] = [];
+
+    try {
+      const [res1, res2, res3] = await Promise.allSettled([
+        streamResolver.search(query1, 'youtube', 1),
+        streamResolver.search(query2, 'youtube', 1),
+        streamResolver.search(query3, 'youtube', 1),
+      ]);
+
+      const pickBestLongPlay = (res: PromiseSettledResult<Track[]>): Track | null => {
+        if (res.status === 'fulfilled' && Array.isArray(res.value) && res.value.length > 0) {
+          // Prefer tracks that are long (> 600s or containing "full" / "live" / "album")
+          const longTrack = res.value.find(
+            (t) =>
+              (t.duration && t.duration >= 600) ||
+              t.title.toLowerCase().includes('concert') ||
+              t.title.toLowerCase().includes('album') ||
+              t.title.toLowerCase().includes('live')
+          );
+          return longTrack || res.value[0];
+        }
+        return null;
+      };
+
+      const c1 = pickBestLongPlay(res1);
+      const c2 = pickBestLongPlay(res2);
+      const c3 = pickBestLongPlay(res3);
+
+      const seenIds = new Set<string>();
+      [c1, c2, c3].forEach((t) => {
+        if (t && !seenIds.has(t.id)) {
+          seenIds.add(t.id);
+          channels.push(t);
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to load personalized continuous channels:', e);
+    }
+
+    // Fallback if network was slow
+    if (channels.length === 0) {
+      channels.push({
+        id: 'vbvyNnw8Qjg',
+        title: 'Queen - Live Aid 1985 (Concierto Completo Legendario)',
+        artist: 'Queen',
+        album: 'Live Aid 1985',
+        duration: 1500,
+        thumbnail: 'https://i.ytimg.com/vi/vbvyNnw8Qjg/hqdefault.jpg',
+        source: 'youtube',
+        youtubeId: 'vbvyNnw8Qjg',
+        views: 120000000,
+        viewsFormatted: 'Concierto Legendario',
+      });
+    }
+
+    return channels;
   }
 }
 
