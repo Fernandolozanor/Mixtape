@@ -83,12 +83,6 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
     <div className="space-y-6 sm:space-y-10 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
       {/* 80s Rock Audio Hi-Fi Receiver Hero Banner */}
       <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-10 relative overflow-hidden shadow-2xl border-2 border-[#262f40] w-full min-w-0">
-        {/* 4 Corner Screws */}
-        <div className="absolute top-2.5 left-2.5 retro-screw" />
-        <div className="absolute top-2.5 right-2.5 retro-screw" />
-        <div className="absolute bottom-2.5 left-2.5 retro-screw" />
-        <div className="absolute bottom-2.5 right-2.5 retro-screw" />
-
         <div className="max-w-2xl space-y-3.5 relative z-10">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/60 border border-amber-500/40 font-mono-retro text-[10px] sm:text-xs font-bold text-amber-400">
             <Radio className="w-3.5 h-3.5 text-amber-500 animate-pulse" />

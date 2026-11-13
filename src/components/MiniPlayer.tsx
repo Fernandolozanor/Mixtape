@@ -41,18 +41,6 @@ export const MiniPlayer: React.FC = () => {
             : 'bg-gradient-to-r from-[#171c26] via-[#11151e] to-[#0e1219] border-2 border-[#263042] shadow-[0_10px_30px_rgba(0,0,0,0.85)]'
         } p-2.5 flex items-center justify-between gap-3`}
       >
-        {/* Chassis corner screws */}
-        <div
-          className={`absolute top-1.5 left-1.5 ${
-            isSteel ? 'retro-screw-steel' : 'retro-screw'
-          } scale-75`}
-        />
-        <div
-          className={`absolute top-1.5 right-1.5 ${
-            isSteel ? 'retro-screw-steel' : 'retro-screw'
-          } scale-75`}
-        />
-
         {/* Track Info */}
         <div className="flex items-center gap-3 overflow-hidden pl-1.5">
           <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md border border-white/10">

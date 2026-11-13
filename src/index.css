@@ -210,97 +210,10 @@
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
 }
 
-.retro-screw {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #94a3b8 0%, #475569 60%, #1e293b 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), inset 0 0.5px 0.5px rgba(255, 255, 255, 0.5);
-  position: relative;
-}
-.retro-screw::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 1px;
-  background: #0f172a;
-  transform: translate(-50%, -50%) rotate(45deg);
-}
-
-/* ==========================================================================
-   VINTAGE 80s HI-FI & BRUSHED STEEL STYLING (Sony TA-1150 / SQD-2020)
-   ========================================================================== */
-
-/* Authentic Brushed Stainless Steel / Anodized Aluminum Faceplate */
-.retro-brushed-steel {
-  background-color: #d8dce3;
-  background-image: 
-    repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.12) 0px,
-      rgba(255, 255, 255, 0.12) 1px,
-      rgba(0, 0, 0, 0.035) 1px,
-      rgba(0, 0, 0, 0.035) 2px
-    ),
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.45) 0%,
-      rgba(203, 213, 225, 0.1) 12%,
-      rgba(255, 255, 255, 0.55) 28%,
-      rgba(148, 163, 184, 0.2) 48%,
-      rgba(255, 255, 255, 0.5) 68%,
-      rgba(148, 163, 184, 0.25) 86%,
-      rgba(255, 255, 255, 0.35) 100%
-    ),
-    linear-gradient(180deg, #f8fafc 0%, #e2e8f0 22%, #cbd5e1 55%, #94a3b8 100%);
-  border: 1px solid #94a3b8;
-  border-top-color: #f1f5f9;
-  border-bottom-color: #64748b;
-  box-shadow: 
-    inset 0 1px 1px rgba(255, 255, 255, 0.95),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.45),
-    0 16px 36px rgba(0, 0, 0, 0.7);
-}
-
-/* Crisp Engraved Dark Silkscreened Typography */
-.retro-engraved-text {
-  color: #1e293b;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 -0.5px 0.5px rgba(0, 0, 0, 0.4);
-  font-family: 'Share Tech Mono', monospace;
-  letter-spacing: 0.12em;
-  font-weight: 700;
-}
-
-/* Sony-Style Machined Stainless Steel Corner Screw */
+/* Screws completely hidden across the entire app */
+.retro-screw,
 .retro-screw-steel {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 45%, #64748b 80%, #334155 100%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), inset 0 0.5px 0.5px rgba(255, 255, 255, 0.9);
-  position: relative;
-}
-.retro-screw-steel::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 1px;
-  background: #0f172a;
-  transform: translate(-50%, -50%) rotate(35deg);
-}
-.retro-screw-steel::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 1px;
-  background: #0f172a;
-  transform: translate(-50%, -50%) rotate(125deg);
+  display: none !important;
 }
 
 /* Milled Aluminum Rotary Knob */

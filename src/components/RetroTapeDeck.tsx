@@ -410,12 +410,6 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       <div
         className={`retro-tape-chassis rounded-2xl p-2.5 relative select-none transition-all duration-200 group ${className}`}
       >
-        {/* 4 Corner Screws */}
-        <div className="absolute top-1.5 left-1.5 retro-screw" />
-        <div className="absolute top-1.5 right-1.5 retro-screw" />
-        <div className="absolute bottom-1.5 left-1.5 retro-screw" />
-        <div className="absolute bottom-1.5 right-1.5 retro-screw" />
-
         {/* Deck Header: Brand & Counter */}
         <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
           <div className="flex items-center gap-1.5">
@@ -598,18 +592,6 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           : 'retro-tape-chassis shadow-2xl'
       } rounded-2xl sm:rounded-3xl p-2 sm:p-3.5 md:p-4 relative select-none w-full max-w-lg sm:max-w-xl mx-auto ${className}`}
     >
-      {/* Bottom Chassis Corner Screws (Top screws removed to maximize space & keep header clean) */}
-      <div
-        className={`absolute bottom-2 left-2 sm:bottom-2.5 sm:left-2.5 ${
-          isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-75 sm:scale-100`}
-      />
-      <div
-        className={`absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5 ${
-          isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-75 sm:scale-100`}
-      />
-
       {/* Hi-Fi Header with Silkscreen Markings */}
       <div
         className={`flex items-center justify-between px-1 sm:px-2 pt-0 pb-1 sm:pb-1.5 ${

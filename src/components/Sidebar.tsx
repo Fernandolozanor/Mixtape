@@ -31,10 +31,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="hidden md:flex flex-col w-64 h-screen bg-[#0e121a] border-r-2 border-[#1f2636] p-3.5 select-none shrink-0 shadow-2xl relative">
-      {/* 4 Corner Chassis Screws */}
-      <div className="absolute top-2 left-2 retro-screw" />
-      <div className="absolute top-2 right-2 retro-screw" />
-
       {/* 80s Rock Audio Receiver Header */}
       <div className="px-2 pt-2 pb-3 mb-3 border-b border-white/10 relative">
         <div className="flex items-center justify-between">
