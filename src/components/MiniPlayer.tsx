@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Heart, Loader2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Heart, Loader2, Disc3 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -43,10 +43,10 @@ export const MiniPlayer: React.FC = () => {
               loading="lazy"
             />
             {isPlaying && (
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <span
-                  className="w-2 h-2 rounded-full animate-ping"
-                  style={{ backgroundColor: currentTheme.accent }}
+              <div className="absolute inset-0 bg-black/35 flex items-center justify-center backdrop-blur-[0.5px]">
+                <Disc3
+                  className="w-5 h-5 text-amber-400 animate-spin"
+                  style={{ animationDuration: '2.5s' }}
                 />
               </div>
             )}

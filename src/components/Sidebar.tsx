@@ -2,6 +2,8 @@ import React from 'react';
 import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
+import { usePlayer } from '../context/PlayerContext';
+import { RetroTapeDeck } from './RetroTapeDeck';
 
 interface SidebarProps {
   activeTab: string;
@@ -18,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { playlists } = useLibrary();
   const { currentTheme, setThemeById, themes } = useTheme();
+  const { setFullScreenPlayerOpen } = usePlayer();
 
   const navItems = [
     { id: 'home', label: 'Escuchar', icon: Compass },
@@ -133,6 +136,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <p className="text-xs text-zinc-500 px-3 italic">No hay listas aún</p>
           )}
         </div>
+      </div>
+
+      {/* 80s Rock Cassette Deck in Lateral Sidebar */}
+      <div className="py-2.5">
+        <RetroTapeDeck
+          variant="sidebar"
+          onExpand={() => setFullScreenPlayerOpen(true)}
+        />
       </div>
 
       {/* Quick Theme Swatches Bar */}

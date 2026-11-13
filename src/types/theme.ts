@@ -13,6 +13,18 @@ export interface ThemeScheme {
 
 export const THEME_SCHEMES: ThemeScheme[] = [
   {
+    id: 'retro-rock-80s',
+    name: 'Pletina Rock 80s (Tape Deck)',
+    primary: '#1d5494', // Azul tinta bolígrafo de la cinta
+    rgb: '29, 84, 148',
+    secondary: '#8a6b33', // Latón y cinta magnética vintage
+    accent: '#f59e0b', // Ámbar de vúmetro analógico
+    gradient: 'linear-gradient(135deg, #1d5494 0%, #1e2533 50%, #8a6b33 100%)',
+    badgeBg: 'rgba(29, 84, 148, 0.3)',
+    badgeText: '#fbbf24',
+    badgeBorder: 'rgba(245, 158, 11, 0.35)',
+  },
+  {
     id: 'ocean-blue',
     name: 'Azul Zafiro (R27 G98 B163)',
     primary: '#1b62a3',

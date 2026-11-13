@@ -22,6 +22,8 @@ import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
+import { RetroTapeDeck } from './RetroTapeDeck';
+import { Disc3, Image as ImageIcon } from 'lucide-react';
 
 interface FullScreenPlayerProps {
   onOpenAddToPlaylist: () => void;
@@ -51,8 +53,8 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const { isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
 
-  // Active Center View: 'artwork' | 'lyrics' | 'queue'
-  const [centerView, setCenterView] = useState<'artwork' | 'lyrics' | 'queue'>('artwork');
+  // Active Center View: 'cassette' | 'artwork' | 'lyrics' | 'queue'
+  const [centerView, setCenterView] = useState<'cassette' | 'artwork' | 'lyrics' | 'queue'>('cassette');
 
   if (!isFullScreenPlayerOpen || !currentTrack) return null;
 
@@ -116,8 +118,14 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
       {/* Middle Interactive Content */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 min-h-0">
+        {centerView === 'cassette' && (
+          <div className="w-full max-w-xl my-auto px-2 animate-in fade-in duration-300">
+            <RetroTapeDeck variant="fullscreen" />
+          </div>
+        )}
+
         {centerView === 'artwork' && (
-          <div className="w-full max-w-sm aspect-square my-auto relative group">
+          <div className="w-full max-w-sm aspect-square my-auto relative group animate-in fade-in duration-300">
             <div
               className="w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/10 transition-transform duration-500"
               style={{
@@ -286,29 +294,53 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           />
         </div>
 
-        {/* Bottom Switcher: Artwork / Lyrics / Queue */}
-        <div className="flex items-center justify-around pt-3 border-t border-white/10">
+        {/* Bottom Switcher: Cassette 80s / Artwork / Lyrics / Queue */}
+        <div className="flex items-center justify-around pt-3 border-t border-white/10 flex-wrap gap-1">
           <button
-            onClick={() => setCenterView(centerView === 'lyrics' ? 'artwork' : 'lyrics')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+            onClick={() => setCenterView('cassette')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+              centerView === 'cassette'
+                ? 'bg-amber-400 text-black shadow-md font-bold'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Disc3 className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin' : ''}`} />
+            <span>Cinta 80s</span>
+          </button>
+
+          <button
+            onClick={() => setCenterView('artwork')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+              centerView === 'artwork'
+                ? 'bg-white text-black shadow-md'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>Portada</span>
+          </button>
+
+          <button
+            onClick={() => setCenterView('lyrics')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               centerView === 'lyrics'
                 ? 'bg-white text-black shadow-md'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Quote className="w-4 h-4" />
+            <Quote className="w-3.5 h-3.5" />
             <span>Letra</span>
           </button>
 
           <button
-            onClick={() => setCenterView(centerView === 'queue' ? 'artwork' : 'queue')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+            onClick={() => setCenterView('queue')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               centerView === 'queue'
                 ? 'bg-white text-black shadow-md'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <ListMusic className="w-4 h-4" />
+            <ListMusic className="w-3.5 h-3.5" />
             <span>Cola</span>
           </button>
         </div>

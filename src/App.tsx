@@ -11,6 +11,7 @@ import { SearchTab } from './components/SearchTab';
 import { LibraryTab } from './components/LibraryTab';
 import { PlaylistModal } from './components/PlaylistModal';
 import { SettingsModal } from './components/SettingsModal';
+import { RetroTapeDeck } from './components/RetroTapeDeck';
 import type { Track } from './types/music';
 
 const AppContent: React.FC = () => {
@@ -63,6 +64,10 @@ const AppContent: React.FC = () => {
 
       {/* Main View Area */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto safe-top relative px-4 md:px-10 pt-6">
+        {/* Subtle Ambient 80s Rock Tape on the right lateral side (Large screens) */}
+        <div className="fixed right-8 bottom-28 pointer-events-none opacity-25 hover:opacity-45 transition-opacity hidden xl:block z-0">
+          <RetroTapeDeck variant="ambient-lateral" />
+        </div>
         {activeTab === 'home' && (
           <HomeTab onSearchGenre={handleSearchGenre} />
         )}
