@@ -1,0 +1,312 @@
+import React from 'react';
+import { Heart, Plus, ListMusic, Play, Trash2 } from 'lucide-react';
+import { useLibrary } from '../context/LibraryContext';
+import { usePlayer } from '../context/PlayerContext';
+
+interface LibraryTabProps {
+  openNewPlaylistModal: () => void;
+  selectedPlaylistId: string | null;
+  setSelectedPlaylistId: (id: string | null) => void;
+  isFavoritesView?: boolean;
+}
+
+export const LibraryTab: React.FC<LibraryTabProps> = ({
+  openNewPlaylistModal,
+  selectedPlaylistId,
+  setSelectedPlaylistId,
+  isFavoritesView = false,
+}) => {
+  const { playlists, likedTracks, deletePlaylist, removeTrackFromPlaylist } = useLibrary();
+  const { playTrack, currentTrack } = usePlayer();
+
+  const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return '--:--';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // 1. Favorites view
+  if (isFavoritesView) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto pb-32">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-400 flex items-center justify-center shadow-lg shadow-pink-600/30">
+              <Heart className="w-10 h-10 fill-white text-white" />
+            </div>
+            <div>
+              <p className="text-xs uppercase font-bold text-pink-500 tracking-wider">Lista Automática</p>
+              <h1 className="text-3xl font-extrabold text-white">Canciones Favoritas</h1>
+              <p className="text-sm text-zinc-400">{likedTracks.length} canciones</p>
+            </div>
+          </div>
+
+          {likedTracks.length > 0 && (
+            <button
+              onClick={() => playTrack(likedTracks[0], likedTracks)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-pink-600 hover:bg-pink-500 text-white font-semibold shadow-lg transition"
+            >
+              <Play className="w-4 h-4 fill-white" />
+              <span>Reproducir Todo</span>
+            </button>
+          )}
+        </div>
+
+        {likedTracks.length === 0 ? (
+          <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
+            <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="text-lg font-medium text-white">No tienes canciones favoritas aún</p>
+            <p className="text-sm">Toca el icono de corazón en cualquier canción para guardarla aquí.</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {likedTracks.map((track) => (
+              <div
+                key={track.id}
+                onClick={() => playTrack(track, likedTracks)}
+                className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition ${
+                  currentTrack?.id === track.id
+                    ? 'bg-pink-500/15 border border-pink-500/20'
+                    : 'glass-card glass-card-hover'
+                }`}
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <img
+                    src={track.thumbnail}
+                    alt={track.title}
+                    className="w-11 h-11 rounded-xl object-cover shrink-0"
+                  />
+                  <div className="overflow-hidden">
+                    <p
+                      className={`text-sm font-semibold truncate ${
+                        currentTrack?.id === track.id ? 'text-pink-400' : 'text-white'
+                      }`}
+                    >
+                      {track.title}
+                    </p>
+                    <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-zinc-500">
+                    {formatDuration(track.duration)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 2. Playlist Detail view
+  if (selectedPlaylist) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto pb-32">
+        <button
+          onClick={() => setSelectedPlaylistId(null)}
+          className="text-sm font-medium text-pink-400 hover:text-pink-300 transition"
+        >
+          ← Volver a la Biblioteca
+        </button>
+
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-2xl bg-zinc-800 flex items-center justify-center overflow-hidden shadow-lg border border-white/10">
+              {selectedPlaylist.coverUrl ? (
+                <img
+                  src={selectedPlaylist.coverUrl}
+                  alt={selectedPlaylist.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ListMusic className="w-8 h-8 text-zinc-500" />
+              )}
+            </div>
+
+            <div>
+              <p className="text-xs uppercase font-bold text-zinc-400 tracking-wider">Lista de reproducción</p>
+              <h1 className="text-3xl font-extrabold text-white">{selectedPlaylist.name}</h1>
+              <p className="text-sm text-zinc-400">
+                {selectedPlaylist.tracks.length} canciones
+                {selectedPlaylist.description && ` • ${selectedPlaylist.description}`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {selectedPlaylist.tracks.length > 0 && (
+              <button
+                onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-semibold shadow-lg transition"
+              >
+                <Play className="w-4 h-4 fill-white" />
+                <span>Reproducir</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                if (confirm('¿Eliminar esta lista de reproducción?')) {
+                  deletePlaylist(selectedPlaylist.id);
+                  setSelectedPlaylistId(null);
+                }
+              }}
+              className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition"
+              title="Eliminar lista"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {selectedPlaylist.tracks.length === 0 ? (
+          <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
+            <ListMusic className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="text-lg font-medium text-white">Esta lista está vacía</p>
+            <p className="text-sm">Busca canciones y agrégalas usando el botón (+).</p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {selectedPlaylist.tracks.map((track) => (
+              <div
+                key={track.id}
+                onClick={() => playTrack(track, selectedPlaylist.tracks)}
+                className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition ${
+                  currentTrack?.id === track.id
+                    ? 'bg-pink-500/15 border border-pink-500/20'
+                    : 'glass-card glass-card-hover'
+                }`}
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <img
+                    src={track.thumbnail}
+                    alt={track.title}
+                    className="w-11 h-11 rounded-xl object-cover shrink-0"
+                  />
+                  <div className="overflow-hidden">
+                    <p
+                      className={`text-sm font-semibold truncate ${
+                        currentTrack?.id === track.id ? 'text-pink-400' : 'text-white'
+                      }`}
+                    >
+                      {track.title}
+                    </p>
+                    <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-zinc-500">
+                    {formatDuration(track.duration)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTrackFromPlaylist(selectedPlaylist.id, track.id);
+                    }}
+                    className="p-2 text-zinc-500 hover:text-red-400 transition"
+                    title="Quitar de la lista"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3. Main Library Overview
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto pb-32">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          Biblioteca
+        </h1>
+        <button
+          onClick={openNewPlaylistModal}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold transition shadow-md"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Nueva Lista</span>
+        </button>
+      </div>
+
+      {/* Favorites Banner Card */}
+      <div
+        onClick={() => setSelectedPlaylistId('favorites')}
+        className="p-5 rounded-3xl bg-gradient-to-r from-pink-600/30 to-purple-600/20 border border-pink-500/30 cursor-pointer hover:border-pink-500/50 transition flex items-center justify-between"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center shadow-lg shadow-pink-500/30">
+            <Heart className="w-7 h-7 fill-white text-white" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-white">Canciones Favoritas</p>
+            <p className="text-xs text-zinc-400">{likedTracks.length} canciones guardadas</p>
+          </div>
+        </div>
+        <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+          <Play className="w-4 h-4 fill-white" />
+        </div>
+      </div>
+
+      {/* Playlists Grid */}
+      <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          Tus Listas ({playlists.length})
+        </p>
+
+        {playlists.length === 0 ? (
+          <div className="p-8 text-center glass-card rounded-2xl text-zinc-400">
+            <p className="text-sm">Aún no has creado listas de reproducción.</p>
+            <button
+              onClick={openNewPlaylistModal}
+              className="mt-3 text-pink-400 font-semibold text-sm hover:underline"
+            >
+              Crea tu primera lista
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {playlists.map((playlist) => (
+              <div
+                key={playlist.id}
+                onClick={() => setSelectedPlaylistId(playlist.id)}
+                className="glass-card glass-card-hover p-3.5 rounded-2xl cursor-pointer transition flex flex-col group"
+              >
+                <div className="w-full aspect-square rounded-xl bg-zinc-800/80 mb-3 overflow-hidden flex items-center justify-center relative shadow-md">
+                  {playlist.coverUrl ? (
+                    <img
+                      src={playlist.coverUrl}
+                      alt={playlist.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <ListMusic className="w-10 h-10 text-zinc-600" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                    <Play className="w-6 h-6 fill-white text-white" />
+                  </div>
+                </div>
+
+                <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
+                <p className="text-xs text-zinc-400 truncate">
+                  {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -1,0 +1,136 @@
+import React, { useState } from 'react';
+import { PlayerProvider, usePlayer } from './context/PlayerContext';
+import { LibraryProvider } from './context/LibraryContext';
+import { Sidebar } from './components/Sidebar';
+import { BottomNav } from './components/BottomNav';
+import { MiniPlayer } from './components/MiniPlayer';
+import { FullScreenPlayer } from './components/FullScreenPlayer';
+import { HomeTab } from './components/HomeTab';
+import { SearchTab } from './components/SearchTab';
+import { LibraryTab } from './components/LibraryTab';
+import { PlaylistModal } from './components/PlaylistModal';
+import { SettingsModal } from './components/SettingsModal';
+import type { Track } from './types/music';
+
+const AppContent: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>('home');
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+
+  const { currentTrack } = usePlayer();
+
+  const handleOpenAddToPlaylist = (track?: Track | null) => {
+    setTrackToAdd(track ?? currentTrack);
+    setIsPlaylistModalOpen(true);
+  };
+
+  const handleSearchGenre = (_genre: string) => {
+    setActiveTab('search');
+  };
+
+  // Check if activeTab points to a playlist
+  const isPlaylistRoute = activeTab.startsWith('playlist:');
+  const playlistIdFromRoute = isPlaylistRoute ? activeTab.replace('playlist:', '') : null;
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-[#f4f4f5]">
+      {/* Desktop Sidebar */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setSelectedPlaylistId(null);
+        }}
+        openNewPlaylistModal={() => {
+          setTrackToAdd(null);
+          setIsPlaylistModalOpen(true);
+        }}
+        openSettingsModal={() => setIsSettingsModalOpen(true)}
+      />
+
+      {/* Main View Area */}
+      <main className="flex-1 flex flex-col h-full overflow-y-auto safe-top relative px-4 md:px-10 pt-6">
+        {activeTab === 'home' && (
+          <HomeTab onSearchGenre={handleSearchGenre} />
+        )}
+
+        {activeTab === 'search' && (
+          <SearchTab onSelectTrackForPlaylist={handleOpenAddToPlaylist} />
+        )}
+
+        {activeTab === 'library' && (
+          <LibraryTab
+            openNewPlaylistModal={() => {
+              setTrackToAdd(null);
+              setIsPlaylistModalOpen(true);
+            }}
+            selectedPlaylistId={selectedPlaylistId}
+            setSelectedPlaylistId={setSelectedPlaylistId}
+          />
+        )}
+
+        {activeTab === 'favorites' && (
+          <LibraryTab
+            openNewPlaylistModal={() => {}}
+            selectedPlaylistId="favorites"
+            setSelectedPlaylistId={() => setActiveTab('library')}
+            isFavoritesView={true}
+          />
+        )}
+
+        {isPlaylistRoute && playlistIdFromRoute && (
+          <LibraryTab
+            openNewPlaylistModal={() => {}}
+            selectedPlaylistId={playlistIdFromRoute}
+            setSelectedPlaylistId={() => setActiveTab('library')}
+          />
+        )}
+      </main>
+
+      {/* Mini Player */}
+      <MiniPlayer />
+
+      {/* Full Screen Player Modal */}
+      <FullScreenPlayer onOpenAddToPlaylist={() => handleOpenAddToPlaylist(currentTrack)} />
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav
+        activeTab={activeTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setSelectedPlaylistId(null);
+        }}
+        openSettingsModal={() => setIsSettingsModalOpen(true)}
+      />
+
+      {/* Modals */}
+      <PlaylistModal
+        isOpen={isPlaylistModalOpen}
+        onClose={() => {
+          setIsPlaylistModalOpen(false);
+          setTrackToAdd(null);
+        }}
+        trackToAdd={trackToAdd}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
+    </div>
+  );
+};
+
+export function App() {
+  return (
+    <LibraryProvider>
+      <PlayerProvider>
+        <AppContent />
+      </PlayerProvider>
+    </LibraryProvider>
+  );
+}
+
+export default App;
