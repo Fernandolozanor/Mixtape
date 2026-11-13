@@ -180,7 +180,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (nextIdx < q.length) {
       playTrack(q[nextIdx]);
-    } else if (rMode === 'all') {
+    } else if (rMode === 'all' || q.length > 1) {
       playTrack(q[0]);
     } else {
       setIsPlaying(false);
@@ -195,8 +195,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const q = queueRef.current;
     const curIdx = queueIndexRef.current;
+    if (q.length === 0) return;
+
     if (curIdx > 0) {
       playTrack(q[curIdx - 1]);
+    } else if (q.length > 1) {
+      playTrack(q[q.length - 1]);
     } else {
       audioEngine.seek(0);
     }

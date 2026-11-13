@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipForward, Heart, Loader2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Heart, Loader2 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -12,6 +12,7 @@ export const MiniPlayer: React.FC = () => {
     isLoading,
     togglePlay,
     nextTrack,
+    prevTrack,
     currentTime,
     duration,
     setFullScreenPlayerOpen,
@@ -87,6 +88,16 @@ export const MiniPlayer: React.FC = () => {
                 color: liked ? currentTheme.accent : 'currentColor',
               }}
             />
+          </button>
+
+          {/* Previous Track Button */}
+          <button
+            onClick={prevTrack}
+            className="p-2 text-zinc-300 hover:text-white transition"
+            aria-label="Canción anterior"
+            title="Anterior"
+          >
+            <SkipBack className="w-5 h-5" />
           </button>
 
           <button
