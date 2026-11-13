@@ -157,12 +157,12 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
     return (
       <div className="flex flex-col items-center">
-        <div className="w-20 sm:w-26 h-10 sm:h-12 retro-vu-meter-incandescent rounded-md p-1 relative flex flex-col justify-between overflow-hidden shadow-inner border border-zinc-900 select-none">
+        <div className="w-16 sm:w-24 h-8 sm:h-11 retro-vu-meter-incandescent rounded-md p-0.5 sm:p-1 relative flex flex-col justify-between overflow-hidden shadow-inner border border-zinc-900 select-none">
           {/* Subtle Glass glare highlight */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-transparent to-black/20 pointer-events-none z-20" />
 
           {/* Scale curved arc & markings */}
-          <div className="relative z-10 flex justify-between items-center text-[7.5px] sm:text-[8.5px] font-mono-retro font-black px-1 text-amber-950">
+          <div className="relative z-10 flex justify-between items-center text-[7px] sm:text-[8.5px] font-mono-retro font-black px-0.5 sm:px-1 text-amber-950">
             <span>-20</span>
             <span>-7</span>
             <span>0</span>
@@ -171,7 +171,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
           {/* Moving Needle */}
           <div
-            className="absolute bottom-[-1px] left-1/2 w-[1.5px] sm:w-[2px] h-8 sm:h-10 bg-zinc-950 origin-bottom transition-transform duration-75 z-10"
+            className="absolute bottom-[-1px] left-1/2 w-[1.5px] sm:w-[2px] h-6 sm:h-9 bg-zinc-950 origin-bottom transition-transform duration-75 z-10"
             style={{
               transform: `translateX(-50%) rotate(${angle}deg)`,
               boxShadow: '0 0 1.5px rgba(0,0,0,0.9)',
@@ -179,10 +179,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           />
 
           {/* Pivot Black Round Cap */}
-          <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-zinc-950 border border-amber-600/60 z-20 shadow-md" />
+          <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-zinc-950 border border-amber-600/60 z-20 shadow-md" />
 
           {/* Channel Label */}
-          <span className="absolute bottom-0.5 right-1.5 text-[8px] sm:text-[9px] font-mono-retro font-bold text-amber-950/80 z-10">
+          <span className="absolute bottom-0.5 right-1 text-[7px] sm:text-[8.5px] font-mono-retro font-bold text-amber-950/80 z-10">
             {label}
           </span>
         </div>
@@ -492,57 +492,57 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     <div
       className={`${
         isSteel
-          ? 'retro-brushed-steel border-2 border-slate-300/80 shadow-[0_20px_60px_rgba(0,0,0,0.8)]'
+          ? 'retro-brushed-steel border-2 border-slate-300/80 shadow-[0_15px_40px_rgba(0,0,0,0.8)]'
           : 'retro-tape-chassis shadow-2xl'
-      } rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 relative select-none w-full max-w-xl sm:max-w-2xl mx-auto ${className}`}
+      } rounded-2xl sm:rounded-3xl p-2 sm:p-4 md:p-5 relative select-none w-full max-w-xl mx-auto ${className}`}
     >
       {/* 4 Corner Screws */}
       <div
-        className={`absolute top-2.5 left-2.5 sm:top-3 sm:left-3 ${
+        className={`absolute top-2 left-2 sm:top-2.5 sm:left-2.5 ${
           isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-90 sm:scale-125`}
+        } scale-75 sm:scale-100`}
       />
       <div
-        className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 ${
+        className={`absolute top-2 right-2 sm:top-2.5 sm:right-2.5 ${
           isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-90 sm:scale-125`}
+        } scale-75 sm:scale-100`}
       />
       <div
-        className={`absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 ${
+        className={`absolute bottom-2 left-2 sm:bottom-2.5 sm:left-2.5 ${
           isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-90 sm:scale-125`}
+        } scale-75 sm:scale-100`}
       />
       <div
-        className={`absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 ${
+        className={`absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5 ${
           isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-90 sm:scale-125`}
+        } scale-75 sm:scale-100`}
       />
 
       {/* Hi-Fi Header with Silkscreen Markings */}
       <div
-        className={`flex items-center justify-between px-2 sm:px-3 pt-1 sm:pt-2 pb-2 sm:pb-3 ${
+        className={`flex items-center justify-between px-1.5 sm:px-3 pt-0.5 sm:pt-1 pb-1 sm:pb-2 ${
           isSteel ? 'border-b border-slate-400/40' : 'border-b border-white/10'
-        } mb-2 sm:mb-4`}
+        } mb-1.5 sm:mb-2.5`}
       >
         <div>
           {isSteel && (
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="font-sans font-black text-xs sm:text-sm tracking-widest text-slate-800">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="font-sans font-black text-[11px] sm:text-xs tracking-widest text-slate-800">
                 SONY
               </span>
-              <span className="text-[9px] sm:text-[10px] text-slate-600 font-mono-retro font-bold">
+              <span className="text-[8.5px] sm:text-[9.5px] text-slate-600 font-mono-retro font-bold">
                 TA-1150 SERIES
               </span>
             </div>
           )}
           <h3
-            className={`font-rock text-lg sm:text-xl md:text-2xl tracking-widest uppercase flex items-center gap-1.5 sm:gap-2 ${
+            className={`font-rock text-sm sm:text-lg md:text-xl tracking-widest uppercase flex items-center gap-1.5 ${
               isSteel ? 'text-slate-900' : 'text-white'
             }`}
           >
             MIXTAPE DECK
             <span
-              className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded font-mono-retro font-bold border ${
+              className={`text-[8px] sm:text-[9.5px] px-1 sm:px-1.5 py-0.2 rounded font-mono-retro font-bold border ${
                 isSteel
                   ? 'bg-amber-500/20 text-amber-900 border-amber-600/40'
                   : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
@@ -552,7 +552,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             </span>
           </h3>
           <p
-            className={`text-[9px] sm:text-[11px] font-mono-retro ${
+            className={`text-[8px] sm:text-[9.5px] font-mono-retro ${
               isSteel ? 'text-slate-600' : 'text-zinc-400'
             }`}
           >
@@ -560,10 +560,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           </p>
         </div>
 
-        {/* Big Mechanical Tape Counter */}
+        {/* Mechanical Tape Counter */}
         <div className="flex flex-col items-end">
           <span
-            className={`text-[8px] sm:text-[10px] font-mono-retro font-bold ${
+            className={`text-[7.5px] sm:text-[9px] font-mono-retro font-bold ${
               isSteel ? 'text-slate-700' : 'text-zinc-400'
             }`}
           >
@@ -572,12 +572,12 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           <div
             className={`${
               isSteel ? 'bg-slate-900 border-slate-700' : 'retro-counter-display'
-            } px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md flex items-center gap-0.5 sm:gap-1 font-mono-retro text-sm sm:text-lg font-bold text-amber-400 tracking-wider shadow-inner`}
+            } px-1 sm:px-2 py-0.5 rounded flex items-center gap-0.5 font-mono-retro text-xs sm:text-sm font-bold text-amber-400 tracking-wider shadow-inner`}
           >
             {counterStr.split('').map((digit, idx) => (
               <span
                 key={idx}
-                className="bg-black/90 px-1 sm:px-1.5 py-0.5 rounded text-center min-w-[10px] sm:min-w-[14px] border border-white/5"
+                className="bg-black/90 px-0.5 sm:px-1 py-0.2 rounded text-center min-w-[8px] sm:min-w-[11px] border border-white/5"
               >
                 {digit}
               </span>
@@ -586,9 +586,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         </div>
       </div>
 
-      {/* Massive Cassette Bay with Rotating Video & Handwritten Label */}
+      {/* Cassette Bay with Rotating Video & Handwritten Label */}
       <div
-        className={`retro-tape-window rounded-xl sm:rounded-2xl aspect-[16/9] w-full relative overflow-hidden shadow-2xl border-2 sm:border-4 ${
+        className={`retro-tape-window rounded-xl aspect-[16/9] max-h-[140px] sm:max-h-[190px] md:max-h-[220px] w-full relative overflow-hidden shadow-2xl border-2 sm:border-3 mx-auto ${
           isSteel ? 'border-slate-700/80' : 'border-zinc-800'
         }`}
       >
@@ -615,8 +615,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group/overlay z-30"
         >
           {!isPlaying && (
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-black/70 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl">
-              <Play className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 fill-amber-400 ml-1" />
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-black/70 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl">
+              <Play className="w-5 h-5 sm:w-7 sm:h-7 text-amber-400 fill-amber-400 ml-0.5" />
             </div>
           )}
         </div>
@@ -624,34 +624,34 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
       {/* Lower Deck Controls & VU Meters Bar */}
       <div
-        className={`mt-2 sm:mt-4 pt-2 sm:pt-3 ${
+        className={`mt-1.5 sm:mt-2.5 pt-1.5 sm:pt-2 ${
           isSteel ? 'border-t border-slate-400/35' : 'border-t border-white/10'
-        } flex items-center justify-between flex-wrap gap-2 sm:gap-4 px-1 sm:px-2`}
+        } flex items-center justify-between gap-1.5 px-0.5 sm:px-2`}
       >
         {/* Authentic Analog Backlit Incandescent VU Meters when in Steel mode, or LED meters */}
         {isSteel ? (
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {renderNeedleMeter(vuLeft, 'LEFT')}
             {renderNeedleMeter(vuRight, 'RIGHT')}
           </div>
         ) : (
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="text-[8px] sm:text-[9px] font-mono-retro font-bold text-zinc-400 w-3">
                 L
               </span>
               {renderMeterBar(vuLeft)}
-              <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">
-                -20 0 +3 dB
+              <span className="text-[7.5px] sm:text-[9px] font-mono-retro text-zinc-500">
+                -20 +3dB
               </span>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <span className="text-[8px] sm:text-[9px] font-mono-retro font-bold text-zinc-400 w-3">
                 R
               </span>
               {renderMeterBar(vuRight)}
-              <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">
-                -20 0 +3 dB
+              <span className="text-[7.5px] sm:text-[9px] font-mono-retro text-zinc-500">
+                -20 +3dB
               </span>
             </div>
           </div>
@@ -659,13 +659,13 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
         {/* 80s Rock Tape Specs */}
         <div
-          className={`flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-mono-retro ${
+          className={`flex items-center gap-1.5 sm:gap-2 text-[8.5px] sm:text-[10px] font-mono-retro ${
             isSteel ? 'text-slate-700' : 'text-zinc-400'
           }`}
         >
-          <div className="flex items-center gap-1 sm:gap-1.5">
+          <div className="flex items-center gap-1">
             <span
-              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full ${
                 isPlaying
                   ? isSteel
                     ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'
@@ -683,8 +683,6 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               {isPlaying ? 'MOTOR ON' : 'STOP'}
             </span>
           </div>
-          <span className="hidden xs:inline">|</span>
-          <span className="hidden xs:inline">DOLBY B NR</span>
           <span>|</span>
           <span
             className={`font-bold ${
