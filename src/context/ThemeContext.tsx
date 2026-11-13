@@ -13,7 +13,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentTheme, setCurrentTheme] = useState<ThemeScheme>(() => {
     const saved = localStorage.getItem('pulse_theme');
     const found = THEME_SCHEMES.find((t) => t.id === saved);
-    return found || THEME_SCHEMES[0]; // Default to Ocean Blue (#1b62a3)
+    // If user has not explicitly set retro-rock-80s yet, default to retro-rock-80s for the new 80s aesthetic
+    return found && saved !== 'ocean-blue' ? found : THEME_SCHEMES[0];
   });
 
   useEffect(() => {

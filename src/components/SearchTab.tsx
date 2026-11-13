@@ -241,11 +241,19 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-44 relative">
       {/* Header and Search Box */}
-      <div>
+      <div className="retro-tape-chassis rounded-3xl p-5 sm:p-6 shadow-2xl border-2 border-[#262f40] relative">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
-            Buscar Música
-          </h1>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+              <span className="font-mono-retro text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+                DIAL DE BÚSQUEDA • FRECUENCIA DIRECTA
+              </span>
+            </div>
+            <h1 className="font-rock text-3xl sm:text-4xl tracking-widest text-white leading-tight">
+              SINTONIZADOR DE MÚSICA
+            </h1>
+          </div>
 
           {/* Multi-select toggle button */}
           {results.length > 0 && (
@@ -253,7 +261,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               {isMultiSelectMode && (
                 <button
                   onClick={selectAll}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl font-stereo text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition flex items-center gap-1.5 border border-white/10"
                 >
                   {selectedIds.size === sortedResults.length ? (
                     <>
@@ -274,10 +282,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   setIsMultiSelectMode(!isMultiSelectMode);
                   if (isMultiSelectMode) setSelectedIds(new Set());
                 }}
-                className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5 ${
+                className={`px-4 py-1.5 rounded-xl font-stereo text-xs font-semibold transition border flex items-center gap-1.5 ${
                   isMultiSelectMode
-                    ? 'bg-white text-black border-white shadow-md'
-                    : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                    ? 'bg-amber-400 text-black border-amber-400 shadow-md font-bold'
+                    : 'bg-[#151a24] hover:bg-[#1e2534] text-zinc-300 border-white/10'
                 }`}
               >
                 {isMultiSelectMode ? (
@@ -297,77 +305,77 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         </div>
 
         <div className="relative">
-          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escribe canción, artista o pega enlace de YouTube..."
-            className="w-full pl-12 pr-28 py-3.5 rounded-2xl glass-input text-base placeholder:text-zinc-500 shadow-xl transition"
+            placeholder="Escribe artista de rock, canción, disco o enlace de YouTube..."
+            className="w-full pl-12 pr-28 py-3.5 rounded-2xl glass-input font-stereo text-base placeholder:text-zinc-500 shadow-xl transition"
           />
           <button
             onClick={() => handleSearch(query)}
             disabled={isSearching}
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-xl text-white text-sm font-semibold transition disabled:opacity-50 theme-btn"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-5 py-1.5 rounded-xl text-amber-300 hover:text-white font-rock text-base tracking-wider transition disabled:opacity-50 theme-btn active:scale-95"
           >
-            {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+            {isSearching ? <Loader2 className="w-4 h-4 animate-spin text-amber-400" /> : 'SINTONIZAR'}
           </button>
         </div>
 
         {/* Source Filter Switcher & Sort Options */}
-        <div className="flex items-center justify-between gap-3 mt-3 overflow-x-auto pb-1 text-xs flex-wrap">
+        <div className="flex items-center justify-between gap-3 mt-4 overflow-x-auto pb-1 text-xs flex-wrap border-t border-white/5 pt-3">
           <div className="flex items-center gap-2">
-            <span className="text-zinc-500 font-semibold mr-1">Fuente:</span>
+            <span className="font-mono-retro text-[10px] text-zinc-400 font-bold uppercase mr-1">
+              FUENTE:
+            </span>
             <button
               onClick={() => handleFilterChange('all')}
-              className={`px-3 py-1.5 rounded-xl font-medium transition ${
+              className={`px-3 py-1.5 rounded-lg font-stereo font-bold uppercase tracking-wider transition border ${
                 selectedFilter === 'all'
-                  ? 'bg-white text-black font-semibold'
-                  : 'bg-white/5 text-zinc-400 hover:text-white'
+                  ? 'bg-amber-400 text-black border-amber-400 shadow-md'
+                  : 'bg-black/40 text-zinc-400 hover:text-white border-white/5'
               }`}
             >
-              Todas
+              TODAS
             </button>
             <button
               onClick={() => handleFilterChange('youtube')}
-              className="px-3 py-1.5 rounded-xl font-medium transition"
-              style={
+              className={`px-3 py-1.5 rounded-lg font-stereo font-bold uppercase tracking-wider transition border ${
                 selectedFilter === 'youtube'
-                  ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
-                  : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
-              }
+                  ? 'bg-red-500 text-white border-red-500 shadow-md'
+                  : 'bg-black/40 text-zinc-400 hover:text-white border-white/5'
+              }`}
             >
-              YouTube
+              YOUTUBE
             </button>
             <button
               onClick={() => handleFilterChange('audius')}
-              className="px-3 py-1.5 rounded-xl font-medium transition"
-              style={
+              className={`px-3 py-1.5 rounded-lg font-stereo font-bold uppercase tracking-wider transition border ${
                 selectedFilter === 'audius'
-                  ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
-                  : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
-              }
+                  ? 'bg-cyan-500 text-black border-cyan-500 shadow-md'
+                  : 'bg-black/40 text-zinc-400 hover:text-white border-white/5'
+              }`}
             >
-              Audius
+              AUDIUS
             </button>
           </div>
 
           {/* Sort By Dropdown */}
           {results.length > 0 && (
             <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-3.5 h-3.5 text-zinc-400" />
-              <span className="text-zinc-500 font-semibold">Orden:</span>
+              <ArrowUpDown className="w-3.5 h-3.5 text-amber-500" />
+              <span className="font-mono-retro text-[10px] text-zinc-400 font-bold uppercase">ORDEN:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-white focus:outline-none"
+                className="bg-black/70 border border-white/10 rounded-xl px-2.5 py-1 text-xs text-amber-400 font-mono-retro focus:outline-none"
               >
                 <option value="views" className="bg-zinc-900 text-white">
                   Más reproducidos (Destacados)
                 </option>
                 <option value="duration" className="bg-zinc-900 text-white">
-                  Mayor duración
+                  Mayor duración (Conciertos)
                 </option>
                 <option value="title" className="bg-zinc-900 text-white">
                   Título (A-Z)

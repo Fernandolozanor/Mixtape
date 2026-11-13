@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Play,
-  Sparkles,
   Flame,
   Headphones,
   RefreshCw,
@@ -82,59 +81,57 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
 
   return (
     <div className="space-y-10 max-w-5xl mx-auto pb-32">
-      {/* Hero Welcome */}
-      <div
-        className="relative overflow-hidden rounded-3xl p-8 md:p-10 border border-white/10 shadow-2xl transition-all"
-        style={{
-          background: `linear-gradient(135deg, rgba(${currentTheme.rgb}, 0.25) 0%, rgba(10, 16, 26, 0.9) 100%)`,
-        }}
-      >
-        <div className="max-w-xl space-y-3 relative z-10">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border"
-            style={{
-              backgroundColor: currentTheme.badgeBg,
-              color: currentTheme.badgeText,
-              borderColor: currentTheme.badgeBorder,
-            }}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>PWA Musical Inteligente</span>
+      {/* 80s Rock Audio Hi-Fi Receiver Hero Banner */}
+      <div className="retro-tape-chassis rounded-3xl p-6 sm:p-10 relative overflow-hidden shadow-2xl border-2 border-[#262f40]">
+        {/* 4 Corner Screws */}
+        <div className="absolute top-2.5 left-2.5 retro-screw" />
+        <div className="absolute top-2.5 right-2.5 retro-screw" />
+        <div className="absolute bottom-2.5 left-2.5 retro-screw" />
+        <div className="absolute bottom-2.5 right-2.5 retro-screw" />
+
+        <div className="max-w-2xl space-y-3.5 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-black/60 border border-amber-500/40 font-mono-retro text-xs font-bold text-amber-400">
+            <Radio className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+            <span>PLETINA ANALÓGICA DE ALTA FIDELIDAD • MODEL 1984</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            Música seleccionada para ti.
+
+          <h1 className="font-rock text-4xl sm:text-6xl text-white tracking-widest drop-shadow-md leading-none">
+            SISTEMA HI-FI ESTÉREO <span className="text-amber-400">'84</span>
           </h1>
-          <p className="text-zinc-300 text-sm md:text-base">
-            El sistema aprende de tus búsquedas, listas y favoritos para descubrirte canciones afines.
+
+          <p className="text-zinc-300 font-stereo text-sm sm:text-base tracking-wide">
+            Reproducción analógica de catálogo completo sin anuncios. El cabezal aprende de tus escuchas para recomendarte directos míticos, rarezas y temas afines.
           </p>
-          <div className="pt-2 flex items-center gap-3">
+
+          <div className="pt-2 flex items-center gap-3 flex-wrap">
             <button
-              onClick={() => onSearchGenre('Top Éxitos')}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-black font-semibold hover:bg-zinc-200 transition shadow-lg active:scale-95 text-sm"
+              onClick={() => onSearchGenre('80s Rock Classics')}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl theme-btn active:scale-95 text-base"
             >
-              <Play className="w-4 h-4 fill-black" />
-              <span>Explorar Catálogo</span>
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+              <span>Explorar Grandes Éxitos</span>
             </button>
 
             <button
               onClick={() => loadRecommendations(true)}
               disabled={isLoadingRecs}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold transition border border-white/10 text-sm disabled:opacity-50"
-              title="Volver a analizar gustos y actualizar"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/50 hover:bg-black/70 text-zinc-300 hover:text-white font-stereo text-sm font-semibold tracking-wider transition border border-white/10 active:scale-95 disabled:opacity-50"
+              title="Volver a analizar gustos y actualizar pletina"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoadingRecs ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualizar Recomendaciones</span>
+              <RefreshCw className={`w-4 h-4 text-amber-400 ${isLoadingRecs ? 'animate-spin' : ''}`} />
+              <span>Sintonizar Preferencias</span>
             </button>
           </div>
         </div>
 
-        {/* Ambient glow in corner */}
-        <div
-          className="absolute right-0 top-0 -mr-16 -mt-16 w-80 h-80 rounded-full blur-3xl pointer-events-none"
-          style={{
-            backgroundColor: `rgba(${currentTheme.rgb}, 0.25)`,
-          }}
-        />
+        {/* Vintage VU meter aesthetic overlay in corner */}
+        <div className="absolute right-4 bottom-4 hidden lg:flex items-center gap-3 bg-black/50 p-3 rounded-xl border border-white/10 font-mono-retro text-[10px] text-zinc-400">
+          <div className="flex flex-col gap-1">
+            <span className="text-amber-400 font-bold">STEREO PEAK</span>
+            <span>TYPE II CrO2</span>
+          </div>
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+        </div>
       </div>
 
       {/* Personalized Recommendations Section */}

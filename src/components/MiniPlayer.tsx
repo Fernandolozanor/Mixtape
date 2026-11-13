@@ -30,12 +30,16 @@ export const MiniPlayer: React.FC = () => {
   return (
     <div
       onClick={() => setFullScreenPlayerOpen(true)}
-      className="fixed bottom-16 md:bottom-3 left-2 right-2 md:left-68 md:right-4 z-30 cursor-pointer transition-all duration-300"
+      className="fixed bottom-16 md:bottom-2.5 left-2 right-2 md:left-68 md:right-4 z-30 cursor-pointer transition-all duration-300"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-[#0e1624]/90 backdrop-blur-2xl border border-white/10 shadow-2xl p-2.5 flex items-center justify-between gap-3">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#171c26] via-[#11151e] to-[#0e1219] border-2 border-[#263042] shadow-[0_10px_30px_rgba(0,0,0,0.85)] p-2.5 flex items-center justify-between gap-3">
+        {/* Chassis corner screws */}
+        <div className="absolute top-1.5 left-1.5 retro-screw scale-75" />
+        <div className="absolute top-1.5 right-1.5 retro-screw scale-75" />
+
         {/* Track Info */}
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-md">
+        <div className="flex items-center gap-3 overflow-hidden pl-1.5">
+          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md border border-white/10">
             <img
               src={currentTrack.thumbnail}
               alt={currentTrack.title}
@@ -43,9 +47,9 @@ export const MiniPlayer: React.FC = () => {
               loading="lazy"
             />
             {isPlaying && (
-              <div className="absolute inset-0 bg-black/35 flex items-center justify-center backdrop-blur-[0.5px]">
+              <div className="absolute inset-0 bg-black/45 flex items-center justify-center backdrop-blur-[0.5px]">
                 <Disc3
-                  className="w-5 h-5 text-amber-400 animate-spin"
+                  className="w-6 h-6 text-amber-400 animate-spin"
                   style={{ animationDuration: '2.5s' }}
                 />
               </div>
@@ -53,36 +57,33 @@ export const MiniPlayer: React.FC = () => {
           </div>
 
           <div className="overflow-hidden">
-            <p className="text-sm font-semibold text-white truncate">{currentTrack.title}</p>
-            <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-              <span className="truncate">{currentTrack.artist}</span>
-              <span>•</span>
-              <span
-                className="text-[10px] px-1.5 py-0.2 rounded font-medium border"
-                style={{
-                  backgroundColor: currentTheme.badgeBg,
-                  color: currentTheme.badgeText,
-                  borderColor: currentTheme.badgeBorder,
-                }}
-              >
+            <p className="font-stereo text-sm sm:text-base font-bold text-white tracking-wide truncate">
+              {currentTrack.title}
+            </p>
+            <div className="flex items-center gap-2 text-xs truncate">
+              <span className="text-amber-400 font-mono font-semibold truncate">
+                {currentTrack.artist}
+              </span>
+              <span className="text-zinc-600">•</span>
+              <span className="text-[10px] font-mono-retro font-bold px-1.5 py-0.2 rounded bg-black/50 text-emerald-400 border border-emerald-500/30">
                 {sourceLabel}
               </span>
             </div>
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* 80s Rock Mechanical Transport Controls */}
         <div
-          className="flex items-center gap-2 shrink-0 pr-1"
+          className="flex items-center gap-1.5 sm:gap-2 shrink-0 pr-1"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => toggleLike(currentTrack)}
-            className="p-2 text-zinc-400 hover:text-white transition"
+            className="p-2 text-zinc-400 hover:text-amber-400 transition"
             aria-label="Me gusta"
           >
             <Heart
-              className="w-5 h-5 transition-colors"
+              className="w-4 h-4 transition-colors"
               style={{
                 fill: liked ? currentTheme.accent : 'none',
                 color: liked ? currentTheme.accent : 'currentColor',
@@ -90,47 +91,52 @@ export const MiniPlayer: React.FC = () => {
             />
           </button>
 
-          {/* Previous Track Button */}
+          {/* Previous Track Button - Mechanical bevel */}
           <button
             onClick={prevTrack}
-            className="p-2 text-zinc-300 hover:text-white transition"
+            className="p-2.5 rounded-xl bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-t border-white/20 border-b-2 border-black/80 transition active:translate-y-0.5"
             aria-label="Canción anterior"
-            title="Anterior"
+            title="REW ⏪"
           >
-            <SkipBack className="w-5 h-5" />
+            <SkipBack className="w-4 h-4 text-amber-400 fill-amber-400" />
           </button>
 
+          {/* Main Play / Pause Key */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg"
+            className="w-11 h-11 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black flex items-center justify-center transition shadow-lg border-t border-white/40 border-b-2 border-amber-900 active:translate-y-0.5"
             aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+            title={isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-zinc-800" />
+              <Loader2 className="w-5 h-5 animate-spin text-black" />
             ) : isPlaying ? (
-              <Pause className="w-5 h-5 fill-black" />
+              <Pause className="w-5 h-5 fill-black text-black" />
             ) : (
-              <Play className="w-5 h-5 fill-black ml-0.5" />
+              <Play className="w-5 h-5 fill-black text-black ml-0.5" />
             )}
           </button>
 
+          {/* Next Track Button - Mechanical bevel */}
           <button
             onClick={nextTrack}
-            className="p-2 text-zinc-300 hover:text-white transition"
+            className="p-2.5 rounded-xl bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-t border-white/20 border-b-2 border-black/80 transition active:translate-y-0.5"
             aria-label="Siguiente"
+            title="FF ⏩"
           >
-            <SkipForward className="w-5 h-5" />
+            <SkipForward className="w-4 h-4 text-amber-400 fill-amber-400" />
           </button>
         </div>
 
-        {/* Progress Bar line along bottom */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
+        {/* Progress Bar styled like analog tape level with amber glow */}
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/60">
           <div
             className="h-full transition-all duration-200"
             style={{
               width: `${progressPercent}%`,
-              background: currentTheme.gradient,
+              background: 'linear-gradient(90deg, #1d5494 0%, #f59e0b 80%, #ef4444 100%)',
+              boxShadow: '0 0 6px rgba(245, 158, 11, 0.7)',
             }}
           />
         </div>

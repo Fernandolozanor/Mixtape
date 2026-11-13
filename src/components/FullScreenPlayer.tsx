@@ -159,17 +159,17 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         {/* Title, Artist and Heart */}
         <div className="flex items-center justify-between gap-4">
           <div className="overflow-hidden">
-            <h2 className="text-xl md:text-2xl font-bold text-white truncate drop-shadow-md">
+            <h2 className="font-rock text-3xl sm:text-4xl text-white tracking-widest truncate drop-shadow-md">
               {currentTrack.title}
             </h2>
-            <p className="text-sm md:text-base text-zinc-300 font-medium truncate">
+            <p className="text-base text-amber-400 font-mono font-bold tracking-wide truncate">
               {currentTrack.artist}
             </p>
           </div>
 
           <button
             onClick={() => toggleLike(currentTrack)}
-            className="p-2 text-zinc-300 hover:text-white transition shrink-0"
+            className="p-2 text-zinc-300 hover:text-amber-400 transition shrink-0"
             aria-label="Me gusta"
           >
             <Heart
@@ -191,66 +191,70 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               max={duration || 100}
               value={currentTime}
               onChange={(e) => seek(parseFloat(e.target.value))}
-              className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-white hover:h-2 transition-all"
+              className="w-full h-2 bg-black/60 rounded-full appearance-none cursor-pointer accent-amber-400 border border-white/10"
             />
           </div>
-          <div className="flex justify-between text-xs font-semibold text-zinc-400 tabular-nums">
+          <div className="flex justify-between text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider">
             <span>{formatTime(currentTime)}</span>
             <span>-{formatTime(remainingTime)}</span>
           </div>
         </div>
 
-        {/* Playback Controls */}
-        <div className="flex items-center justify-between py-1">
+        {/* Playback Controls - 80s Rock Mechanical Deck */}
+        <div className="flex items-center justify-between py-2">
           {/* Shuffle Button */}
           <button
             onClick={toggleShuffle}
-            className="p-3 rounded-full transition"
+            className="p-3 rounded-xl transition border border-white/10 active:translate-y-0.5"
             style={
               isShuffle
                 ? {
-                    color: currentTheme.accent,
-                    backgroundColor: `rgba(${currentTheme.rgb}, 0.2)`,
+                    color: '#fbbf24',
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 0.4)',
                   }
-                : { color: '#a1a1aa' }
+                : { color: '#94a3b8', backgroundColor: '#131822' }
             }
             aria-label="Aleatorio"
           >
             <Shuffle className="w-5 h-5" />
           </button>
 
-          {/* Previous Track */}
+          {/* Previous Track - Mechanical */}
           <button
             onClick={prevTrack}
-            className="p-3 text-white hover:scale-110 active:scale-95 transition"
+            className="p-3.5 rounded-2xl bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90 active:translate-y-0.5 shadow-lg transition"
             aria-label="Anterior"
+            title="REW ⏪"
           >
-            <SkipBack className="w-8 h-8 fill-current" />
+            <SkipBack className="w-7 h-7 fill-amber-400 text-amber-400" />
           </button>
 
-          {/* Large Play/Pause Button */}
+          {/* Large Play/Pause Heavy Rock Key */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-18 h-18 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-2xl shadow-white/20"
+            className="w-18 h-18 rounded-2xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black flex items-center justify-center transition shadow-2xl border-t-2 border-white/50 border-b-4 border-amber-950 active:translate-y-1 hover:brightness-110"
             aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+            title={isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
-              <Loader2 className="w-8 h-8 animate-spin text-zinc-800" />
+              <Loader2 className="w-8 h-8 animate-spin text-black" />
             ) : isPlaying ? (
-              <Pause className="w-8 h-8 fill-black" />
+              <Pause className="w-8 h-8 fill-black text-black" />
             ) : (
-              <Play className="w-8 h-8 fill-black ml-1" />
+              <Play className="w-8 h-8 fill-black text-black ml-1" />
             )}
           </button>
 
-          {/* Next Track */}
+          {/* Next Track - Mechanical */}
           <button
             onClick={nextTrack}
-            className="p-3 text-white hover:scale-110 active:scale-95 transition"
+            className="p-3.5 rounded-2xl bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90 active:translate-y-0.5 shadow-lg transition"
             aria-label="Siguiente"
+            title="FF ⏩"
           >
-            <SkipForward className="w-8 h-8 fill-current" />
+            <SkipForward className="w-7 h-7 fill-amber-400 text-amber-400" />
           </button>
 
           {/* Repeat Button */}

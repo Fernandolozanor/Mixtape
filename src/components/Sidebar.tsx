@@ -30,38 +30,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 h-screen bg-[#0b1019]/80 backdrop-blur-2xl border-r border-white/5 p-4 select-none shrink-0">
-      {/* Brand Logo with Dynamic Theme Gradient */}
-      <div className="flex items-center gap-3 px-3 py-4 mb-4">
-        <div
-          className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg"
-          style={{
-            background: currentTheme.gradient,
-            boxShadow: `0 8px 20px rgba(${currentTheme.rgb}, 0.35)`,
-          }}
-        >
-          <Radio className="w-5 h-5 text-white animate-pulse" />
+    <aside className="hidden md:flex flex-col w-64 h-screen bg-[#0e121a] border-r-2 border-[#1f2636] p-3.5 select-none shrink-0 shadow-2xl relative">
+      {/* 4 Corner Chassis Screws */}
+      <div className="absolute top-2 left-2 retro-screw" />
+      <div className="absolute top-2 right-2 retro-screw" />
+
+      {/* 80s Rock Audio Receiver Header */}
+      <div className="px-2 pt-2 pb-3 mb-3 border-b border-white/10 relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Radio className="w-5 h-5 text-amber-500 animate-pulse" />
+            <h1 className="font-rock text-2xl tracking-widest text-amber-400 drop-shadow">
+              PULSE <span className="text-white">'84</span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded border border-white/10 font-mono-retro text-[10px] text-emerald-400 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+            HI-FI
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-            Pulse{' '}
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full font-bold border"
-              style={{
-                backgroundColor: currentTheme.badgeBg,
-                color: currentTheme.badgeText,
-                borderColor: currentTheme.badgeBorder,
-              }}
-            >
-              PRO
-            </span>
-          </h1>
-          <p className="text-xs text-zinc-400">Sin anuncios • Hi-Fi</p>
-        </div>
+        <p className="text-[9px] font-mono tracking-wider text-zinc-400 uppercase mt-0.5">
+          STEREO CASSETTE RECEIVER • 3-HEAD
+        </p>
       </div>
 
-      {/* Main Navigation */}
-      <nav className="space-y-1 mb-5">
+      {/* Main Navigation - 80s Push Buttons */}
+      <nav className="space-y-1.5 mb-4">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -69,71 +63,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all duration-100 ${
                 isActive
-                  ? 'text-white font-semibold shadow-sm'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-gradient-to-r from-[#20293a] to-[#141a26] text-amber-400 border border-amber-500/40 shadow-inner'
+                  : 'bg-[#121620] text-zinc-400 hover:text-white hover:bg-[#181e2b] border border-white/5'
               }`}
-              style={
-                isActive
-                  ? {
-                      backgroundColor: `rgba(${currentTheme.rgb}, 0.18)`,
-                      color: currentTheme.accent,
-                      border: `1px solid rgba(${currentTheme.rgb}, 0.3)`,
-                    }
-                  : {}
-              }
             >
-              <Icon
-                className="w-5 h-5"
-                style={{ color: isActive ? currentTheme.accent : undefined }}
-              />
-              <span>{item.label}</span>
+              <div className="flex items-center gap-3">
+                <Icon
+                  className="w-4 h-4"
+                  style={{ color: isActive ? currentTheme.accent : undefined }}
+                />
+                <span>{item.label}</span>
+              </div>
+              {isActive && (
+                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
+              )}
             </button>
           );
         })}
       </nav>
 
-      {/* Playlists Section */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-4">
-        <div className="flex items-center justify-between px-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-            Listas
+      {/* Playlists Section - Mixtape Rack */}
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3 min-h-0">
+        <div className="flex items-center justify-between px-2 pt-1 border-b border-white/5 pb-1">
+          <span className="text-[10px] font-mono-retro font-bold uppercase tracking-widest text-zinc-400">
+            CINTAS & MIXTAPES
           </span>
           <button
             onClick={openNewPlaylistModal}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-white/10 transition"
-            title="Crear nueva lista"
+            className="p-1 rounded bg-white/5 hover:bg-white/10 text-amber-400 hover:text-white border border-white/5 transition"
+            title="Grabar nueva cinta / lista"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        <div className="space-y-0.5">
+        <div className="space-y-1">
           {playlists.map((playlist) => (
             <button
               key={playlist.id}
               onClick={() => setActiveTab(`playlist:${playlist.id}`)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-left truncate transition ${
+              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-mono truncate transition border ${
                 activeTab === `playlist:${playlist.id}`
-                  ? 'font-medium'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'
+                  : 'text-zinc-400 hover:text-white bg-black/20 hover:bg-white/5 border-transparent'
               }`}
-              style={
-                activeTab === `playlist:${playlist.id}`
-                  ? {
-                      color: currentTheme.accent,
-                      backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
-                    }
-                  : {}
-              }
             >
-              <ListMusic className="w-4 h-4 shrink-0 text-zinc-500" />
+              <ListMusic className="w-3.5 h-3.5 shrink-0 text-amber-500/70" />
               <span className="truncate">{playlist.name}</span>
             </button>
           ))}
           {playlists.length === 0 && (
-            <p className="text-xs text-zinc-500 px-3 italic">No hay listas aún</p>
+            <p className="text-[11px] text-zinc-500 px-2 italic font-mono">Sin cintas grabadas</p>
           )}
         </div>
       </div>

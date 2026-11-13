@@ -442,64 +442,75 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   // 3. Main Library Overview
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-32">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold tracking-tight text-white">
-          Biblioteca
-        </h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+            <span className="font-mono-retro text-[10px] uppercase font-bold tracking-widest text-zinc-400">
+              ARCHIVO DE AUDIO ANALÓGICO
+            </span>
+          </div>
+          <h1 className="font-rock text-3xl sm:text-4xl tracking-widest text-white leading-tight">
+            ESTANTERÍA DE CINTAS & MIXTAPES
+          </h1>
+        </div>
+
         <button
           onClick={openNewPlaylistModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition shadow-md theme-btn"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl theme-btn text-base active:scale-95"
         >
           <Plus className="w-4 h-4" />
-          <span>Nueva Lista</span>
+          <span>GRABAR CINTA +</span>
         </button>
       </div>
 
-      {/* Favorites Banner Card */}
+      {/* Favorites Banner Card - Styled as Golden Master Cassette */}
       <div
         onClick={() => setSelectedPlaylistId('favorites')}
-        className="p-5 rounded-3xl border cursor-pointer hover:border-white/30 transition flex items-center justify-between"
-        style={{
-          background: `linear-gradient(135deg, rgba(${currentTheme.rgb}, 0.35) 0%, rgba(10, 16, 26, 0.7) 100%)`,
-          borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
-        }}
+        className="retro-tape-chassis p-5 sm:p-6 rounded-3xl cursor-pointer hover:border-amber-500/50 transition-all flex items-center justify-between border-2 border-[#2b3548] relative group overflow-hidden"
       >
         <div className="flex items-center gap-4">
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0"
+            className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shrink-0 border border-white/20"
             style={{
-              background: currentTheme.gradient,
+              background: 'linear-gradient(135deg, #1d5494 0%, #d97706 100%)',
             }}
           >
-            <Heart className="w-7 h-7 fill-white text-white" />
+            <Heart className="w-8 h-8 fill-amber-300 text-amber-300 group-hover:scale-110 transition" />
           </div>
           <div>
-            <p className="text-base font-bold text-white">Canciones Favoritas</p>
-            <p className="text-xs text-zinc-400">{likedTracks.length} canciones guardadas</p>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-mono-retro font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                CINTA MASTER ORO
+              </span>
+              <span className="text-xs font-mono text-zinc-400">SIDE A/B</span>
+            </div>
+            <p className="font-rock text-2xl text-white tracking-wider mt-0.5">CANCIONES FAVORITAS</p>
+            <p className="text-xs font-mono text-amber-400/80">{likedTracks.length} pistas guardadas en el cabezal</p>
           </div>
         </div>
-        <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
-          <Play className="w-4 h-4 fill-white" />
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-black flex items-center justify-center shadow-lg group-hover:scale-110 transition border-t border-white/40">
+          <Play className="w-5 h-5 fill-black ml-0.5" />
         </div>
       </div>
 
-      {/* Playlists Grid */}
+      {/* Playlists Grid - Mixtape Rack */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-            Tus Listas ({playlists.length})
+          <p className="font-mono-retro text-xs font-bold uppercase tracking-widest text-zinc-400">
+            TUS MIXTAPES GRABADAS ({playlists.length})
           </p>
         </div>
 
         {playlists.length === 0 ? (
-          <div className="p-8 text-center glass-card rounded-2xl text-zinc-400">
-            <p className="text-sm">Aún no has creado listas de reproducción.</p>
+          <div className="p-10 text-center retro-tape-chassis rounded-3xl border border-white/10 text-zinc-400">
+            <p className="font-rock text-xl text-white tracking-wider mb-1">LA PLETINA ESTÁ VACÍA</p>
+            <p className="text-xs font-mono text-zinc-400">No has grabado ninguna cinta de casette todavía.</p>
             <button
               onClick={openNewPlaylistModal}
-              className="mt-3 font-semibold text-sm hover:underline"
-              style={{ color: currentTheme.accent }}
+              className="mt-4 px-5 py-2 rounded-xl theme-btn text-sm"
             >
-              Crea tu primera lista
+              Grabar mi primera cinta
             </button>
           </div>
         ) : (
@@ -508,9 +519,10 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               <div
                 key={playlist.id}
                 onClick={() => setSelectedPlaylistId(playlist.id)}
-                className="glass-card glass-card-hover p-3.5 rounded-2xl cursor-pointer transition flex flex-col group relative"
+                className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
               >
-                <div className="w-full aspect-square rounded-xl bg-zinc-800/80 mb-3 overflow-hidden flex items-center justify-center relative shadow-md">
+                {/* Cassette Cover Window */}
+                <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
                   {playlist.coverUrl ? (
                     <img
                       src={playlist.coverUrl}
