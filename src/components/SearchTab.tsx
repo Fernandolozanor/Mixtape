@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
+import { recommendationService } from '../services/recommendationService';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -60,6 +61,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     const term = searchTerm.trim();
     if (!term) return;
 
+    recommendationService.recordSearch(term);
     setIsSearching(true);
     try {
       const tracks = await streamResolver.search(term, filter);
