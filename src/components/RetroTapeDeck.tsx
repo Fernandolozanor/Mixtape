@@ -252,14 +252,14 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             )}
           </div>
 
-          {/* Artist Name in handwriting right underneath */}
+          {/* Artist / Group Name in handwritten Red Ballpoint Pen right underneath */}
           {(writtenArtist || !currentTrack) && (
             <div className="w-full max-w-full overflow-hidden flex justify-center mt-0.2">
               {isTyping ? (
                 <p
-                  className="font-marker truncate max-w-full opacity-90 px-1"
+                  className="font-marker font-bold truncate max-w-full px-1"
                   style={{
-                    color: '#1a4682',
+                    color: '#b91c1c', // Authentic Bic / Pilot Red Pen Ink
                     fontSize:
                       size === 'sm'
                         ? '7.5px'
@@ -267,20 +267,20 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                         ? 'clamp(8.5px, 2.3vw, 11px)'
                         : '9px',
                     lineHeight: 1.15,
-                    textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
+                    textShadow: '0 0 0.5px rgba(185, 28, 28, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                     mixBlendMode: 'multiply',
                   }}
                 >
                   {artistText}
-                  <span className="inline-block w-0.5 h-2 bg-[#1a4682] ml-0.5 animate-pulse rounded-sm" />
+                  <span className="inline-block w-0.5 h-2 bg-[#b91c1c] ml-0.5 animate-pulse rounded-sm" />
                 </p>
               ) : (
                 <MarqueeTitle
                   text={artistText}
                   centered={true}
-                  className="font-marker opacity-90 px-1"
+                  className="font-marker font-bold px-1"
                   style={{
-                    color: '#1a4682',
+                    color: '#b91c1c', // Authentic Bic / Pilot Red Pen Ink
                     fontSize:
                       size === 'sm'
                         ? '7.5px'
@@ -288,7 +288,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                         ? 'clamp(8.5px, 2.3vw, 11px)'
                         : '9px',
                     lineHeight: 1.15,
-                    textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
+                    textShadow: '0 0 0.5px rgba(185, 28, 28, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                     mixBlendMode: 'multiply',
                   }}
                 />
