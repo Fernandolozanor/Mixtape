@@ -1,5 +1,6 @@
 import React from 'react';
 import { Compass, Search, Library, Heart, Settings } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface BottomNavProps {
   activeTab: string;
@@ -12,6 +13,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   setActiveTab,
   openSettingsModal,
 }) => {
+  const { currentTheme } = useTheme();
+
   const tabs = [
     { id: 'home', label: 'Escuchar', icon: Compass },
     { id: 'search', label: 'Buscar', icon: Search },
@@ -37,9 +40,10 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                   setActiveTab(tab.id);
                 }
               }}
-              className={`flex flex-col items-center justify-center flex-1 py-1 transition-colors ${
-                isActive ? 'text-pink-500' : 'text-zinc-400 hover:text-white'
-              }`}
+              className="flex flex-col items-center justify-center flex-1 py-1 transition-colors"
+              style={{
+                color: isActive ? currentTheme.accent : undefined,
+              }}
             >
               <Icon className="w-5 h-5 mb-0.5" />
               <span className="text-[10px] font-medium tracking-tight">{tab.label}</span>

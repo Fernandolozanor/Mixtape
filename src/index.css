@@ -3,11 +3,20 @@
 @layer base {
   :root {
     --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --theme-primary: #1b62a3;
+    --theme-rgb: 27, 98, 163;
+    --theme-secondary: #0284c7;
+    --theme-accent: #38bdf8;
+    --theme-gradient: linear-gradient(135deg, #1b62a3 0%, #0284c7 50%, #38bdf8 100%);
+    --theme-badge-bg: rgba(27, 98, 163, 0.25);
+    --theme-badge-text: #38bdf8;
+    --theme-badge-border: rgba(56, 189, 248, 0.35);
+    --theme-glow: rgba(27, 98, 163, 0.35);
   }
   
   html, body {
     font-family: var(--font-sans);
-    background-color: #08080a;
+    background-color: #06090e;
     color: #f4f4f6;
     overflow-x: hidden;
     touch-action: pan-x pan-y;
@@ -16,7 +25,6 @@
     -webkit-user-select: none;
   }
 
-  /* Safe areas for iPhone dynamic island, notch & home bar */
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
@@ -27,26 +35,26 @@
 
 /* Glassmorphism Classes styled after Apple iOS */
 .glass-nav {
-  background: rgba(18, 18, 22, 0.72);
+  background: rgba(10, 16, 26, 0.78);
   backdrop-filter: blur(24px) saturate(190%);
   -webkit-backdrop-filter: blur(24px) saturate(190%);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .glass-card-hover:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
 .glass-panel {
-  background: rgba(24, 24, 29, 0.82);
+  background: rgba(14, 20, 32, 0.88);
   backdrop-filter: blur(32px) saturate(200%);
   -webkit-backdrop-filter: blur(32px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -59,13 +67,41 @@
 }
 .glass-input:focus {
   background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(250, 45, 85, 0.6);
+  border-color: var(--theme-accent);
   outline: none;
 }
 
-/* Apple Music style vibrant glowing gradient backgrounds */
-.apple-gradient-text {
-  background: linear-gradient(135deg, #fa2d55 0%, #ff5e7e 50%, #c084fc 100%);
+/* Dynamic Theme Utilities */
+.theme-btn {
+  background-color: var(--theme-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--theme-glow);
+  transition: all 0.2s ease-in-out;
+}
+.theme-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+.theme-btn:active {
+  transform: scale(0.97);
+}
+
+.theme-text {
+  color: var(--theme-accent);
+}
+
+.theme-badge {
+  background-color: var(--theme-badge-bg);
+  color: var(--theme-badge-text);
+  border: 1px solid var(--theme-badge-border);
+}
+
+.theme-gradient-bg {
+  background: var(--theme-gradient);
+}
+
+.theme-gradient-text {
+  background: var(--theme-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -84,20 +120,4 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
-}
-
-/* Custom smooth animation for lyrics and modal transitions */
-@keyframes pulseSubtle {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.95;
-  }
-  50% {
-    transform: scale(1.02);
-    opacity: 1;
-  }
-}
-
-.animate-pulse-subtle {
-  animation: pulseSubtle 4s ease-in-out infinite;
 }

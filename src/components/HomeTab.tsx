@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Sparkles, Flame, Headphones } from 'lucide-react';
 import type { Track } from '../types/music';
 import { usePlayer } from '../context/PlayerContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface HomeTabProps {
   onSearchGenre: (genre: string) => void;
@@ -12,33 +13,33 @@ const FEATURED_CARDS = [
     id: 'lofi_chill',
     title: 'Lofi & Relax Beats',
     subtitle: 'Música perfecta para estudiar y concentrarse',
-    gradient: 'from-purple-900/60 via-indigo-900/40 to-black',
-    accent: '#a855f7',
+    gradient: 'from-blue-950/60 via-sky-950/40 to-black',
+    accent: '#38bdf8',
     query: 'Lofi hip hop beats to study relax',
   },
   {
     id: 'top_hits',
     title: 'Top Hits Internacional',
     subtitle: 'Lo más escuchado del momento',
-    gradient: 'from-pink-900/60 via-rose-900/40 to-black',
-    accent: '#f43f5e',
+    gradient: 'from-indigo-950/60 via-blue-950/40 to-black',
+    accent: '#60a5fa',
     query: 'Top hits 2026',
   },
   {
     id: 'synthwave',
     title: 'Synthwave & Retrowave',
     subtitle: 'Vibras retro futuristas electrónicas',
-    gradient: 'from-cyan-900/60 via-blue-900/40 to-black',
+    gradient: 'from-cyan-950/60 via-blue-950/40 to-black',
     accent: '#06b6d4',
-    query: 'Synthwave chillwave radio',
+    query: 'Synthwave chillwave',
   },
 ];
 
 const PRESET_CHANNELS = [
   {
     id: 'radio_lofi',
-    title: 'Lofi Girl Live',
-    artist: 'Lofi Stream',
+    title: 'Lofi Girl - Beats to relax/study to',
+    artist: 'Lofi Girl',
     duration: 0,
     thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=80',
     source: 'youtube' as const,
@@ -66,6 +67,7 @@ const PRESET_CHANNELS = [
 
 export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
   const { playTrack } = usePlayer();
+  const { currentTheme } = useTheme();
 
   const handlePlayPreset = (preset: typeof PRESET_CHANNELS[0]) => {
     const track: Track = {
@@ -75,6 +77,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
       duration: preset.duration,
       thumbnail: preset.thumbnail,
       source: 'youtube',
+      youtubeId: preset.videoId,
     };
     playTrack(track);
   };
@@ -82,9 +85,21 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-32">
       {/* Hero Welcome */}
-      <div className="relative overflow-hidden rounded-3xl p-8 md:p-10 border border-white/10 bg-gradient-to-r from-pink-950/40 via-purple-950/20 to-zinc-950 shadow-2xl">
+      <div
+        className="relative overflow-hidden rounded-3xl p-8 md:p-10 border border-white/10 shadow-2xl transition-all"
+        style={{
+          background: `linear-gradient(135deg, rgba(${currentTheme.rgb}, 0.25) 0%, rgba(10, 16, 26, 0.9) 100%)`,
+        }}
+      >
         <div className="max-w-xl space-y-3 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/10 text-pink-400 text-xs font-semibold border border-pink-500/20">
+          <div
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border"
+            style={{
+              backgroundColor: currentTheme.badgeBg,
+              color: currentTheme.badgeText,
+              borderColor: currentTheme.badgeBorder,
+            }}
+          >
             <Sparkles className="w-3.5 h-3.5" />
             <span>PWA Musical Sin Anuncios</span>
           </div>
@@ -92,7 +107,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
             Escucha la música que amas con pureza total.
           </h1>
           <p className="text-zinc-300 text-sm md:text-base">
-            Diseño refinado, letras en tiempo real y listas sincronizadas en la nube.
+            Diseño refinado, canciones completas, letras en tiempo real y listas sincronizadas en la nube.
           </p>
           <div className="pt-2">
             <button
@@ -106,13 +121,18 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
         </div>
 
         {/* Ambient glow in corner */}
-        <div className="absolute right-0 top-0 -mr-16 -mt-16 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div
+          className="absolute right-0 top-0 -mr-16 -mt-16 w-80 h-80 rounded-full blur-3xl pointer-events-none"
+          style={{
+            backgroundColor: `rgba(${currentTheme.rgb}, 0.25)`,
+          }}
+        />
       </div>
 
       {/* Featured Collection Cards */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Flame className="w-5 h-5 text-pink-500" />
+          <Flame className="w-5 h-5" style={{ color: currentTheme.accent }} />
           <h2 className="text-lg font-bold text-white tracking-tight">Destacados</h2>
         </div>
 
@@ -144,7 +164,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
       {/* Live / Ambient Channels */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Headphones className="w-5 h-5 text-purple-400" />
+          <Headphones className="w-5 h-5" style={{ color: currentTheme.accent }} />
           <h2 className="text-lg font-bold text-white tracking-tight">Canales Continuos</h2>
         </div>
 

@@ -2,6 +2,8 @@ import React from 'react';
 import { Heart, Plus, ListMusic, Play, Trash2 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
+import { useTheme } from '../context/ThemeContext';
+import { audioEngine } from '../services/audioEngine';
 
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
@@ -18,6 +20,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 }) => {
   const { playlists, likedTracks, deletePlaylist, removeTrackFromPlaylist } = useLibrary();
   const { playTrack, currentTrack } = usePlayer();
+  const { currentTheme } = useTheme();
 
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
@@ -34,11 +37,22 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       <div className="space-y-6 max-w-5xl mx-auto pb-32">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-400 flex items-center justify-center shadow-lg shadow-pink-600/30">
+            <div
+              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
+              style={{
+                background: currentTheme.gradient,
+                boxShadow: `0 8px 24px rgba(${currentTheme.rgb}, 0.35)`,
+              }}
+            >
               <Heart className="w-10 h-10 fill-white text-white" />
             </div>
             <div>
-              <p className="text-xs uppercase font-bold text-pink-500 tracking-wider">Lista Automática</p>
+              <p
+                className="text-xs uppercase font-bold tracking-wider"
+                style={{ color: currentTheme.accent }}
+              >
+                Lista Automática
+              </p>
               <h1 className="text-3xl font-extrabold text-white">Canciones Favoritas</h1>
               <p className="text-sm text-zinc-400">{likedTracks.length} canciones</p>
             </div>
@@ -47,7 +61,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           {likedTracks.length > 0 && (
             <button
               onClick={() => playTrack(likedTracks[0], likedTracks)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-pink-600 hover:bg-pink-500 text-white font-semibold shadow-lg transition"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-white font-semibold shadow-lg transition theme-btn"
             >
               <Play className="w-4 h-4 fill-white" />
               <span>Reproducir Todo</span>
@@ -69,9 +83,17 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 onClick={() => playTrack(track, likedTracks)}
                 className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition ${
                   currentTrack?.id === track.id
-                    ? 'bg-pink-500/15 border border-pink-500/20'
+                    ? 'border shadow-md'
                     : 'glass-card glass-card-hover'
                 }`}
+                style={
+                  currentTrack?.id === track.id
+                    ? {
+                        backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
+                        borderColor: `rgba(${currentTheme.rgb}, 0.3)`,
+                      }
+                    : {}
+                }
               >
                 <div className="flex items-center gap-3 overflow-hidden">
                   <img
@@ -81,13 +103,16 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   />
                   <div className="overflow-hidden">
                     <p
-                      className={`text-sm font-semibold truncate ${
-                        currentTrack?.id === track.id ? 'text-pink-400' : 'text-white'
-                      }`}
+                      className="text-sm font-semibold truncate"
+                      style={{
+                        color: currentTrack?.id === track.id ? currentTheme.accent : '#ffffff',
+                      }}
                     >
                       {track.title}
                     </p>
-                    <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
+                    <p className="text-xs text-zinc-400 truncate">
+                      {track.artist} • {audioEngine.getSourceLabel(track.source)}
+                    </p>
                   </div>
                 </div>
 
@@ -110,7 +135,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       <div className="space-y-6 max-w-5xl mx-auto pb-32">
         <button
           onClick={() => setSelectedPlaylistId(null)}
-          className="text-sm font-medium text-pink-400 hover:text-pink-300 transition"
+          className="text-sm font-medium hover:underline transition"
+          style={{ color: currentTheme.accent }}
         >
           ← Volver a la Biblioteca
         </button>
@@ -143,7 +169,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             {selectedPlaylist.tracks.length > 0 && (
               <button
                 onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-semibold shadow-lg transition"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold shadow-lg transition theme-btn"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>Reproducir</span>
@@ -179,9 +205,17 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 onClick={() => playTrack(track, selectedPlaylist.tracks)}
                 className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition ${
                   currentTrack?.id === track.id
-                    ? 'bg-pink-500/15 border border-pink-500/20'
+                    ? 'border shadow-md'
                     : 'glass-card glass-card-hover'
                 }`}
+                style={
+                  currentTrack?.id === track.id
+                    ? {
+                        backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
+                        borderColor: `rgba(${currentTheme.rgb}, 0.3)`,
+                      }
+                    : {}
+                }
               >
                 <div className="flex items-center gap-3 overflow-hidden">
                   <img
@@ -191,13 +225,16 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   />
                   <div className="overflow-hidden">
                     <p
-                      className={`text-sm font-semibold truncate ${
-                        currentTrack?.id === track.id ? 'text-pink-400' : 'text-white'
-                      }`}
+                      className="text-sm font-semibold truncate"
+                      style={{
+                        color: currentTrack?.id === track.id ? currentTheme.accent : '#ffffff',
+                      }}
                     >
                       {track.title}
                     </p>
-                    <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
+                    <p className="text-xs text-zinc-400 truncate">
+                      {track.artist} • {audioEngine.getSourceLabel(track.source)}
+                    </p>
                   </div>
                 </div>
 
@@ -233,7 +270,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </h1>
         <button
           onClick={openNewPlaylistModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold transition shadow-md"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold transition shadow-md theme-btn"
         >
           <Plus className="w-4 h-4" />
           <span>Nueva Lista</span>
@@ -243,10 +280,19 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       {/* Favorites Banner Card */}
       <div
         onClick={() => setSelectedPlaylistId('favorites')}
-        className="p-5 rounded-3xl bg-gradient-to-r from-pink-600/30 to-purple-600/20 border border-pink-500/30 cursor-pointer hover:border-pink-500/50 transition flex items-center justify-between"
+        className="p-5 rounded-3xl border cursor-pointer hover:border-white/30 transition flex items-center justify-between"
+        style={{
+          background: `linear-gradient(135deg, rgba(${currentTheme.rgb}, 0.35) 0%, rgba(10, 16, 26, 0.7) 100%)`,
+          borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
+        }}
       >
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center shadow-lg shadow-pink-500/30">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+            style={{
+              background: currentTheme.gradient,
+            }}
+          >
             <Heart className="w-7 h-7 fill-white text-white" />
           </div>
           <div>
@@ -270,7 +316,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             <p className="text-sm">Aún no has creado listas de reproducción.</p>
             <button
               onClick={openNewPlaylistModal}
-              className="mt-3 text-pink-400 font-semibold text-sm hover:underline"
+              className="mt-3 font-semibold text-sm hover:underline"
+              style={{ color: currentTheme.accent }}
             >
               Crea tu primera lista
             </button>

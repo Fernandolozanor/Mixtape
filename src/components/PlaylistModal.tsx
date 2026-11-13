@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Check, ListMusic } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
+import { useTheme } from '../context/ThemeContext';
 import type { Track } from '../types/music';
 
 interface PlaylistModalProps {
@@ -15,6 +16,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
   trackToAdd,
 }) => {
   const { playlists, createPlaylist, addTrackToPlaylist } = useLibrary();
+  const { currentTheme } = useTheme();
   const [isCreatingNew, setIsCreatingNew] = useState(!trackToAdd || playlists.length === 0);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
@@ -67,7 +69,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
         </h2>
         {trackToAdd && (
           <p className="text-xs text-zinc-400 truncate mb-4">
-            Canción: <span className="text-pink-400">{trackToAdd.title}</span>
+            Canción: <span style={{ color: currentTheme.accent }}>{trackToAdd.title}</span>
           </p>
         )}
 
@@ -76,17 +78,23 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           <div className="flex gap-2 mb-4 p-1 bg-white/5 rounded-xl text-xs font-semibold">
             <button
               onClick={() => setIsCreatingNew(false)}
-              className={`flex-1 py-1.5 rounded-lg transition ${
-                !isCreatingNew ? 'bg-pink-600 text-white' : 'text-zinc-400'
-              }`}
+              className="flex-1 py-1.5 rounded-lg transition"
+              style={
+                !isCreatingNew
+                  ? { backgroundColor: currentTheme.primary, color: '#ffffff' }
+                  : { color: '#a1a1aa' }
+              }
             >
               Listas existentes
             </button>
             <button
               onClick={() => setIsCreatingNew(true)}
-              className={`flex-1 py-1.5 rounded-lg transition ${
-                isCreatingNew ? 'bg-pink-600 text-white' : 'text-zinc-400'
-              }`}
+              className="flex-1 py-1.5 rounded-lg transition"
+              style={
+                isCreatingNew
+                  ? { backgroundColor: currentTheme.primary, color: '#ffffff' }
+                  : { color: '#a1a1aa' }
+              }
             >
               Crear nueva
             </button>
@@ -104,7 +112,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 required
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
-                placeholder="Ej. Favoritos del verano"
+                placeholder="Ej. Favoritos para el coche"
                 className="w-full px-4 py-2.5 rounded-xl glass-input text-sm"
                 autoFocus
               />
@@ -118,7 +126,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 type="text"
                 value={newPlaylistDesc}
                 onChange={(e) => setNewPlaylistDesc(e.target.value)}
-                placeholder="Ej. Para escuchar en el coche"
+                placeholder="Ej. Para escuchar concentrado"
                 className="w-full px-4 py-2.5 rounded-xl glass-input text-sm"
               />
             </div>
@@ -133,7 +141,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold shadow-md transition"
+                className="px-5 py-2 rounded-xl text-white text-sm font-semibold shadow-md transition theme-btn"
               >
                 Guardar Lista
               </button>
@@ -159,7 +167,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                   </div>
 
                   {isAdded ? (
-                    <span className="flex items-center gap-1 text-xs text-green-400 font-semibold">
+                    <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold">
                       <Check className="w-4 h-4" /> Añadida
                     </span>
                   ) : (

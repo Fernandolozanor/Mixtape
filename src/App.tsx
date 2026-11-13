@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { LibraryProvider } from './context/LibraryContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Sidebar } from './components/Sidebar';
 import { BottomNav } from './components/BottomNav';
 import { MiniPlayer } from './components/MiniPlayer';
@@ -130,11 +131,13 @@ const AppContent: React.FC = () => {
 
 export function App() {
   return (
-    <LibraryProvider>
-      <PlayerProvider>
-        <AppContent />
-      </PlayerProvider>
-    </LibraryProvider>
+    <ThemeProvider>
+      <LibraryProvider>
+        <PlayerProvider>
+          <AppContent />
+        </PlayerProvider>
+      </LibraryProvider>
+    </ThemeProvider>
   );
 }
 

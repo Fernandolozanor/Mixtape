@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
@@ -48,6 +49,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   } = usePlayer();
 
   const { isLiked, toggleLike } = useLibrary();
+  const { currentTheme } = useTheme();
 
   // Active Center View: 'artwork' | 'lyrics' | 'queue'
   const [centerView, setCenterView] = useState<'artwork' | 'lyrics' | 'queue'>('artwork');
@@ -91,7 +93,14 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
             FUENTE DE REPRODUCCIÓN
           </span>
-          <span className="text-xs font-bold text-pink-400 bg-pink-500/15 px-3 py-0.5 rounded-full mt-0.5 border border-pink-500/25">
+          <span
+            className="text-xs font-bold px-3 py-0.5 rounded-full mt-0.5 border"
+            style={{
+              backgroundColor: currentTheme.badgeBg,
+              color: currentTheme.badgeText,
+              borderColor: currentTheme.badgeBorder,
+            }}
+          >
             {audioEngine.getSourceLabel(currentTrack.source)}
           </span>
         </div>
@@ -109,7 +118,12 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       <main className="flex-1 flex flex-col items-center justify-center px-6 min-h-0">
         {centerView === 'artwork' && (
           <div className="w-full max-w-sm aspect-square my-auto relative group">
-            <div className="w-full h-full rounded-3xl overflow-hidden shadow-2xl shadow-pink-500/10 border border-white/10 transition-transform duration-500">
+            <div
+              className="w-full h-full rounded-3xl overflow-hidden shadow-2xl border border-white/10 transition-transform duration-500"
+              style={{
+                boxShadow: `0 20px 50px rgba(${currentTheme.rgb}, 0.25)`,
+              }}
+            >
               <img
                 src={currentTrack.thumbnail}
                 alt={currentTrack.title}
@@ -147,13 +161,15 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
           <button
             onClick={() => toggleLike(currentTrack)}
-            className="p-2 text-zinc-300 hover:text-pink-500 transition shrink-0"
+            className="p-2 text-zinc-300 hover:text-white transition shrink-0"
             aria-label="Me gusta"
           >
             <Heart
-              className={`w-7 h-7 ${
-                liked ? 'fill-pink-500 text-pink-500' : 'text-zinc-300'
-              }`}
+              className="w-7 h-7 transition-colors"
+              style={{
+                fill: liked ? currentTheme.accent : 'none',
+                color: liked ? currentTheme.accent : 'currentColor',
+              }}
             />
           </button>
         </div>
@@ -176,14 +192,20 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           </div>
         </div>
 
-        {/* Playback Controls (Apple Music Style) */}
+        {/* Playback Controls */}
         <div className="flex items-center justify-between py-1">
           {/* Shuffle Button */}
           <button
             onClick={toggleShuffle}
-            className={`p-3 rounded-full transition ${
-              isShuffle ? 'text-pink-500 bg-pink-500/10' : 'text-zinc-400 hover:text-white'
-            }`}
+            className="p-3 rounded-full transition"
+            style={
+              isShuffle
+                ? {
+                    color: currentTheme.accent,
+                    backgroundColor: `rgba(${currentTheme.rgb}, 0.2)`,
+                  }
+                : { color: '#a1a1aa' }
+            }
             aria-label="Aleatorio"
           >
             <Shuffle className="w-5 h-5" />
@@ -226,11 +248,15 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           {/* Repeat Button */}
           <button
             onClick={toggleRepeat}
-            className={`p-3 rounded-full transition ${
+            className="p-3 rounded-full transition"
+            style={
               repeatMode !== 'off'
-                ? 'text-pink-500 bg-pink-500/10'
-                : 'text-zinc-400 hover:text-white'
-            }`}
+                ? {
+                    color: currentTheme.accent,
+                    backgroundColor: `rgba(${currentTheme.rgb}, 0.2)`,
+                  }
+                : { color: '#a1a1aa' }
+            }
             aria-label="Repetir"
           >
             {repeatMode === 'one' ? (

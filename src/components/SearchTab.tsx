@@ -4,6 +4,7 @@ import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
 const GENRE_TAGS = [
@@ -31,6 +32,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
 
   const { playTrack, currentTrack } = usePlayer();
   const { isLiked, toggleLike } = useLibrary();
+  const { currentTheme } = useTheme();
 
   const handleSearch = async (searchTerm: string, filter: AudioSourceType | 'all' = selectedFilter) => {
     const term = searchTerm.trim();
@@ -90,7 +92,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
+            style={{
+              backgroundColor: currentTheme.badgeBg,
+              color: currentTheme.badgeText,
+              borderColor: currentTheme.badgeBorder,
+            }}
+          >
             {audioEngine.getSourceLabel(source)}
           </span>
         );
@@ -106,7 +115,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             Buscar Música
           </h1>
           <span className="text-xs text-zinc-400 hidden sm:inline">
-            Fuentes: YouTube • Audius (Canciones completas)
+            Canciones completas sin anuncios
           </span>
         </div>
 
@@ -123,7 +132,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
           <button
             onClick={() => handleSearch(query)}
             disabled={isSearching}
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold transition disabled:opacity-50"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-xl text-white text-sm font-semibold transition disabled:opacity-50 theme-btn"
           >
             {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
           </button>
@@ -144,21 +153,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
           </button>
           <button
             onClick={() => handleFilterChange('youtube')}
-            className={`px-3 py-1.5 rounded-xl font-medium transition ${
+            className="px-3 py-1.5 rounded-xl font-medium transition"
+            style={
               selectedFilter === 'youtube'
-                ? 'bg-red-600 text-white font-semibold'
-                : 'bg-white/5 text-zinc-400 hover:text-white'
-            }`}
+                ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
+                : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
+            }
           >
             YouTube (Completa)
           </button>
           <button
             onClick={() => handleFilterChange('audius')}
-            className={`px-3 py-1.5 rounded-xl font-medium transition ${
+            className="px-3 py-1.5 rounded-xl font-medium transition"
+            style={
               selectedFilter === 'audius'
-                ? 'bg-cyan-600 text-white font-semibold'
-                : 'bg-white/5 text-zinc-400 hover:text-white'
-            }`}
+                ? { backgroundColor: currentTheme.primary, color: '#ffffff', fontWeight: 600 }
+                : { backgroundColor: 'rgba(255,255,255,0.05)', color: '#a1a1aa' }
+            }
           >
             Audius (Completa)
           </button>
@@ -195,7 +206,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Resultados ({results.length})
             </p>
-            <span className="text-xs text-zinc-500">Canciones completas sin anuncios</span>
+            <span className="text-xs text-zinc-500">Canciones completas</span>
           </div>
 
           <div className="space-y-1.5">
@@ -208,10 +219,16 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
                   key={track.id}
                   onClick={() => playTrack(track, results)}
                   className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition group ${
-                    isCurrent
-                      ? 'bg-pink-500/15 border border-pink-500/30 shadow-lg shadow-pink-500/10'
-                      : 'glass-card glass-card-hover'
+                    isCurrent ? 'border shadow-md' : 'glass-card glass-card-hover'
                   }`}
+                  style={
+                    isCurrent
+                      ? {
+                          backgroundColor: `rgba(${currentTheme.rgb}, 0.16)`,
+                          borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
+                        }
+                      : {}
+                  }
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md">
@@ -229,9 +246,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
                     <div className="overflow-hidden">
                       <div className="flex items-center gap-2">
                         <p
-                          className={`text-sm font-semibold truncate ${
-                            isCurrent ? 'text-pink-400' : 'text-white'
-                          }`}
+                          className="text-sm font-semibold truncate"
+                          style={{
+                            color: isCurrent ? currentTheme.accent : '#ffffff',
+                          }}
                         >
                           {track.title}
                         </p>
@@ -256,13 +274,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
 
                     <button
                       onClick={() => toggleLike(track)}
-                      className="p-2 text-zinc-400 hover:text-pink-500 transition"
+                      className="p-2 text-zinc-400 hover:text-white transition"
                       title="Me gusta"
                     >
                       <Heart
-                        className={`w-4 h-4 ${
-                          liked ? 'fill-pink-500 text-pink-500' : ''
-                        }`}
+                        className="w-4 h-4 transition-colors"
+                        style={{
+                          fill: liked ? currentTheme.accent : 'none',
+                          color: liked ? currentTheme.accent : 'currentColor',
+                        }}
                       />
                     </button>
 

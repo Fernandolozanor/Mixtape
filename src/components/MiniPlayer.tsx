@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Pause, SkipForward, Heart, Loader2 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 
 export const MiniPlayer: React.FC = () => {
@@ -17,6 +18,7 @@ export const MiniPlayer: React.FC = () => {
   } = usePlayer();
 
   const { isLiked, toggleLike } = useLibrary();
+  const { currentTheme } = useTheme();
 
   if (!currentTrack) return null;
 
@@ -29,7 +31,7 @@ export const MiniPlayer: React.FC = () => {
       onClick={() => setFullScreenPlayerOpen(true)}
       className="fixed bottom-16 md:bottom-3 left-2 right-2 md:left-68 md:right-4 z-30 cursor-pointer transition-all duration-300"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-zinc-900/90 backdrop-blur-2xl border border-white/10 shadow-2xl p-2.5 flex items-center justify-between gap-3">
+      <div className="relative overflow-hidden rounded-2xl bg-[#0e1624]/90 backdrop-blur-2xl border border-white/10 shadow-2xl p-2.5 flex items-center justify-between gap-3">
         {/* Track Info */}
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-md">
@@ -41,7 +43,10 @@ export const MiniPlayer: React.FC = () => {
             />
             {isPlaying && (
               <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <span className="w-2 h-2 rounded-full bg-pink-500 animate-ping" />
+                <span
+                  className="w-2 h-2 rounded-full animate-ping"
+                  style={{ backgroundColor: currentTheme.accent }}
+                />
               </div>
             )}
           </div>
@@ -51,7 +56,14 @@ export const MiniPlayer: React.FC = () => {
             <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
               <span className="truncate">{currentTrack.artist}</span>
               <span>•</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-pink-400 font-medium">
+              <span
+                className="text-[10px] px-1.5 py-0.2 rounded font-medium border"
+                style={{
+                  backgroundColor: currentTheme.badgeBg,
+                  color: currentTheme.badgeText,
+                  borderColor: currentTheme.badgeBorder,
+                }}
+              >
                 {sourceLabel}
               </span>
             </div>
@@ -65,13 +77,15 @@ export const MiniPlayer: React.FC = () => {
         >
           <button
             onClick={() => toggleLike(currentTrack)}
-            className="p-2 text-zinc-400 hover:text-pink-500 transition"
+            className="p-2 text-zinc-400 hover:text-white transition"
             aria-label="Me gusta"
           >
             <Heart
-              className={`w-5 h-5 ${
-                liked ? 'fill-pink-500 text-pink-500' : 'text-zinc-400'
-              }`}
+              className="w-5 h-5 transition-colors"
+              style={{
+                fill: liked ? currentTheme.accent : 'none',
+                color: liked ? currentTheme.accent : 'currentColor',
+              }}
             />
           </button>
 
@@ -102,8 +116,11 @@ export const MiniPlayer: React.FC = () => {
         {/* Progress Bar line along bottom */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/10">
           <div
-            className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-200"
-            style={{ width: `${progressPercent}%` }}
+            className="h-full transition-all duration-200"
+            style={{
+              width: `${progressPercent}%`,
+              background: currentTheme.gradient,
+            }}
           />
         </div>
       </div>

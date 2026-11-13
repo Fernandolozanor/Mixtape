@@ -3,6 +3,7 @@ import { X, Cloud, Shield, Database, Trash2, LogIn, LogOut } from 'lucide-react'
 import { useLibrary } from '../context/LibraryContext';
 import { firebaseService } from '../services/firebase';
 import { cacheService } from '../services/cacheService';
+import { ThemeSelector } from './ThemeSelector';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -65,6 +66,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         </button>
 
         <h2 className="text-xl font-bold text-white mb-6">Ajustes de Pulse</h2>
+
+        {/* Section 0: Color Theme Selection */}
+        <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
+          <ThemeSelector />
+        </div>
 
         {/* Section 1: Firebase Cloud Sync */}
         <div className="space-y-3 mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
