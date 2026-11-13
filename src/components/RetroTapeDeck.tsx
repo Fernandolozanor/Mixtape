@@ -294,7 +294,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
   /**
    * Renders the handwritten blue ballpoint pen ink directly onto the video's blank masking tape.
-   * Proportions and font sizes are tuned to prevent any vertical cut-off.
+   * Proportions and font sizes are tuned to sit strictly within the cassette's paper label.
    */
   const renderHandwrittenTapeLabel = (size: 'sm' | 'md' | 'lg') => {
     const titleText = writtenTitle || (currentTrack ? '' : 'MIXTAPE');
@@ -304,10 +304,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       <div
         className="absolute pointer-events-none flex flex-col justify-center items-center text-center overflow-hidden z-20"
         style={{
-          top: '7.5%',
-          left: '12%',
-          width: '76%',
-          height: '24%',
+          top: '6.5%',
+          left: '14%',
+          width: '72%',
+          height: '18%',
           transform: 'rotate(-0.25deg)',
         }}
       >
@@ -321,11 +321,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                   color: '#153b6e', // Authentic Bic Blue Ink
                   fontSize:
                     size === 'sm'
-                      ? '9.5px'
+                      ? '9px'
                       : size === 'lg'
-                      ? 'clamp(11.5px, 3.2vw, 15.5px)'
-                      : '11.5px',
-                  lineHeight: 1.15,
+                      ? 'clamp(9.5px, 2.7vw, 12.5px)'
+                      : '10px',
+                  lineHeight: 1.05,
                   textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                   mixBlendMode: 'multiply',
                 }}
@@ -342,11 +342,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                   color: '#153b6e',
                   fontSize:
                     size === 'sm'
-                      ? '9.5px'
+                      ? '9px'
                       : size === 'lg'
-                      ? 'clamp(11.5px, 3.2vw, 15.5px)'
-                      : '11.5px',
-                  lineHeight: 1.15,
+                      ? 'clamp(9.5px, 2.7vw, 12.5px)'
+                      : '10px',
+                  lineHeight: 1.05,
                   textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                   mixBlendMode: 'multiply',
                 }}
@@ -356,7 +356,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
           {/* Artist / Group Name in handwritten Red Ballpoint Pen right underneath */}
           {(writtenArtist || !currentTrack) && (
-            <div className="w-full max-w-full overflow-hidden flex justify-center mt-0.2">
+            <div className="w-full max-w-full overflow-hidden flex justify-center mt-0.5">
               {isTyping ? (
                 <p
                   className="font-marker font-bold truncate max-w-full px-1"
@@ -364,11 +364,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                     color: '#b91c1c', // Authentic Bic / Pilot Red Pen Ink
                     fontSize:
                       size === 'sm'
-                        ? '7.5px'
+                        ? '7px'
                         : size === 'lg'
-                        ? 'clamp(8.5px, 2.3vw, 11px)'
-                        : '9px',
-                    lineHeight: 1.15,
+                        ? 'clamp(7.5px, 2vw, 9.5px)'
+                        : '8px',
+                    lineHeight: 1.0,
                     textShadow: '0 0 0.5px rgba(185, 28, 28, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                     mixBlendMode: 'multiply',
                   }}
@@ -385,11 +385,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                     color: '#b91c1c', // Authentic Bic / Pilot Red Pen Ink
                     fontSize:
                       size === 'sm'
-                        ? '7.5px'
+                        ? '7px'
                         : size === 'lg'
-                        ? 'clamp(8.5px, 2.3vw, 11px)'
-                        : '9px',
-                    lineHeight: 1.15,
+                        ? 'clamp(7.5px, 2vw, 9.5px)'
+                        : '8px',
+                    lineHeight: 1.0,
                     textShadow: '0 0 0.5px rgba(185, 28, 28, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                     mixBlendMode: 'multiply',
                   }}
@@ -596,19 +596,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         isSteel
           ? 'retro-brushed-steel border-2 border-slate-300/80 shadow-[0_15px_40px_rgba(0,0,0,0.8)]'
           : 'retro-tape-chassis shadow-2xl'
-      } rounded-2xl sm:rounded-3xl p-2 sm:p-4 md:p-5 relative select-none w-full max-w-xl mx-auto ${className}`}
+      } rounded-2xl sm:rounded-3xl p-2 sm:p-3.5 md:p-4 relative select-none w-full max-w-lg sm:max-w-xl mx-auto ${className}`}
     >
-      {/* 4 Corner Screws */}
-      <div
-        className={`absolute top-2 left-2 sm:top-2.5 sm:left-2.5 ${
-          isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-75 sm:scale-100`}
-      />
-      <div
-        className={`absolute top-2 right-2 sm:top-2.5 sm:right-2.5 ${
-          isSteel ? 'retro-screw-steel' : 'retro-screw'
-        } scale-75 sm:scale-100`}
-      />
+      {/* Bottom Chassis Corner Screws (Top screws removed to maximize space & keep header clean) */}
       <div
         className={`absolute bottom-2 left-2 sm:bottom-2.5 sm:left-2.5 ${
           isSteel ? 'retro-screw-steel' : 'retro-screw'
@@ -622,9 +612,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
       {/* Hi-Fi Header with Silkscreen Markings */}
       <div
-        className={`flex items-center justify-between px-1.5 sm:px-3 pt-0.5 sm:pt-1 pb-1 sm:pb-2 ${
+        className={`flex items-center justify-between px-1 sm:px-2 pt-0 pb-1 sm:pb-1.5 ${
           isSteel ? 'border-b border-slate-400/40' : 'border-b border-white/10'
-        } mb-1.5 sm:mb-2.5`}
+        } mb-1 sm:mb-2`}
       >
         <div>
           {isSteel && (
@@ -688,9 +678,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         </div>
       </div>
 
-      {/* Cassette Bay with Rotating Video & Handwritten Label */}
+      {/* Cassette Bay with Rotating Video & Handwritten Label - Uncropped True 16:9 Aspect */}
       <div
-        className={`retro-tape-window rounded-xl aspect-[16/9] max-h-[140px] sm:max-h-[190px] md:max-h-[220px] w-full relative overflow-hidden shadow-2xl border-2 sm:border-3 mx-auto ${
+        className={`retro-tape-window rounded-xl aspect-[16/9] w-full max-w-[325px] sm:max-w-[420px] relative overflow-hidden shadow-2xl border-2 sm:border-3 mx-auto ${
           isSteel ? 'border-slate-700/80' : 'border-zinc-800'
         }`}
       >
@@ -702,7 +692,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           muted
           playsInline
           preload="auto"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain sm:object-cover"
         />
 
         {/* Handwritten Ink on the physical blank label of the cassette */}
