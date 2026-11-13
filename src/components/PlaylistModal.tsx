@@ -8,16 +8,25 @@ interface PlaylistModalProps {
   isOpen: boolean;
   onClose: () => void;
   trackToAdd?: Track | null;
+  tracksToAdd?: Track[] | null;
 }
 
 export const PlaylistModal: React.FC<PlaylistModalProps> = ({
   isOpen,
   onClose,
   trackToAdd,
+  tracksToAdd,
 }) => {
-  const { playlists, createPlaylist, addTrackToPlaylist } = useLibrary();
+  const { playlists, createPlaylist, addTracksToPlaylist } = useLibrary();
   const { currentTheme } = useTheme();
-  const [isCreatingNew, setIsCreatingNew] = useState(!trackToAdd || playlists.length === 0);
+
+  const allTracksToAdd: Track[] = tracksToAdd && tracksToAdd.length > 0 
+    ? tracksToAdd 
+    : trackToAdd ? [trackToAdd] : [];
+
+  const hasTracks = allTracksToAdd.length > 0;
+
+  const [isCreatingNew, setIsCreatingNew] = useState(!hasTracks || playlists.length === 0);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
@@ -29,8 +38,8 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
     if (!newPlaylistName.trim()) return;
 
     const created = createPlaylist(newPlaylistName, newPlaylistDesc);
-    if (trackToAdd) {
-      addTrackToPlaylist(created.id, trackToAdd);
+    if (hasTracks) {
+      addTracksToPlaylist(created.id, allTracksToAdd);
       setAddedSuccessId(created.id);
       setTimeout(() => {
         onClose();
@@ -45,8 +54,8 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
   };
 
   const handleAddToExisting = (playlistId: string) => {
-    if (!trackToAdd) return;
-    addTrackToPlaylist(playlistId, trackToAdd);
+    if (!hasTracks) return;
+    addTracksToPlaylist(playlistId, allTracksToAdd);
     setAddedSuccessId(playlistId);
     setTimeout(() => {
       onClose();
@@ -65,16 +74,28 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
         </button>
 
         <h2 className="text-xl font-bold text-white mb-1">
-          {trackToAdd ? 'Añadir a lista' : 'Nueva lista de reproducción'}
+          {hasTracks
+            ? allTracksToAdd.length === 1
+              ? 'Añadir a lista'
+              : `Añadir ${allTracksToAdd.length} canciones a lista`
+            : 'Nueva lista de reproducción'}
         </h2>
-        {trackToAdd && (
+        {hasTracks && (
           <p className="text-xs text-zinc-400 truncate mb-4">
-            Canción: <span style={{ color: currentTheme.accent }}>{trackToAdd.title}</span>
+            {allTracksToAdd.length === 1 ? (
+              <>
+                Canción: <span style={{ color: currentTheme.accent }}>{allTracksToAdd[0].title}</span>
+              </>
+            ) : (
+              <span>
+                Seleccionadas: <strong className="text-white">{allTracksToAdd.length} canciones</strong>
+              </span>
+            )}
           </p>
         )}
 
         {/* Option to create new or select existing */}
-        {trackToAdd && playlists.length > 0 && (
+        {hasTracks && playlists.length > 0 && (
           <div className="flex gap-2 mb-4 p-1 bg-white/5 rounded-xl text-xs font-semibold">
             <button
               onClick={() => setIsCreatingNew(false)}
@@ -143,7 +164,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 type="submit"
                 className="px-5 py-2 rounded-xl text-white text-sm font-semibold shadow-md transition theme-btn"
               >
-                Guardar Lista
+                {hasTracks ? `Guardar y Añadir (${allTracksToAdd.length})` : 'Guardar Lista'}
               </button>
             </div>
           </form>
@@ -168,7 +189,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
 
                   {isAdded ? (
                     <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold">
-                      <Check className="w-4 h-4" /> Añadida
+                      <Check className="w-4 h-4" /> Añadidas
                     </span>
                   ) : (
                     <Plus className="w-4 h-4 text-zinc-400" />

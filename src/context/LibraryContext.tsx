@@ -11,10 +11,12 @@ interface LibraryContextType {
   updatePlaylist: (id: string, updates: { name?: string; description?: string; coverUrl?: string }) => void;
   deletePlaylist: (id: string) => void;
   addTrackToPlaylist: (playlistId: string, track: Track) => void;
+  addTracksToPlaylist: (playlistId: string, tracks: Track[]) => void;
   removeTrackFromPlaylist: (playlistId: string, trackId: string) => void;
   reorderPlaylistTracks: (playlistId: string, fromIndex: number, toIndex: number) => void;
   reorderLikedTracks: (fromIndex: number, toIndex: number) => void;
   toggleLike: (track: Track) => void;
+  addMultipleToLiked: (tracks: Track[]) => void;
   removeLikedTrack: (trackId: string) => void;
   clearLikedTracks: () => void;
   isLiked: (trackId: string) => boolean;
@@ -139,15 +141,26 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const addTrackToPlaylist = (playlistId: string, track: Track) => {
+    addTracksToPlaylist(playlistId, [track]);
+  };
+
+  const addTracksToPlaylist = (playlistId: string, tracks: Track[]) => {
+    if (!tracks || tracks.length === 0) return;
     setPlaylists((prev) => {
       const updated = prev.map((p) => {
         if (p.id === playlistId) {
-          if (p.tracks.some((t) => t.id === track.id)) return p;
-          const updatedTracks = [...p.tracks, { ...track, addedAt: Date.now() }];
+          const existingIds = new Set(p.tracks.map((t) => t.id));
+          const newTracks = tracks
+            .filter((t) => !existingIds.has(t.id))
+            .map((t) => ({ ...t, addedAt: Date.now() }));
+
+          if (newTracks.length === 0) return p;
+
+          const merged = [...p.tracks, ...newTracks];
           return {
             ...p,
-            tracks: updatedTracks,
-            coverUrl: p.coverUrl || track.thumbnail,
+            tracks: merged,
+            coverUrl: p.coverUrl || newTracks[0]?.thumbnail || p.coverUrl,
             updatedAt: Date.now(),
           };
         }
@@ -225,6 +238,22 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const addMultipleToLiked = (tracks: Track[]) => {
+    if (!tracks || tracks.length === 0) return;
+    setLikedTracks((prev) => {
+      const existingIds = new Set(prev.map((t) => t.id));
+      const newTracks = tracks
+        .filter((t) => !existingIds.has(t.id))
+        .map((t) => ({ ...t, addedAt: Date.now() }));
+
+      if (newTracks.length === 0) return prev;
+
+      const updated = [...newTracks, ...prev];
+      firebaseService.saveLikedTracks(updated);
+      return updated;
+    });
+  };
+
   const removeLikedTrack = (trackId: string) => {
     setLikedTracks((prev) => {
       const updated = prev.filter((t) => t.id !== trackId);
@@ -252,10 +281,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updatePlaylist,
         deletePlaylist,
         addTrackToPlaylist,
+        addTracksToPlaylist,
         removeTrackFromPlaylist,
         reorderPlaylistTracks,
         reorderLikedTracks,
         toggleLike,
+        addMultipleToLiked,
         removeLikedTrack,
         clearLikedTracks,
         isLiked,

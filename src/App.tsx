@@ -19,12 +19,20 @@ const AppContent: React.FC = () => {
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
+  const [tracksToAdd, setTracksToAdd] = useState<Track[] | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
   const { currentTrack } = usePlayer();
 
   const handleOpenAddToPlaylist = (track?: Track | null) => {
     setTrackToAdd(track ?? currentTrack);
+    setTracksToAdd(null);
+    setIsPlaylistModalOpen(true);
+  };
+
+  const handleOpenAddMultipleToPlaylist = (tracks: Track[]) => {
+    setTracksToAdd(tracks);
+    setTrackToAdd(null);
     setIsPlaylistModalOpen(true);
   };
 
@@ -62,6 +70,7 @@ const AppContent: React.FC = () => {
         {activeTab === 'search' && (
           <SearchTab
             onSelectTrackForPlaylist={handleOpenAddToPlaylist}
+            onSelectMultipleForPlaylist={handleOpenAddMultipleToPlaylist}
             initialQuery={searchQuery}
           />
         )}
@@ -117,8 +126,10 @@ const AppContent: React.FC = () => {
         onClose={() => {
           setIsPlaylistModalOpen(false);
           setTrackToAdd(null);
+          setTracksToAdd(null);
         }}
         trackToAdd={trackToAdd}
+        tracksToAdd={tracksToAdd}
       />
 
       <SettingsModal
