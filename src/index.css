@@ -421,3 +421,23 @@
   border: 1px solid #334155;
   cursor: pointer;
 }
+
+/* ==========================================================================
+   SMOOTH MARQUEE PING-PONG ANIMATION (Auto-scroll for long titles)
+   ========================================================================== */
+@keyframes marquee-pingpong {
+  0%, 20% {
+    transform: translateX(0);
+  }
+  50%, 70% {
+    transform: translateX(var(--marquee-distance, -60px));
+  }
+  92%, 100% {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-pingpong {
+  display: inline-block;
+  animation: marquee-pingpong var(--marquee-duration, 6s) ease-in-out infinite;
+}

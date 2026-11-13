@@ -23,6 +23,7 @@ import { audioEngine } from '../services/audioEngine';
 import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
 import { RetroTapeDeck } from './RetroTapeDeck';
+import { MarqueeTitle } from './MarqueeTitle';
 import { Disc3, Image as ImageIcon } from 'lucide-react';
 
 interface FullScreenPlayerProps {
@@ -159,13 +160,17 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       <footer className="w-full max-w-xl mx-auto px-4 sm:px-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,20px)+1.5rem)] sm:pb-6 pt-1 sm:pt-2 space-y-2.5 sm:space-y-3.5 shrink-0">
         {/* Title, Artist and Heart */}
         <div className="flex items-center justify-between gap-4">
-          <div className="overflow-hidden">
-            <h2 className="font-rock text-2xl sm:text-4xl text-white tracking-widest truncate drop-shadow-md">
-              {currentTrack.title}
-            </h2>
-            <p className="text-sm sm:text-base text-amber-400 font-mono font-bold tracking-wide truncate">
-              {currentTrack.artist}
-            </p>
+          <div className="overflow-hidden flex-1 min-w-0">
+            <MarqueeTitle
+              text={currentTrack.title}
+              as="h2"
+              className="font-rock text-2xl sm:text-4xl text-white tracking-widest drop-shadow-md"
+            />
+            <MarqueeTitle
+              text={currentTrack.artist}
+              as="p"
+              className="text-sm sm:text-base text-amber-400 font-mono font-bold tracking-wide mt-0.5"
+            />
           </div>
 
           <button

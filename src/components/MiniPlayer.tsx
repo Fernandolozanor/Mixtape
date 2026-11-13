@@ -4,6 +4,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
+import { MarqueeTitle } from './MarqueeTitle';
 
 export const MiniPlayer: React.FC = () => {
   const {
@@ -71,10 +72,12 @@ export const MiniPlayer: React.FC = () => {
             )}
           </div>
 
-          <div className="overflow-hidden">
-            <p className="font-stereo text-sm sm:text-base font-bold text-white tracking-wide truncate">
-              {currentTrack.title}
-            </p>
+          <div className="overflow-hidden flex-1 min-w-0">
+            <MarqueeTitle
+              text={currentTrack.title}
+              as="p"
+              className="font-stereo text-sm sm:text-base font-bold text-white tracking-wide"
+            />
             <div className="flex items-center gap-2 text-xs truncate">
               <span className="text-amber-400 font-mono font-semibold truncate">
                 {currentTrack.artist}

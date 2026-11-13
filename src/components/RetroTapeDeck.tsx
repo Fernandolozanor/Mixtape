@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { Play, Pause, Disc3, Maximize2 } from 'lucide-react';
+import { MarqueeTitle } from './MarqueeTitle';
 
 interface RetroTapeDeckProps {
   variant?: 'sidebar' | 'ambient-lateral' | 'fullscreen' | 'compact';
@@ -194,6 +195,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
    * Proportions and font sizes are tuned to prevent any vertical cut-off.
    */
   const renderHandwrittenTapeLabel = (size: 'sm' | 'md' | 'lg') => {
+    const titleText = writtenTitle || (currentTrack ? '' : 'MIXTAPE');
+    const artistText = writtenArtist || (currentTrack ? '' : 'MIXTAPE');
+
     return (
       <div
         className="absolute pointer-events-none flex flex-col justify-center items-center text-center overflow-hidden z-20"
@@ -206,50 +210,90 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         }}
       >
         <div className="w-full h-full flex flex-col items-center justify-center px-1 overflow-hidden">
-          {/* Track Title in Bic Blue Ballpoint Pen */}
-          <p
-            className="font-marker font-bold truncate max-w-full px-1"
-            style={{
-              color: '#153b6e', // Authentic Bic Blue Ink
-              fontSize:
-                size === 'sm'
-                  ? '9.5px'
-                  : size === 'lg'
-                  ? 'clamp(11.5px, 3.2vw, 15.5px)'
-                  : '11.5px',
-              lineHeight: 1.15,
-              textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
-              mixBlendMode: 'multiply',
-            }}
-          >
-            {writtenTitle || (currentTrack ? '' : 'MIXTAPE')}
-            {isTyping && writtenTitle.length < (currentTrack?.title.length || 0) && (
-              <span className="inline-block w-1 h-2.5 bg-[#153b6e] ml-0.5 animate-pulse rounded-sm" />
+          {/* Track Title in Bic Blue Ballpoint Pen with Auto-Scroll if long */}
+          <div className="w-full max-w-full overflow-hidden flex justify-center">
+            {isTyping ? (
+              <p
+                className="font-marker font-bold truncate max-w-full px-1"
+                style={{
+                  color: '#153b6e', // Authentic Bic Blue Ink
+                  fontSize:
+                    size === 'sm'
+                      ? '9.5px'
+                      : size === 'lg'
+                      ? 'clamp(11.5px, 3.2vw, 15.5px)'
+                      : '11.5px',
+                  lineHeight: 1.15,
+                  textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
+                  mixBlendMode: 'multiply',
+                }}
+              >
+                {titleText}
+                <span className="inline-block w-1 h-2.5 bg-[#153b6e] ml-0.5 animate-pulse rounded-sm" />
+              </p>
+            ) : (
+              <MarqueeTitle
+                text={titleText}
+                centered={true}
+                className="font-marker font-bold px-1"
+                style={{
+                  color: '#153b6e',
+                  fontSize:
+                    size === 'sm'
+                      ? '9.5px'
+                      : size === 'lg'
+                      ? 'clamp(11.5px, 3.2vw, 15.5px)'
+                      : '11.5px',
+                  lineHeight: 1.15,
+                  textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
+                  mixBlendMode: 'multiply',
+                }}
+              />
             )}
-          </p>
+          </div>
 
           {/* Artist Name in handwriting right underneath */}
           {(writtenArtist || !currentTrack) && (
-            <p
-              className="font-marker truncate max-w-full opacity-90 px-1 mt-0.2"
-              style={{
-                color: '#1a4682',
-                fontSize:
-                  size === 'sm'
-                    ? '7.5px'
-                    : size === 'lg'
-                    ? 'clamp(8.5px, 2.3vw, 11px)'
-                    : '9px',
-                lineHeight: 1.15,
-                textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
-                mixBlendMode: 'multiply',
-              }}
-            >
-              {writtenArtist || (currentTrack ? '' : 'MIXTAPE')}
-              {isTyping && writtenTitle.length >= (currentTrack?.title.length || 0) && (
-                <span className="inline-block w-0.5 h-2 bg-[#1a4682] ml-0.5 animate-pulse rounded-sm" />
+            <div className="w-full max-w-full overflow-hidden flex justify-center mt-0.2">
+              {isTyping ? (
+                <p
+                  className="font-marker truncate max-w-full opacity-90 px-1"
+                  style={{
+                    color: '#1a4682',
+                    fontSize:
+                      size === 'sm'
+                        ? '7.5px'
+                        : size === 'lg'
+                        ? 'clamp(8.5px, 2.3vw, 11px)'
+                        : '9px',
+                    lineHeight: 1.15,
+                    textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
+                    mixBlendMode: 'multiply',
+                  }}
+                >
+                  {artistText}
+                  <span className="inline-block w-0.5 h-2 bg-[#1a4682] ml-0.5 animate-pulse rounded-sm" />
+                </p>
+              ) : (
+                <MarqueeTitle
+                  text={artistText}
+                  centered={true}
+                  className="font-marker opacity-90 px-1"
+                  style={{
+                    color: '#1a4682',
+                    fontSize:
+                      size === 'sm'
+                        ? '7.5px'
+                        : size === 'lg'
+                        ? 'clamp(8.5px, 2.3vw, 11px)'
+                        : '9px',
+                    lineHeight: 1.15,
+                    textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
+                    mixBlendMode: 'multiply',
+                  }}
+                />
               )}
-            </p>
+            </div>
           )}
         </div>
       </div>
