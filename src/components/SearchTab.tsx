@@ -14,6 +14,8 @@ import {
   ChevronDown,
   Flame,
   ArrowUpDown,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
@@ -51,7 +53,9 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title'>('views');
   const [results, setResults] = useState<Track[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [visibleCount, setVisibleCount] = useState<number>(10);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [visibleCount, setVisibleCount] = useState<number>(25);
 
   // Multi-selection state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -64,23 +68,45 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   const handleSearch = async (
     searchTerm: string,
-    filter: AudioSourceType | 'all' = selectedFilter,
-    expand: boolean = true
+    filter: AudioSourceType | 'all' = selectedFilter
   ) => {
     const term = searchTerm.trim();
     if (!term) return;
 
     recommendationService.recordSearch(term);
     setIsSearching(true);
-    setVisibleCount(10); // reset page
+    setCurrentPage(1);
+    setVisibleCount(25); // initial generous batch
     try {
-      const tracks = await streamResolver.search(term, filter, expand);
+      const tracks = await streamResolver.search(term, filter, 1);
       setResults(tracks);
       setSelectedIds(new Set()); // reset selection on new search
     } catch (e) {
       console.error('Search failed:', e);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const handleFetchMoreFromNetwork = async () => {
+    if (isLoadingMore || !query.trim()) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const additionalTracks = await streamResolver.search(query, selectedFilter, nextPage);
+      if (additionalTracks.length > 0) {
+        setResults((prev) => {
+          const existingIds = new Set(prev.map((t) => t.id));
+          const uniqueNew = additionalTracks.filter((t) => !existingIds.has(t.id));
+          return [...prev, ...uniqueNew];
+        });
+        setCurrentPage(nextPage);
+        setVisibleCount((prev) => prev + 25);
+      }
+    } catch (e) {
+      console.error('Failed to load deep search results:', e);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -122,7 +148,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const hasMore = visibleCount < sortedResults.length;
 
   const handleShowMore = () => {
-    setVisibleCount((prev) => Math.min(prev + 10, sortedResults.length));
+    setVisibleCount((prev) => Math.min(prev + 25, sortedResults.length));
+  };
+
+  const handleShowAll = () => {
+    setVisibleCount(sortedResults.length);
   };
 
   const toggleSelectTrack = (trackId: string) => {
@@ -374,14 +404,27 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       {/* Results List */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              Mostrando {visibleResults.length} de {sortedResults.length} resultados ordenados por popularidad
-            </p>
-            <span className="text-xs text-zinc-500">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                Mostrando {visibleResults.length} de {sortedResults.length} canciones
+              </span>
+              <span
+                className="text-[11px] px-2.5 py-0.5 rounded-full font-medium flex items-center gap-1 border shadow-sm"
+                style={{
+                  backgroundColor: currentTheme.badgeBg,
+                  color: currentTheme.badgeText,
+                  borderColor: currentTheme.badgeBorder,
+                }}
+              >
+                <Sparkles className="w-3 h-3" />
+                Sin límites de búsqueda (Pág. {currentPage})
+              </span>
+            </div>
+            <span className="text-xs text-zinc-400">
               {isMultiSelectMode
                 ? 'Toca cualquier canción para marcarla'
-                : 'Canciones completas'}
+                : 'Ordenadas por popularidad'}
             </span>
           </div>
 
@@ -539,21 +582,58 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             })}
           </div>
 
-          {/* Show More Results Control */}
-          <div className="pt-4 flex flex-col items-center justify-center gap-2">
-            {hasMore ? (
+          {/* Show More Results Controls */}
+          <div className="pt-5 pb-6 flex flex-col items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              {hasMore && (
+                <>
+                  <button
+                    onClick={handleShowMore}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold transition border border-white/10 text-sm shadow-md active:scale-95"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                    <span>Mostrar más canciones (+25)</span>
+                  </button>
+
+                  <button
+                    onClick={handleShowAll}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white font-medium transition border border-white/5 text-xs active:scale-95"
+                    title="Desplegar todas las canciones cargadas"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Ver todas ({sortedResults.length})</span>
+                  </button>
+                </>
+              )}
+
+              {/* Deep Network Search (Unlimited) */}
               <button
-                onClick={handleShowMore}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold transition border border-white/10 text-sm shadow-md"
+                onClick={handleFetchMoreFromNetwork}
+                disabled={isLoadingMore}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold transition border text-sm shadow-md active:scale-95 disabled:opacity-50"
+                style={{
+                  backgroundColor: currentTheme.secondary,
+                  color: '#ffffff',
+                  borderColor: currentTheme.badgeBorder,
+                }}
               >
-                <ChevronDown className="w-4 h-4" />
-                <span>Mostrar más resultados (+10)</span>
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Buscando más canciones en la red...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Buscar aún más en la red (Página {currentPage + 1})</span>
+                  </>
+                )}
               </button>
-            ) : (
-              <p className="text-xs text-zinc-500 italic pt-2">
-                Has visto todos los resultados destacados disponibles para esta búsqueda.
-              </p>
-            )}
+            </div>
+
+            <p className="text-xs text-zinc-500 text-center max-w-md pt-1">
+              Búsqueda continua sin límites. Puedes pulsar en <strong>Buscar aún más en la red</strong> para extraer versiones en vivo, directos, remasters y rarezas ilimitadas.
+            </p>
           </div>
         </div>
       )}

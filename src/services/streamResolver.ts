@@ -2,12 +2,12 @@ import type { Track, AudioSourceType, SponsorSegment } from '../types/music';
 
 class StreamResolver {
   /**
-   * Search full-length tracks across YouTube and Audius, sorted by most played/prominent
+   * Search full-length tracks across YouTube and Audius, sorted by most played/prominent, with no search limits
    */
   async search(
     query: string,
     filterSource: AudioSourceType | 'all' = 'all',
-    expand: boolean = true
+    page: number = 1
   ): Promise<Track[]> {
     const term = query.trim();
     if (!term) return [];
@@ -34,12 +34,12 @@ class StreamResolver {
       ];
     }
 
-    // 1. Search YouTube (Full Songs with view counts)
+    // 1. Search YouTube (Full Songs with view counts & no limits)
     if (filterSource === 'all' || filterSource === 'youtube') {
       try {
         const res = await fetch(
-          `/api/yt/search?q=${encodeURIComponent(term)}&expand=${expand ? 'true' : 'false'}`,
-          { signal: AbortSignal.timeout(6000) }
+          `/api/yt/search?q=${encodeURIComponent(term)}&page=${page}`,
+          { signal: AbortSignal.timeout(9000) }
         );
         if (res.ok) {
           const ytVideos = await res.json();
@@ -52,15 +52,16 @@ class StreamResolver {
       }
     }
 
-    // 2. Search Audius (Full-length free streaming tracks)
+    // 2. Search Audius (Full-length free streaming tracks with limit=100)
     if (filterSource === 'all' || filterSource === 'audius') {
       try {
-        const audiusUrl = `https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(term)}&app_name=pulse_music`;
-        const res = await fetch(audiusUrl, { signal: AbortSignal.timeout(4000) });
+        const offset = (page - 1) * 30;
+        const audiusUrl = `https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(term)}&app_name=pulse_music&limit=60&offset=${offset}`;
+        const res = await fetch(audiusUrl, { signal: AbortSignal.timeout(5000) });
         if (res.ok) {
           const data = await res.json();
           if (data && Array.isArray(data.data)) {
-            for (const item of data.data.slice(0, 15)) {
+            for (const item of data.data) {
               if (!item.title) continue;
               const cover =
                 item.artwork?.['480x480'] ||
