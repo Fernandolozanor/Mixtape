@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext';
+import { useTheme } from '../context/ThemeContext';
 import { Play, Pause, Disc3, Maximize2 } from 'lucide-react';
 
 interface RetroTapeDeckProps {
@@ -14,6 +15,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   className = '',
 }) => {
   const { currentTrack, isPlaying, togglePlay, currentTime } = usePlayer();
+  const { currentTheme } = useTheme();
+  const isSteel = currentTheme.id === 'retro-rock-80s';
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Simulated VU Meter bouncing levels
@@ -145,49 +148,104 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   };
 
   /**
-   * Renders the handwritten blue ballpoint pen ink directly onto the video's blank masking tape
+   * Warm Analog Backlit Incandescent Needle VU Meter (Sony SQD-2020 / TA-1150 style)
+   */
+  const renderNeedleMeter = (level: number, label: string) => {
+    // Needle deflection angle between -34deg and +34deg
+    const angle = -34 + Math.min(1, Math.max(0, level)) * 68;
+
+    return (
+      <div className="flex flex-col items-center">
+        <div className="w-20 sm:w-26 h-10 sm:h-12 retro-vu-meter-incandescent rounded-md p-1 relative flex flex-col justify-between overflow-hidden shadow-inner border border-zinc-900 select-none">
+          {/* Subtle Glass glare highlight */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-transparent to-black/20 pointer-events-none z-20" />
+
+          {/* Scale curved arc & markings */}
+          <div className="relative z-10 flex justify-between items-center text-[7.5px] sm:text-[8.5px] font-mono-retro font-black px-1 text-amber-950">
+            <span>-20</span>
+            <span>-7</span>
+            <span>0</span>
+            <span className="text-rose-700 font-extrabold">+3dB</span>
+          </div>
+
+          {/* Moving Needle */}
+          <div
+            className="absolute bottom-[-1px] left-1/2 w-[1.5px] sm:w-[2px] h-8 sm:h-10 bg-zinc-950 origin-bottom transition-transform duration-75 z-10"
+            style={{
+              transform: `translateX(-50%) rotate(${angle}deg)`,
+              boxShadow: '0 0 1.5px rgba(0,0,0,0.9)',
+            }}
+          />
+
+          {/* Pivot Black Round Cap */}
+          <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-zinc-950 border border-amber-600/60 z-20 shadow-md" />
+
+          {/* Channel Label */}
+          <span className="absolute bottom-0.5 right-1.5 text-[8px] sm:text-[9px] font-mono-retro font-bold text-amber-950/80 z-10">
+            {label}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Renders the handwritten blue ballpoint pen ink directly onto the video's blank masking tape.
+   * Proportions and font sizes are tuned to prevent any vertical cut-off.
    */
   const renderHandwrittenTapeLabel = (size: 'sm' | 'md' | 'lg') => {
     return (
       <div
         className="absolute pointer-events-none flex flex-col justify-center items-center text-center overflow-hidden z-20"
         style={{
-          top: '11%',
-          left: '14.5%',
-          width: '71%',
-          height: '18%',
+          top: '7.5%',
+          left: '12%',
+          width: '76%',
+          height: '24%',
           transform: 'rotate(-0.25deg)',
         }}
       >
-        <div className="w-full h-full flex flex-col items-center justify-center px-1 overflow-hidden leading-tight">
+        <div className="w-full h-full flex flex-col items-center justify-center px-1 overflow-hidden">
           {/* Track Title in Bic Blue Ballpoint Pen */}
           <p
-            className="font-marker font-bold truncate max-w-full"
+            className="font-marker font-bold truncate max-w-full px-1"
             style={{
               color: '#153b6e', // Authentic Bic Blue Ink
-              fontSize: size === 'sm' ? '11px' : size === 'lg' ? '20px' : '14px',
+              fontSize:
+                size === 'sm'
+                  ? '9.5px'
+                  : size === 'lg'
+                  ? 'clamp(11.5px, 3.2vw, 15.5px)'
+                  : '11.5px',
+              lineHeight: 1.15,
               textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
               mixBlendMode: 'multiply',
             }}
           >
             {writtenTitle || (currentTrack ? '' : 'MIXTAPE')}
             {isTyping && writtenTitle.length < (currentTrack?.title.length || 0) && (
-              <span className="inline-block w-1 h-3 bg-[#153b6e] ml-0.5 animate-pulse rounded-sm" />
+              <span className="inline-block w-1 h-2.5 bg-[#153b6e] ml-0.5 animate-pulse rounded-sm" />
             )}
           </p>
 
           {/* Artist Name in handwriting right underneath */}
           {(writtenArtist || !currentTrack) && (
             <p
-              className="font-marker truncate max-w-full opacity-90 mt-0.5"
+              className="font-marker truncate max-w-full opacity-90 px-1 mt-0.2"
               style={{
                 color: '#1a4682',
-                fontSize: size === 'sm' ? '8px' : size === 'lg' ? '14px' : '10px',
+                fontSize:
+                  size === 'sm'
+                    ? '7.5px'
+                    : size === 'lg'
+                    ? 'clamp(8.5px, 2.3vw, 11px)'
+                    : '9px',
+                lineHeight: 1.15,
                 textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
                 mixBlendMode: 'multiply',
               }}
             >
-              {writtenArtist || (currentTrack ? '' : 'MIXTAPE 1984')}
+              {writtenArtist || (currentTrack ? '' : 'MIXTAPE')}
               {isTyping && writtenTitle.length >= (currentTrack?.title.length || 0) && (
                 <span className="inline-block w-0.5 h-2 bg-[#1a4682] ml-0.5 animate-pulse rounded-sm" />
               )}
@@ -388,32 +446,90 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
      ------------------------------------------------------------- */
   return (
     <div
-      className={`retro-tape-chassis rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-2xl relative select-none w-full max-w-2xl mx-auto ${className}`}
+      className={`${
+        isSteel
+          ? 'retro-brushed-steel border-2 border-slate-300/80 shadow-[0_20px_60px_rgba(0,0,0,0.8)]'
+          : 'retro-tape-chassis shadow-2xl'
+      } rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 relative select-none w-full max-w-xl sm:max-w-2xl mx-auto ${className}`}
     >
       {/* 4 Corner Screws */}
-      <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 retro-screw scale-90 sm:scale-125" />
-      <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 retro-screw scale-90 sm:scale-125" />
-      <div className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 retro-screw scale-90 sm:scale-125" />
-      <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 retro-screw scale-90 sm:scale-125" />
+      <div
+        className={`absolute top-2.5 left-2.5 sm:top-3 sm:left-3 ${
+          isSteel ? 'retro-screw-steel' : 'retro-screw'
+        } scale-90 sm:scale-125`}
+      />
+      <div
+        className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 ${
+          isSteel ? 'retro-screw-steel' : 'retro-screw'
+        } scale-90 sm:scale-125`}
+      />
+      <div
+        className={`absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 ${
+          isSteel ? 'retro-screw-steel' : 'retro-screw'
+        } scale-90 sm:scale-125`}
+      />
+      <div
+        className={`absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 ${
+          isSteel ? 'retro-screw-steel' : 'retro-screw'
+        } scale-90 sm:scale-125`}
+      />
 
       {/* Hi-Fi Header with Silkscreen Markings */}
-      <div className="flex items-center justify-between px-2 sm:px-3 pt-1 sm:pt-2 pb-2 sm:pb-3 border-b border-white/10 mb-2 sm:mb-4">
+      <div
+        className={`flex items-center justify-between px-2 sm:px-3 pt-1 sm:pt-2 pb-2 sm:pb-3 ${
+          isSteel ? 'border-b border-slate-400/40' : 'border-b border-white/10'
+        } mb-2 sm:mb-4`}
+      >
         <div>
-          <h3 className="font-rock text-lg sm:text-xl md:text-2xl tracking-widest uppercase text-white flex items-center gap-1.5 sm:gap-2">
+          {isSteel && (
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="font-sans font-black text-xs sm:text-sm tracking-widest text-slate-800">
+                SONY
+              </span>
+              <span className="text-[9px] sm:text-[10px] text-slate-600 font-mono-retro font-bold">
+                TA-1150 SERIES
+              </span>
+            </div>
+          )}
+          <h3
+            className={`font-rock text-lg sm:text-xl md:text-2xl tracking-widest uppercase flex items-center gap-1.5 sm:gap-2 ${
+              isSteel ? 'text-slate-900' : 'text-white'
+            }`}
+          >
             MIXTAPE DECK
-            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono-retro font-bold border border-amber-500/30">
-              1984
+            <span
+              className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded font-mono-retro font-bold border ${
+                isSteel
+                  ? 'bg-amber-500/20 text-amber-900 border-amber-600/40'
+                  : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+              }`}
+            >
+              SOLID STATE
             </span>
           </h3>
-          <p className="text-[9px] sm:text-[11px] text-zinc-400 font-mono-retro">
+          <p
+            className={`text-[9px] sm:text-[11px] font-mono-retro ${
+              isSteel ? 'text-slate-600' : 'text-zinc-400'
+            }`}
+          >
             3-HEAD • DUAL CAPSTAN • TYPE II CrO2
           </p>
         </div>
 
         {/* Big Mechanical Tape Counter */}
         <div className="flex flex-col items-end">
-          <span className="text-[8px] sm:text-[10px] font-mono-retro font-bold text-zinc-400">COUNTER</span>
-          <div className="retro-counter-display px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md flex items-center gap-0.5 sm:gap-1 font-mono-retro text-sm sm:text-lg font-bold text-amber-400 tracking-wider">
+          <span
+            className={`text-[8px] sm:text-[10px] font-mono-retro font-bold ${
+              isSteel ? 'text-slate-700' : 'text-zinc-400'
+            }`}
+          >
+            COUNTER
+          </span>
+          <div
+            className={`${
+              isSteel ? 'bg-slate-900 border-slate-700' : 'retro-counter-display'
+            } px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md flex items-center gap-0.5 sm:gap-1 font-mono-retro text-sm sm:text-lg font-bold text-amber-400 tracking-wider shadow-inner`}
+          >
             {counterStr.split('').map((digit, idx) => (
               <span
                 key={idx}
@@ -427,7 +543,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       </div>
 
       {/* Massive Cassette Bay with Rotating Video & Handwritten Label */}
-      <div className="retro-tape-window rounded-xl sm:rounded-2xl aspect-[16/9] w-full relative overflow-hidden shadow-2xl border-2 sm:border-4 border-zinc-800">
+      <div
+        className={`retro-tape-window rounded-xl sm:rounded-2xl aspect-[16/9] w-full relative overflow-hidden shadow-2xl border-2 sm:border-4 ${
+          isSteel ? 'border-slate-700/80' : 'border-zinc-800'
+        }`}
+      >
         <video
           ref={videoRef}
           src="./assets/cassette.mp4"
@@ -459,35 +579,76 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       </div>
 
       {/* Lower Deck Controls & VU Meters Bar */}
-      <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-white/10 flex items-center justify-between flex-wrap gap-2 sm:gap-4 px-1 sm:px-2">
-        {/* Stereo Analog VU Meters with dB Markings */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">L</span>
-            {renderMeterBar(vuLeft)}
-            <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
+      <div
+        className={`mt-2 sm:mt-4 pt-2 sm:pt-3 ${
+          isSteel ? 'border-t border-slate-400/35' : 'border-t border-white/10'
+        } flex items-center justify-between flex-wrap gap-2 sm:gap-4 px-1 sm:px-2`}
+      >
+        {/* Authentic Analog Backlit Incandescent VU Meters when in Steel mode, or LED meters */}
+        {isSteel ? (
+          <div className="flex items-center gap-2 sm:gap-4">
+            {renderNeedleMeter(vuLeft, 'LEFT')}
+            {renderNeedleMeter(vuRight, 'RIGHT')}
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">R</span>
-            {renderMeterBar(vuRight)}
-            <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">
+                L
+              </span>
+              {renderMeterBar(vuLeft)}
+              <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">
+                -20 0 +3 dB
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">
+                R
+              </span>
+              {renderMeterBar(vuRight)}
+              <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">
+                -20 0 +3 dB
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 80s Rock Tape Specs */}
-        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-mono-retro text-zinc-400">
+        <div
+          className={`flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-mono-retro ${
+            isSteel ? 'text-slate-700' : 'text-zinc-400'
+          }`}
+        >
           <div className="flex items-center gap-1 sm:gap-1.5">
             <span
               className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
-                isPlaying ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-zinc-700'
+                isPlaying
+                  ? isSteel
+                    ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'
+                    : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+                  : isSteel
+                  ? 'bg-slate-400'
+                  : 'bg-zinc-700'
               }`}
             />
-            <span className="font-bold text-white">{isPlaying ? 'MOTOR ON' : 'STOP'}</span>
+            <span
+              className={`font-bold ${
+                isSteel ? 'text-slate-900' : 'text-white'
+              }`}
+            >
+              {isPlaying ? 'MOTOR ON' : 'STOP'}
+            </span>
           </div>
           <span className="hidden xs:inline">|</span>
           <span className="hidden xs:inline">DOLBY B NR</span>
           <span>|</span>
-          <span className="text-amber-400 font-bold">MIXTAPE</span>
+          <span
+            className={`font-bold ${
+              isSteel ? 'text-amber-800' : 'text-amber-400'
+            }`}
+          >
+            MIXTAPE
+          </span>
         </div>
       </div>
     </div>

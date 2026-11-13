@@ -14,15 +14,15 @@ export interface ThemeScheme {
 export const THEME_SCHEMES: ThemeScheme[] = [
   {
     id: 'retro-rock-80s',
-    name: 'Pletina Rock 80s (Tape Deck)',
-    primary: '#1d5494', // Azul tinta bolígrafo de la cinta
-    rgb: '29, 84, 148',
-    secondary: '#8a6b33', // Latón y cinta magnética vintage
-    accent: '#f59e0b', // Ámbar de vúmetro analógico
-    gradient: 'linear-gradient(135deg, #1d5494 0%, #1e2533 50%, #8a6b33 100%)',
-    badgeBg: 'rgba(29, 84, 148, 0.3)',
-    badgeText: '#fbbf24',
-    badgeBorder: 'rgba(245, 158, 11, 0.35)',
+    name: 'Pletina Rock 80s (Acero Cepillado)',
+    primary: '#1e293b', // Letras serigrafiadas en negro/grafito
+    rgb: '148, 163, 184', // Acero plateado cepillado
+    secondary: '#cbd5e1', // Aluminio anodizado
+    accent: '#f59e0b', // Ámbar vúmetro analógico cálido
+    gradient: 'linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 50%, #94a3b8 100%)',
+    badgeBg: 'rgba(241, 245, 249, 0.25)',
+    badgeText: '#f59e0b',
+    badgeBorder: 'rgba(245, 158, 11, 0.4)',
   },
   {
     id: 'ocean-blue',

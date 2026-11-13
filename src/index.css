@@ -228,3 +228,196 @@
   background: #0f172a;
   transform: translate(-50%, -50%) rotate(45deg);
 }
+
+/* ==========================================================================
+   VINTAGE 80s HI-FI & BRUSHED STEEL STYLING (Sony TA-1150 / SQD-2020)
+   ========================================================================== */
+
+/* Authentic Brushed Stainless Steel / Anodized Aluminum Faceplate */
+.retro-brushed-steel {
+  background-color: #d8dce3;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.12) 0px,
+      rgba(255, 255, 255, 0.12) 1px,
+      rgba(0, 0, 0, 0.035) 1px,
+      rgba(0, 0, 0, 0.035) 2px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.45) 0%,
+      rgba(203, 213, 225, 0.1) 12%,
+      rgba(255, 255, 255, 0.55) 28%,
+      rgba(148, 163, 184, 0.2) 48%,
+      rgba(255, 255, 255, 0.5) 68%,
+      rgba(148, 163, 184, 0.25) 86%,
+      rgba(255, 255, 255, 0.35) 100%
+    ),
+    linear-gradient(180deg, #f8fafc 0%, #e2e8f0 22%, #cbd5e1 55%, #94a3b8 100%);
+  border: 1px solid #94a3b8;
+  border-top-color: #f1f5f9;
+  border-bottom-color: #64748b;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.45),
+    0 16px 36px rgba(0, 0, 0, 0.7);
+}
+
+/* Crisp Engraved Dark Silkscreened Typography */
+.retro-engraved-text {
+  color: #1e293b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 -0.5px 0.5px rgba(0, 0, 0, 0.4);
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+/* Sony-Style Machined Stainless Steel Corner Screw */
+.retro-screw-steel {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 45%, #64748b 80%, #334155 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), inset 0 0.5px 0.5px rgba(255, 255, 255, 0.9);
+  position: relative;
+}
+.retro-screw-steel::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 1px;
+  background: #0f172a;
+  transform: translate(-50%, -50%) rotate(35deg);
+}
+.retro-screw-steel::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 1px;
+  background: #0f172a;
+  transform: translate(-50%, -50%) rotate(125deg);
+}
+
+/* Milled Aluminum Rotary Knob */
+.retro-knob-aluminum {
+  background: conic-gradient(
+    from 45deg,
+    #ffffff 0deg,
+    #94a3b8 45deg,
+    #f8fafc 90deg,
+    #64748b 135deg,
+    #ffffff 180deg,
+    #94a3b8 225deg,
+    #f8fafc 270deg,
+    #64748b 315deg,
+    #ffffff 360deg
+  );
+  border: 2px solid #cbd5e1;
+  box-shadow: 
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+  position: relative;
+  transition: transform 0.15s ease-out;
+}
+.retro-knob-aluminum:active {
+  transform: scale(0.97);
+}
+
+/* Mechanical Chrome Push Switch (Sony Hi-Fi button) */
+.retro-btn-aluminum {
+  background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 60%, #94a3b8 100%);
+  border-top: 1px solid #ffffff;
+  border-bottom: 2px solid #334155;
+  border-left: 1px solid #cbd5e1;
+  border-right: 1px solid #475569;
+  color: #0f172a;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.1s ease-in-out;
+}
+.retro-btn-aluminum:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #d8dce4 60%, #a1a9b8 100%);
+  color: #000000;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 #ffffff;
+}
+.retro-btn-aluminum:active {
+  transform: translateY(1.5px);
+  border-bottom-width: 1px;
+  background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Mechanical Toggle Lever (Vintage bat switch) */
+.retro-toggle-lever {
+  width: 10px;
+  height: 22px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #94a3b8 0%, #ffffff 35%, #cbd5e1 70%, #475569 100%);
+  border: 1px solid #64748b;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: transform 0.15s ease-in-out;
+}
+
+/* Warm Backlit Incandescent Analog VU Meter Box (Sony SQD-2020 style) */
+.retro-vu-meter-incandescent {
+  background: 
+    radial-gradient(circle at 50% 30%, rgba(255, 243, 199, 0.95) 0%, rgba(254, 240, 138, 0.8) 50%, rgba(245, 158, 11, 0.55) 100%),
+    linear-gradient(180deg, #fffbeb 0%, #fef3c7 70%, #fde68a 100%);
+  border: 2px solid #0f172a;
+  box-shadow: 
+    inset 0 4px 10px rgba(0, 0, 0, 0.85),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.5),
+    0 0 16px rgba(245, 158, 11, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Touch-friendly Retro Volume Range Slider */
+.retro-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #090c12;
+  border: 1px solid #2d3748;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.08);
+  outline: none;
+  touch-action: none;
+}
+.retro-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 40%, #94a3b8 80%, #64748b 100%);
+  border: 1px solid #334155;
+  border-top-color: #ffffff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  position: relative;
+}
+.retro-slider::-webkit-slider-thumb:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e2e8f0 40%, #a1a9b8 80%, #64748b 100%);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4), inset 0 1px 1px #ffffff;
+}
+.retro-slider::-webkit-slider-thumb:active {
+  background: linear-gradient(180deg, #cbd5e1 0%, #94a3b8 100%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.retro-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 40%, #94a3b8 80%, #64748b 100%);
+  border: 1px solid #334155;
+  cursor: pointer;
+}

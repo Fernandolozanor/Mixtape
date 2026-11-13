@@ -20,6 +20,7 @@ export const MiniPlayer: React.FC = () => {
 
   const { isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
+  const isSteel = currentTheme.id === 'retro-rock-80s';
 
   if (!currentTrack) return null;
 
@@ -32,10 +33,24 @@ export const MiniPlayer: React.FC = () => {
       onClick={() => setFullScreenPlayerOpen(true)}
       className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.5rem)] md:bottom-2.5 left-2 right-2 md:left-68 md:right-4 z-40 cursor-pointer transition-all duration-300"
     >
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#171c26] via-[#11151e] to-[#0e1219] border-2 border-[#263042] shadow-[0_10px_30px_rgba(0,0,0,0.85)] p-2.5 flex items-center justify-between gap-3">
+      <div
+        className={`relative overflow-hidden rounded-2xl ${
+          isSteel
+            ? 'retro-brushed-steel border-2 border-slate-300 shadow-[0_12px_32px_rgba(0,0,0,0.7)]'
+            : 'bg-gradient-to-r from-[#171c26] via-[#11151e] to-[#0e1219] border-2 border-[#263042] shadow-[0_10px_30px_rgba(0,0,0,0.85)]'
+        } p-2.5 flex items-center justify-between gap-3`}
+      >
         {/* Chassis corner screws */}
-        <div className="absolute top-1.5 left-1.5 retro-screw scale-75" />
-        <div className="absolute top-1.5 right-1.5 retro-screw scale-75" />
+        <div
+          className={`absolute top-1.5 left-1.5 ${
+            isSteel ? 'retro-screw-steel' : 'retro-screw'
+          } scale-75`}
+        />
+        <div
+          className={`absolute top-1.5 right-1.5 ${
+            isSteel ? 'retro-screw-steel' : 'retro-screw'
+          } scale-75`}
+        />
 
         {/* Track Info */}
         <div className="flex items-center gap-3 overflow-hidden pl-1.5">

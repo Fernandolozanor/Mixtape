@@ -420,9 +420,20 @@ class AudioEngine {
   public setVolume(volume: number): void {
     this.volume = Math.max(0, Math.min(1, volume));
     if (this.ytPlayer && typeof this.ytPlayer.setVolume === 'function') {
-      this.ytPlayer.setVolume(Math.round(this.volume * 100));
+      try {
+        this.ytPlayer.setVolume(Math.round(this.volume * 100));
+        if (this.volume === 0) {
+          if (typeof this.ytPlayer.mute === 'function') this.ytPlayer.mute();
+        } else {
+          if (typeof this.ytPlayer.unMute === 'function') this.ytPlayer.unMute();
+        }
+      } catch (e) {
+        console.warn('ytPlayer setVolume error:', e);
+      }
     }
     this.audio.volume = this.volume;
+    this.audio.muted = this.volume === 0;
+    this.notifyState();
   }
 
   public isPlaying(): boolean {

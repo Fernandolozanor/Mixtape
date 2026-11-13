@@ -10,11 +10,11 @@ export const ThemeSelector: React.FC = () => {
       <div className="flex items-center gap-2">
         <Palette className="w-4 h-4 text-zinc-400" />
         <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Esquema de Color (5 Temas)
+          Esquema de Color ({themes.length} Temas)
         </h4>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
         {themes.map((theme) => {
           const isSelected = currentTheme.id === theme.id;
 

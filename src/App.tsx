@@ -23,7 +23,7 @@ const AppContent: React.FC = () => {
   const [tracksToAdd, setTracksToAdd] = useState<Track[] | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
-  const { currentTrack } = usePlayer();
+  const { currentTrack, setFullScreenPlayerOpen } = usePlayer();
 
   const handleOpenAddToPlaylist = (track?: Track | null) => {
     setTrackToAdd(track ?? currentTrack);
@@ -121,8 +121,12 @@ const AppContent: React.FC = () => {
         setActiveTab={(tab) => {
           setActiveTab(tab);
           setSelectedPlaylistId(null);
+          setFullScreenPlayerOpen(false);
         }}
-        openSettingsModal={() => setIsSettingsModalOpen(true)}
+        openSettingsModal={() => {
+          setFullScreenPlayerOpen(false);
+          setIsSettingsModalOpen(true);
+        }}
       />
 
       {/* Modals */}

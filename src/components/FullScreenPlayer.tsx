@@ -59,6 +59,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   if (!isFullScreenPlayerOpen || !currentTrack) return null;
 
   const liked = isLiked(currentTrack.id);
+  const isSteel = currentTheme.id === 'retro-rock-80s';
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -155,14 +156,14 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       </main>
 
       {/* Bottom Controls Area */}
-      <footer className="w-full max-w-xl mx-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-1 sm:pt-2 space-y-2.5 sm:space-y-4 shrink-0">
+      <footer className="w-full max-w-xl mx-auto px-4 sm:px-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,20px)+1.5rem)] sm:pb-6 pt-1 sm:pt-2 space-y-2.5 sm:space-y-3.5 shrink-0">
         {/* Title, Artist and Heart */}
         <div className="flex items-center justify-between gap-4">
           <div className="overflow-hidden">
-            <h2 className="font-rock text-3xl sm:text-4xl text-white tracking-widest truncate drop-shadow-md">
+            <h2 className="font-rock text-2xl sm:text-4xl text-white tracking-widest truncate drop-shadow-md">
               {currentTrack.title}
             </h2>
-            <p className="text-base text-amber-400 font-mono font-bold tracking-wide truncate">
+            <p className="text-sm sm:text-base text-amber-400 font-mono font-bold tracking-wide truncate">
               {currentTrack.artist}
             </p>
           </div>
@@ -183,7 +184,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         </div>
 
         {/* Scrubber Progress Bar */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="relative group flex items-center">
             <input
               type="range"
@@ -191,120 +192,219 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               max={duration || 100}
               value={currentTime}
               onChange={(e) => seek(parseFloat(e.target.value))}
-              className="w-full h-2 bg-black/60 rounded-full appearance-none cursor-pointer accent-amber-400 border border-white/10"
+              className="retro-slider"
             />
           </div>
           <div className="flex justify-between text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider">
             <span>{formatTime(currentTime)}</span>
+            <span className="text-zinc-500 font-mono text-[10px] hidden xs:inline">HI-FI STEREO</span>
             <span>-{formatTime(remainingTime)}</span>
           </div>
         </div>
 
-        {/* Playback Controls - 80s Rock Mechanical Deck */}
-        <div className="flex items-center justify-between py-2">
-          {/* Shuffle Button */}
+        {/* Playback Controls - Vintage 80s Hi-Fi Mechanical Key Deck */}
+        <div className="flex items-center justify-between py-1">
+          {/* Shuffle Button - Mechanical Toggle */}
           <button
             onClick={toggleShuffle}
-            className="p-3 rounded-xl transition border border-white/10 active:translate-y-0.5"
+            className={`p-2.5 sm:p-3 rounded-xl transition border active:translate-y-0.5 flex flex-col items-center gap-1 ${
+              isSteel
+                ? 'retro-btn-aluminum shadow-md'
+                : 'border-white/10'
+            }`}
             style={
               isShuffle
                 ? {
-                    color: '#fbbf24',
-                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                    borderColor: 'rgba(245, 158, 11, 0.4)',
+                    color: isSteel ? '#b45309' : '#fbbf24',
+                    backgroundColor: isSteel ? '#fef3c7' : 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 0.5)',
                   }
+                : isSteel
+                ? {}
                 : { color: '#94a3b8', backgroundColor: '#131822' }
             }
             aria-label="Aleatorio"
+            title="SHUFFLE MODE"
           >
             <Shuffle className="w-5 h-5" />
+            {isSteel && (
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isShuffle ? 'bg-amber-500 shadow-[0_0_5px_#f59e0b]' : 'bg-slate-400'
+                }`}
+              />
+            )}
           </button>
 
-          {/* Previous Track - Mechanical */}
+          {/* Previous Track - Mechanical Milled Push Button */}
           <button
             onClick={prevTrack}
-            className="p-3.5 rounded-2xl bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90 active:translate-y-0.5 shadow-lg transition"
+            className={`p-3 sm:p-3.5 rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+              isSteel
+                ? 'retro-btn-aluminum'
+                : 'bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90'
+            }`}
             aria-label="Anterior"
-            title="REW ⏪"
+            title="REWIND ⏪"
           >
-            <SkipBack className="w-7 h-7 fill-amber-400 text-amber-400" />
+            <SkipBack
+              className={`w-6 h-6 sm:w-7 sm:h-7 ${
+                isSteel ? 'text-slate-900 fill-slate-900' : 'fill-amber-400 text-amber-400'
+              }`}
+            />
+            {isSteel && (
+              <span className="text-[7.5px] font-mono-retro font-black text-slate-700 mt-0.5">REW</span>
+            )}
           </button>
 
-          {/* Large Play/Pause Heavy Rock Key */}
+          {/* Large Play/Pause Heavy Machined Switch */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-18 h-18 rounded-2xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black flex items-center justify-center transition shadow-2xl border-t-2 border-white/50 border-b-4 border-amber-950 active:translate-y-1 hover:brightness-110"
+            className={`w-16 h-16 sm:w-18 sm:h-18 rounded-2xl flex flex-col items-center justify-center transition shadow-2xl active:translate-y-1 ${
+              isSteel
+                ? 'retro-btn-aluminum border-2 border-slate-300 ring-2 ring-amber-500/30'
+                : 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-t-2 border-white/50 border-b-4 border-amber-950 hover:brightness-110'
+            }`}
             aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
             title={isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
-              <Loader2 className="w-8 h-8 animate-spin text-black" />
+              <Loader2 className={`w-8 h-8 animate-spin ${isSteel ? 'text-slate-900' : 'text-black'}`} />
             ) : isPlaying ? (
-              <Pause className="w-8 h-8 fill-black text-black" />
+              <Pause className={`w-8 h-8 ${isSteel ? 'fill-amber-600 text-amber-600' : 'fill-black text-black'}`} />
             ) : (
-              <Play className="w-8 h-8 fill-black text-black ml-1" />
+              <Play className={`w-8 h-8 ml-1 ${isSteel ? 'fill-slate-900 text-slate-900' : 'fill-black text-black'}`} />
+            )}
+            {isSteel && (
+              <span className="text-[7.5px] font-mono-retro font-black text-slate-800 tracking-wider">
+                {isPlaying ? 'PAUSE' : 'PLAY'}
+              </span>
             )}
           </button>
 
-          {/* Next Track - Mechanical */}
+          {/* Next Track - Mechanical Milled Push Button */}
           <button
             onClick={nextTrack}
-            className="p-3.5 rounded-2xl bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90 active:translate-y-0.5 shadow-lg transition"
+            className={`p-3 sm:p-3.5 rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+              isSteel
+                ? 'retro-btn-aluminum'
+                : 'bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90'
+            }`}
             aria-label="Siguiente"
-            title="FF ⏩"
+            title="FAST FORWARD ⏩"
           >
-            <SkipForward className="w-7 h-7 fill-amber-400 text-amber-400" />
+            <SkipForward
+              className={`w-6 h-6 sm:w-7 sm:h-7 ${
+                isSteel ? 'text-slate-900 fill-slate-900' : 'fill-amber-400 text-amber-400'
+              }`}
+            />
+            {isSteel && (
+              <span className="text-[7.5px] font-mono-retro font-black text-slate-700 mt-0.5">FF</span>
+            )}
           </button>
 
-          {/* Repeat Button */}
+          {/* Repeat Button - Mechanical Toggle */}
           <button
             onClick={toggleRepeat}
-            className="p-3 rounded-full transition"
+            className={`p-2.5 sm:p-3 rounded-xl transition border active:translate-y-0.5 flex flex-col items-center gap-1 ${
+              isSteel
+                ? 'retro-btn-aluminum shadow-md'
+                : 'rounded-full'
+            }`}
             style={
               repeatMode !== 'off'
                 ? {
-                    color: currentTheme.accent,
-                    backgroundColor: `rgba(${currentTheme.rgb}, 0.2)`,
+                    color: isSteel ? '#b45309' : currentTheme.accent,
+                    backgroundColor: isSteel ? '#fef3c7' : `rgba(${currentTheme.rgb}, 0.2)`,
+                    borderColor: 'rgba(245, 158, 11, 0.5)',
                   }
+                : isSteel
+                ? {}
                 : { color: '#a1a1aa' }
             }
             aria-label="Repetir"
+            title="REPEAT MODE"
           >
-            {repeatMode === 'one' ? (
-              <Repeat1 className="w-5 h-5" />
-            ) : (
-              <Repeat className="w-5 h-5" />
+            {repeatMode === 'one' ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
+            {isSteel && (
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  repeatMode !== 'off' ? 'bg-amber-500 shadow-[0_0_5px_#f59e0b]' : 'bg-slate-400'
+                }`}
+              />
             )}
           </button>
         </div>
 
-        {/* Volume Slider */}
-        <div className="flex items-center gap-3 pt-1">
-          <button
-            onClick={() => setVolume(volume > 0 ? 0 : 0.8)}
-            className="text-zinc-400 hover:text-white transition"
+        {/* Vintage 80s Hi-Fi Volume Control - Separated and Touch-Optimized */}
+        <div className="pt-1.5">
+          <div className="flex items-center justify-between text-[10px] font-mono-retro font-bold text-zinc-400 mb-1 px-1">
+            <span className="flex items-center gap-1.5 uppercase tracking-wider text-amber-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
+              VOLUMEN
+            </span>
+            <span className="text-zinc-500 tracking-widest hidden xs:inline">
+              0 • 2 • 4 • 6 • 8 • 10 • MAX
+            </span>
+            <span className="text-amber-400 font-bold">{Math.round(volume * 100)}%</span>
+          </div>
+
+          <div
+            className={`flex items-center gap-3 p-2 rounded-xl shadow-inner ${
+              isSteel
+                ? 'bg-slate-900/90 border border-slate-700'
+                : 'bg-black/50 border border-white/10'
+            }`}
           >
-            {volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-full h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-white"
-          />
+            <button
+              onClick={() => setVolume(volume > 0 ? 0 : 0.8)}
+              className={`p-2 rounded-lg active:scale-95 transition shrink-0 border ${
+                isSteel
+                  ? 'retro-btn-aluminum'
+                  : 'bg-white/5 hover:bg-white/10 text-amber-400 border-white/5'
+              }`}
+              aria-label={volume === 0 ? 'Activar sonido' : 'Silenciar'}
+              title={volume === 0 ? 'Activar sonido' : 'Silenciar'}
+            >
+              {volume === 0 ? (
+                <VolumeX className="w-5 h-5 text-rose-400" />
+              ) : (
+                <Volume2 className={`w-5 h-5 ${isSteel ? 'text-slate-900' : 'text-amber-400'}`} />
+              )}
+            </button>
+
+            <div className="relative flex-1 flex items-center py-2">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                onInput={(e) => setVolume(parseFloat((e.target as HTMLInputElement).value))}
+                className="retro-slider"
+                aria-label="Control de volumen"
+              />
+            </div>
+          </div>
+
+          <p className="text-[9px] text-zinc-400 font-mono-retro text-center mt-1">
+            {/iPhone|iPad|iPod/i.test(navigator.userAgent)
+              ? 'En iOS el volumen de sonido se gradúa con los botones físicos del teléfono'
+              : 'Desliza para regular el volumen o pulsa el botón para silenciar'}
+          </p>
         </div>
 
         {/* Bottom Switcher: Cassette 80s / Artwork / Lyrics / Queue */}
-        <div className="flex items-center justify-around pt-3 border-t border-white/10 flex-wrap gap-1">
+        <div className="flex items-center justify-around pt-2 border-t border-white/10 flex-wrap gap-1">
           <button
             onClick={() => setCenterView('cassette')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               centerView === 'cassette'
-                ? 'bg-amber-400 text-black shadow-md font-bold'
+                ? isSteel
+                  ? 'retro-btn-aluminum text-slate-900 font-bold border-amber-600/60 shadow-md'
+                  : 'bg-amber-400 text-black shadow-md font-bold'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -316,7 +416,9 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             onClick={() => setCenterView('artwork')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               centerView === 'artwork'
-                ? 'bg-white text-black shadow-md'
+                ? isSteel
+                  ? 'retro-btn-aluminum text-slate-900 font-bold shadow-md'
+                  : 'bg-white text-black shadow-md'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -328,7 +430,9 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             onClick={() => setCenterView('lyrics')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               centerView === 'lyrics'
-                ? 'bg-white text-black shadow-md'
+                ? isSteel
+                  ? 'retro-btn-aluminum text-slate-900 font-bold shadow-md'
+                  : 'bg-white text-black shadow-md'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -340,7 +444,9 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             onClick={() => setCenterView('queue')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               centerView === 'queue'
-                ? 'bg-white text-black shadow-md'
+                ? isSteel
+                  ? 'retro-btn-aluminum text-slate-900 font-bold shadow-md'
+                  : 'bg-white text-black shadow-md'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
