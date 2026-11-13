@@ -41,7 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center gap-2">
             <Radio className="w-5 h-5 text-amber-500 animate-pulse" />
             <h1 className="font-rock text-2xl tracking-widest text-amber-400 drop-shadow">
-              PULSE <span className="text-white">'84</span>
+              MIXTAPE <span className="text-white">'84</span>
             </h1>
           </div>
           <div className="flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded border border-white/10 font-mono-retro text-[10px] text-emerald-400 font-bold">

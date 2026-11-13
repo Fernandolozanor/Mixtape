@@ -65,7 +65,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold text-white mb-6">Ajustes de Pulse</h2>
+        <h2 className="text-xl font-bold text-white mb-6">Ajustes de Mixtape</h2>
 
         {/* Section 0: Color Theme Selection */}
         <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
@@ -197,7 +197,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Info */}
         <div className="text-center text-xs text-zinc-500">
-          <p>Pulse Music PWA v1.0 • Estilo Apple Music</p>
+          <p>Mixtape '84 • Hi-Fi Cassette Deck PWA</p>
           <p>Compatible con iPhone, Android, Windows y macOS</p>
         </div>
       </div>

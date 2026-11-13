@@ -1,35 +1,35 @@
-# 🎵 Pulse Music (PWA)
+# 📼 Mixtape '84 (PWA)
 
-> Reproductor de música elegante estilo **Apple Music**, sin anuncios, con extracción de audio en streaming, letras sincronizadas en tiempo real, base de datos en Firebase y soporte completo para **iPhone (iOS), Android, Windows y macOS**.
+> Reproductor de música con auténtica estética **80s Rock Hi-Fi Cassette Deck**, pletina de casette giratoria sincronizada con tinta a bolígrafo escrita a mano en tiempo real, búsqueda sin límites, recomendaciones personalizadas basadas en tus gustos, canales continuos y soporte completo para **iPhone (iOS), Android, Windows y macOS**.
 
-![Pulse Music Banner](public/favicon.svg)
+![Mixtape Banner](public/favicon.svg)
 
 ---
 
 ## ✨ Características Principales
 
-1. **Diseño Gráfico Refinado (Estilo Apple Music):**
-   - Interfaz translúcida con efectos *Glassmorphism* y desenfoque dinámico adaptativo (*ambient background*) basado en la carátula del álbum.
-   - Mini-reproductor flotante y vista expandida con gestos táctiles.
-   - Tipografía moderna inspirada en SF Pro y animaciones fluidas a 60 FPS.
+1. **Estética 80s Rock & Hi-Fi Cassette Deck:**
+   - Pletina de casette analógica con carretes giratorios sincronizados en bucle (`cinta.mp4`).
+   - Simulación de caligrafía a bolígrafo azul tipo Bic que escribe letra por letra el título y artista sobre la cinta al reproducir cada canción.
+   - Chasis con textura de metal anodizado cepillado, tornillería hexagonal de rack 19", vúmetros analógicos estéreo de LEDs (-20 a +3 dB) y contador mecánico de 4 dígitos.
+   - Botonera mecánica clásica con pulsadores estilo deck (`[ ⏪ REW ]`, `[ ▶ PLAY ]`, `[ ⏸ PAUSE ]`, `[ ⏩ FF ]`).
 
-2. **Cero Anuncios y Streaming Nativo:**
-   - Reproducción directa de streams de audio de YouTube y otras fuentes a través de instancias de APIs descentralizadas (**Invidious / Piped**).
-   - Integración automática con **SponsorBlock** para omitir intros, patrocinios y silencios reportados por la comunidad.
-   - **No almacena archivos multimedia:** Únicamente reproduce streams bajo demanda y almacena referencias y metadatos.
+2. **Recomendaciones Inteligentes y Colecciones Personalizadas:**
+   - Algoritmo que analiza en tiempo real tus búsquedas, listas y canciones favoritas para recomendarte música en la pantalla principal.
+   - **Colecciones Destacadas** personalizadas (Grandes Éxitos de los 80, Hard Rock & Heavy Metal Clásico, Baladas y AOR Legendario, etc.).
+   - **Canales Continuos** con conciertos completos, directos míticos y sesiones de larga duración.
 
-3. **Letras Sincronizadas en Tiempo Real:**
-   - Integración nativa con la API de **LRCLIB**.
-   - Desplazamiento automático karaoke y opción de tocar cualquier verso para saltar la canción directamente a ese segundo.
+3. **Búsqueda Sin Límites:**
+   - Múltiples fuentes combinadas (YouTube y Audius).
+   - Sin restricciones de cantidad ni paginación forzada, con selector analógico de frecuencia y botón de carga rápida continua.
 
-4. **Sincronización en la Nube con Firebase:**
-   - Autenticación rápida (modo anónimo o cuenta de Google).
-   - Almacenamiento y sincronización instantánea de **listas de reproducción**, **canciones favoritas** y preferencias entre todos tus dispositivos mediante **Cloud Firestore**.
-   - Fallback local transparente (*LocalStorage* e *IndexedDB*) si aún no has vinculado Firebase.
+4. **100% Procesado en Local y Sin Anuncios:**
+   - Todo el motor de reproducción, animaciones, base de datos local y lógica se ejecutan directamente en tu navegador o dispositivo.
+   - No almacena archivos multimedia pesados en servidores; transmite audio directamente bajo demanda.
 
 5. **Multiplataforma y PWA (iOS, Android, Windows, macOS):**
-   - Soporte nativo para la API `navigator.mediaSession`: visualiza carátulas y controla pistas desde la pantalla de bloqueo de tu iPhone, Dynamic Island, barra de notificaciones de Android o controles multimedia de Windows/Mac.
-   - Caché local con **IndexedDB** para reproducción resistente a pérdidas de cobertura (metro, túneles o viajes).
+   - Soporte nativo para la API `navigator.mediaSession`: visualiza carátulas y controla pistas desde la pantalla de bloqueo de tu móvil, Dynamic Island, barra de notificaciones o teclado.
+   - Caché local con **IndexedDB** para reproducción resistente a pérdidas de cobertura.
 
 ---
 
@@ -45,7 +45,7 @@ cd "D:\REPRODUCTOR MUSICA"
 npm run dev
 ```
 
-Abre tu navegador en `http://localhost:5173`.
+Abre tu navegador en `http://localhost:3030`.
 
 ---
 
@@ -68,7 +68,7 @@ Abre tu navegador en `http://localhost:5173`.
 
 ---
 
-## ☁️ Conexión con Firebase (Base de Datos en la Nube)
+## ☁️ Conexión con Firebase (Opcional - Sincronización en la Nube)
 
 1. Ve a [Firebase Console](https://console.firebase.google.com/) y crea un proyecto gratuito (**Plan Spark**).
 2. Activa **Authentication** (habilita *Proveedor Anónimo* y/o *Google*).
@@ -84,7 +84,7 @@ Abre tu navegador en `http://localhost:5173`.
      "appId": "..."
    }
    ```
-5. En la app **Pulse Music**, pulsa en **Ajustes** (icono de engranaje), pega el JSON y pulsa **Guardar Configuración**. ¡Tus listas quedarán sincronizadas automáticamente!
+5. En la app **Mixtape**, pulsa en **Ajustes** (icono de engranaje), pega el JSON y pulsa **Guardar Configuración**. ¡Tus listas quedarán sincronizadas automáticamente!
 
 ---
 

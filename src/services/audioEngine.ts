@@ -228,7 +228,7 @@ class AudioEngine {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
       artist: `${track.artist} (${this.getSourceLabel(track.source)})`,
-      album: track.album || 'Pulse Music',
+      album: track.album || "Mixtape '84",
       artwork: [
         { src: track.thumbnail, sizes: '96x96', type: 'image/jpeg' },
         { src: track.thumbnail, sizes: '128x128', type: 'image/jpeg' },

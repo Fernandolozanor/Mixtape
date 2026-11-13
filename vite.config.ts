@@ -226,9 +226,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'Pulse Music',
-        short_name: 'Pulse',
-        description: 'Reproductor de música elegante estilo Apple Music sin anuncios con sincronización en la nube',
+        name: 'Mixtape',
+        short_name: 'Mixtape',
+        description: 'Reproductor de música retro rock de los 80 con pletina de casette analógica',
         theme_color: '#0a0a0c',
         background_color: '#0a0a0c',
         display: 'standalone',

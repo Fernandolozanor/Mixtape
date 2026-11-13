@@ -45,8 +45,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   // Handwriting simulation on the cassette tape label
   useEffect(() => {
     if (!currentTrack) {
-      setWrittenTitle('PULSE TAPE');
-      setWrittenArtist('MIXTAPE 1984');
+      setWrittenTitle('MIXTAPE');
+      setWrittenArtist('SIDE A • 1984');
       setIsTyping(false);
       return;
     }
@@ -163,7 +163,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               mixBlendMode: 'multiply',
             }}
           >
-            {writtenTitle || (currentTrack ? '' : 'PULSE TAPE')}
+            {writtenTitle || (currentTrack ? '' : 'MIXTAPE')}
             {isTyping && writtenTitle.length < (currentTrack?.title.length || 0) && (
               <span className="inline-block w-1 h-3 bg-[#153b6e] ml-0.5 animate-pulse rounded-sm" />
             )}
@@ -213,7 +213,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               style={{ animationDuration: '3s' }}
             />
             <span className="text-[10px] font-extrabold tracking-widest uppercase text-zinc-300">
-              PULSE DECK
+              MIXTAPE DECK
             </span>
             <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-mono font-bold">
               CrO2
@@ -393,7 +393,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       <div className="flex items-center justify-between px-3 pt-2 pb-3 border-b border-white/10 mb-4">
         <div>
           <h3 className="font-rock text-xl md:text-2xl tracking-widest uppercase text-white flex items-center gap-2">
-            PULSE STEREO CASSETTE DECK
+            MIXTAPE STEREO CASSETTE DECK
             <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono-retro font-bold border border-amber-500/30">
               MODEL 1984
             </span>
@@ -480,7 +480,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           <span className="hidden sm:inline">|</span>
           <span className="hidden sm:inline">DOLBY B NR ACTIVE</span>
           <span className="hidden sm:inline">|</span>
-          <span className="text-amber-400 font-bold">PULSE HI-FI</span>
+          <span className="text-amber-400 font-bold">MIXTAPE HI-FI</span>
         </div>
       </div>
     </div>
