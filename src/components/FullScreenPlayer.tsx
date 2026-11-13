@@ -155,7 +155,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       </main>
 
       {/* Bottom Controls Area */}
-      <footer className="w-full max-w-xl mx-auto px-6 pb-6 pt-2 space-y-4 shrink-0">
+      <footer className="w-full max-w-xl mx-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-1 sm:pt-2 space-y-2.5 sm:space-y-4 shrink-0">
         {/* Title, Artist and Heart */}
         <div className="flex items-center justify-between gap-4">
           <div className="overflow-hidden">

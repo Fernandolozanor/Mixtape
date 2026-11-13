@@ -30,7 +30,7 @@ export const MiniPlayer: React.FC = () => {
   return (
     <div
       onClick={() => setFullScreenPlayerOpen(true)}
-      className="fixed bottom-16 md:bottom-2.5 left-2 right-2 md:left-68 md:right-4 z-30 cursor-pointer transition-all duration-300"
+      className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.5rem)] md:bottom-2.5 left-2 right-2 md:left-68 md:right-4 z-40 cursor-pointer transition-all duration-300"
     >
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#171c26] via-[#11151e] to-[#0e1219] border-2 border-[#263042] shadow-[0_10px_30px_rgba(0,0,0,0.85)] p-2.5 flex items-center justify-between gap-3">
         {/* Chassis corner screws */}

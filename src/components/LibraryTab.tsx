@@ -60,7 +60,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   // 1. Favorites view
   if (isFavoritesView) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto pb-32">
+      <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="flex items-center gap-4">
             <div
@@ -234,7 +234,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   // 2. Playlist Detail view
   if (selectedPlaylist) {
     return (
-      <div className="space-y-6 max-w-5xl mx-auto pb-32">
+      <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
         <button
           onClick={() => {
             setSelectedPlaylistId(null);
@@ -441,7 +441,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
   // 3. Main Library Overview
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-32">
+    <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
