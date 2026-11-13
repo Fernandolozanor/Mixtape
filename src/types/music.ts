@@ -1,4 +1,4 @@
-export type AudioSourceType = 'youtube' | 'soundcloud' | 'radio' | 'custom';
+export type AudioSourceType = 'itunes' | 'audius' | 'youtube' | 'radio' | 'custom';
 
 export interface Track {
   id: string;
@@ -9,6 +9,7 @@ export interface Track {
   thumbnail: string;
   source: AudioSourceType;
   audioUrl?: string;
+  youtubeId?: string;
   streamExpiry?: number;
   addedAt?: number;
 }

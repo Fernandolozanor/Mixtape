@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { audioEngine } from '../services/audioEngine';
 import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
 
@@ -88,9 +89,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
         <div className="flex flex-col items-center">
           <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-            REPRODUCIENDO DE {currentTrack.source.toUpperCase()}
+            FUENTE DE REPRODUCCIÓN
           </span>
-          <span className="text-xs font-semibold text-pink-400">AUDIO SIN ANUNCIOS</span>
+          <span className="text-xs font-bold text-pink-400 bg-pink-500/15 px-3 py-0.5 rounded-full mt-0.5 border border-pink-500/25">
+            {audioEngine.getSourceLabel(currentTrack.source)}
+          </span>
         </div>
 
         <button

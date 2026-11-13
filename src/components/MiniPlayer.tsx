@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Pause, SkipForward, Heart, Loader2 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { audioEngine } from '../services/audioEngine';
 
 export const MiniPlayer: React.FC = () => {
   const {
@@ -21,6 +22,7 @@ export const MiniPlayer: React.FC = () => {
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const liked = isLiked(currentTrack.id);
+  const sourceLabel = audioEngine.getSourceLabel(currentTrack.source);
 
   return (
     <div
@@ -46,7 +48,13 @@ export const MiniPlayer: React.FC = () => {
 
           <div className="overflow-hidden">
             <p className="text-sm font-semibold text-white truncate">{currentTrack.title}</p>
-            <p className="text-xs text-zinc-400 truncate">{currentTrack.artist}</p>
+            <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+              <span className="truncate">{currentTrack.artist}</span>
+              <span>•</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-pink-400 font-medium">
+                {sourceLabel}
+              </span>
+            </div>
           </div>
         </div>
 

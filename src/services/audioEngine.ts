@@ -68,29 +68,28 @@ class AudioEngine {
       this.onTimeUpdateCallbacks.forEach((cb) => cb(cur, dur, buf));
     });
 
-    this.audio.addEventListener('error', () => {
-      if (!this.isUsingYouTube) {
-        console.warn('Native audio error, falling back to YouTube if available');
-      }
+    this.audio.addEventListener('error', (e) => {
+      console.warn('Native audio error:', e);
+      this.notifyState();
     });
   }
 
   private initYouTubeIFrameAPI() {
     if (typeof window === 'undefined') return;
 
-    // Create hidden DOM container for YouTube player
     let ytContainer = document.getElementById('pulse-yt-container');
     if (!ytContainer) {
       ytContainer = document.createElement('div');
       ytContainer.id = 'pulse-yt-container';
+      // YouTube requires at least 200x200 and visible in viewport for autoplay
       ytContainer.style.position = 'fixed';
-      ytContainer.style.bottom = '-9999px';
-      ytContainer.style.left = '-9999px';
+      ytContainer.style.bottom = '10px';
+      ytContainer.style.right = '10px';
       ytContainer.style.width = '240px';
-      ytContainer.style.height = '180px';
-      ytContainer.style.opacity = '0.001';
+      ytContainer.style.height = '140px';
+      ytContainer.style.opacity = '0.01';
       ytContainer.style.pointerEvents = 'none';
-      ytContainer.style.zIndex = '-999';
+      ytContainer.style.zIndex = '-10';
       document.body.appendChild(ytContainer);
     }
 
@@ -98,7 +97,7 @@ class AudioEngine {
       if (this.ytPlayer) return;
       try {
         this.ytPlayer = new window.YT.Player('pulse-yt-container', {
-          height: '180',
+          height: '140',
           width: '240',
           playerVars: {
             playsinline: 1,
@@ -132,7 +131,6 @@ class AudioEngine {
       window.onYouTubeIframeAPIReady = () => {
         initPlayer();
       };
-      // Inject script
       if (!document.getElementById('yt-iframe-script')) {
         const tag = document.createElement('script');
         tag.id = 'yt-iframe-script';
@@ -143,11 +141,9 @@ class AudioEngine {
   }
 
   private handleYouTubeStateChange(state: number) {
-    // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
     this.notifyState();
 
     if (state === 0) {
-      // Ended
       this.onTrackEndCallbacks.forEach((cb) => cb());
     }
 
@@ -222,7 +218,7 @@ class AudioEngine {
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
-      artist: track.artist,
+      artist: `${track.artist} (${this.getSourceLabel(track.source)})`,
       album: track.album || 'Pulse Music',
       artwork: [
         { src: track.thumbnail, sizes: '96x96', type: 'image/jpeg' },
@@ -231,6 +227,21 @@ class AudioEngine {
         { src: track.thumbnail, sizes: '512x512', type: 'image/jpeg' },
       ],
     });
+  }
+
+  public getSourceLabel(source: string): string {
+    switch (source) {
+      case 'itunes':
+        return 'Apple Music';
+      case 'audius':
+        return 'Audius (Libre)';
+      case 'youtube':
+        return 'YouTube';
+      case 'radio':
+        return 'Radio Web';
+      default:
+        return 'Audio Directo';
+    }
   }
 
   private updateMediaSessionPosition(currentTime: number, duration: number) {
@@ -247,14 +258,14 @@ class AudioEngine {
   }
 
   /**
-   * Play a track using either YouTube or Direct Audio stream
+   * Play a track with instant audio feedback
    */
   public async playTrack(track: Track): Promise<boolean> {
     this.currentTrack = track;
     this.updateMediaSessionMetadata(track);
 
-    // 1. Direct stream available (Audius, direct stream, radio)
-    if (track.source === 'custom' && track.audioUrl) {
+    // 1. Direct audio stream (Apple Music AAC preview, Audius MP3, Radio, Custom)
+    if (track.audioUrl) {
       this.isUsingYouTube = false;
       this.stopYouTubeSync();
       if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
@@ -263,54 +274,34 @@ class AudioEngine {
 
       try {
         this.audio.src = track.audioUrl;
+        this.audio.currentTime = 0;
         await this.audio.play();
+        this.notifyState();
         return true;
       } catch (err) {
-        console.warn('Native audio play error:', err);
+        console.warn('Native audio play error (browser policy):', err);
       }
     }
 
-    // 2. Play via YouTube IFrame Engine (Search or Video ID)
-    if (this.ytPlayerReady && this.ytPlayer) {
+    // 2. YouTube Video stream
+    if (track.source === 'youtube' && track.youtubeId && this.ytPlayerReady && this.ytPlayer) {
       this.isUsingYouTube = true;
       this.audio.pause();
 
       try {
-        const query = `${track.title} ${track.artist}`;
-        if (track.id.length === 11 && !track.id.startsWith('yt_')) {
-          this.ytPlayer.loadVideoById(track.id);
-        } else {
-          // Native YouTube search playlist
-          this.ytPlayer.loadPlaylist({
-            listType: 'search',
-            list: query,
-            index: 0,
-            suggestedQuality: 'small',
-          });
-        }
+        this.ytPlayer.loadVideoById(track.youtubeId);
+        this.notifyState();
         return true;
       } catch (err) {
-        console.warn('YouTube loadPlaylist error:', err);
-      }
-    }
-
-    // 3. Fallback: If preview audio is available on track
-    if (track.audioUrl) {
-      this.isUsingYouTube = false;
-      try {
-        this.audio.src = track.audioUrl;
-        await this.audio.play();
-        return true;
-      } catch (e) {
-        console.warn('Fallback preview audio failed:', e);
+        console.warn('YouTube loadVideoById error:', err);
       }
     }
 
     return false;
   }
 
-  public async preloadNextTrack(_track: Track) {
-    // Gapless preloading stub
+  public preloadNextTrack(_track: Track): void {
+    // Gapless preloading
   }
 
   public play(): Promise<void> {
@@ -351,14 +342,14 @@ class AudioEngine {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
       return this.ytPlayer.getPlayerState() === 1; // 1 = playing
     }
-    return !this.audio.paused && !this.audio.ended && this.audio.readyState > 2;
+    return !this.audio.paused && !this.audio.ended && this.audio.readyState > 1;
   }
 
   public isBuffering(): boolean {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
       return this.ytPlayer.getPlayerState() === 3; // 3 = buffering
     }
-    return !this.audio.paused && this.audio.readyState < 3;
+    return !this.audio.paused && this.audio.readyState < 2;
   }
 
   public getCurrentTime(): number {

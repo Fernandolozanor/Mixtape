@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Search as SearchIcon, Loader2, Play, Plus, Heart, Clock } from 'lucide-react';
-import type { Track } from '../types/music';
+import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { audioEngine } from '../services/audioEngine';
 
 const GENRE_TAGS = [
   'Éxitos Globales',
@@ -24,26 +25,20 @@ interface SearchTabProps {
 
 export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, initialQuery = '' }) => {
   const [query, setQuery] = useState(initialQuery);
+  const [selectedFilter, setSelectedFilter] = useState<AudioSourceType | 'all'>('all');
   const [results, setResults] = useState<Track[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const { playTrack, currentTrack } = usePlayer();
   const { isLiked, toggleLike } = useLibrary();
 
-  React.useEffect(() => {
-    if (initialQuery && initialQuery.trim()) {
-      setQuery(initialQuery);
-      handleSearch(initialQuery);
-    }
-  }, [initialQuery]);
-
-  const handleSearch = async (searchTerm: string) => {
+  const handleSearch = async (searchTerm: string, filter: AudioSourceType | 'all' = selectedFilter) => {
     const term = searchTerm.trim();
     if (!term) return;
 
     setIsSearching(true);
     try {
-      const tracks = await streamResolver.search(term);
+      const tracks = await streamResolver.search(term, filter);
       setResults(tracks);
     } catch (e) {
       console.error('Search failed:', e);
@@ -52,9 +47,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
     }
   };
 
+  React.useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      setQuery(initialQuery);
+      handleSearch(initialQuery);
+    }
+  }, [initialQuery]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch(query);
+    }
+  };
+
+  const handleFilterChange = (filter: AudioSourceType | 'all') => {
+    setSelectedFilter(filter);
+    if (query.trim()) {
+      handleSearch(query, filter);
     }
   };
 
@@ -65,13 +74,48 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const getSourceBadge = (source: AudioSourceType) => {
+    switch (source) {
+      case 'itunes':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-pink-500/20 text-pink-400 border border-pink-500/30">
+            Apple Music
+          </span>
+        );
+      case 'audius':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+            Audius (Libre)
+          </span>
+        );
+      case 'youtube':
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+            YouTube
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+            {audioEngine.getSourceLabel(source)}
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-32">
       {/* Header and Search Box */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white mb-4">
-          Buscar
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            Buscar Música
+          </h1>
+          <span className="text-xs text-zinc-400 hidden sm:inline">
+            Multi-fuente: Apple Music • Audius • YouTube
+          </span>
+        </div>
+
         <div className="relative">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
           <input
@@ -79,7 +123,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Canciones, artistas, álbumes..."
+            placeholder="Escribe canción, artista o pega enlace de YouTube..."
             className="w-full pl-12 pr-28 py-3.5 rounded-2xl glass-input text-base placeholder:text-zinc-500 shadow-xl transition"
           />
           <button
@@ -88,6 +132,41 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
             className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold transition disabled:opacity-50"
           >
             {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar'}
+          </button>
+        </div>
+
+        {/* Source Filter Switcher */}
+        <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 text-xs">
+          <span className="text-zinc-500 font-semibold mr-1">Fuente:</span>
+          <button
+            onClick={() => handleFilterChange('all')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition ${
+              selectedFilter === 'all'
+                ? 'bg-white text-black font-semibold'
+                : 'bg-white/5 text-zinc-400 hover:text-white'
+            }`}
+          >
+            Todas las fuentes
+          </button>
+          <button
+            onClick={() => handleFilterChange('itunes')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition ${
+              selectedFilter === 'itunes'
+                ? 'bg-pink-600 text-white font-semibold'
+                : 'bg-white/5 text-zinc-400 hover:text-white'
+            }`}
+          >
+            Apple Music
+          </button>
+          <button
+            onClick={() => handleFilterChange('audius')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition ${
+              selectedFilter === 'audius'
+                ? 'bg-cyan-600 text-white font-semibold'
+                : 'bg-white/5 text-zinc-400 hover:text-white'
+            }`}
+          >
+            Audius (Completo)
           </button>
         </div>
       </div>
@@ -118,9 +197,13 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
       {/* Results List */}
       {results.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-            Resultados ({results.length})
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Resultados ({results.length})
+            </p>
+            <span className="text-xs text-zinc-500">Pulsa en una canción para reproducir</span>
+          </div>
+
           <div className="space-y-1.5">
             {results.map((track) => {
               const isCurrent = currentTrack?.id === track.id;
@@ -132,7 +215,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
                   onClick={() => playTrack(track, results)}
                   className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition group ${
                     isCurrent
-                      ? 'bg-pink-500/15 border border-pink-500/20'
+                      ? 'bg-pink-500/15 border border-pink-500/30 shadow-lg shadow-pink-500/10'
                       : 'glass-card glass-card-hover'
                   }`}
                 >
@@ -150,14 +233,20 @@ export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, 
                     </div>
 
                     <div className="overflow-hidden">
-                      <p
-                        className={`text-sm font-semibold truncate ${
-                          isCurrent ? 'text-pink-400' : 'text-white'
-                        }`}
-                      >
-                        {track.title}
-                      </p>
-                      <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
+                      <div className="flex items-center gap-2">
+                        <p
+                          className={`text-sm font-semibold truncate ${
+                            isCurrent ? 'text-pink-400' : 'text-white'
+                          }`}
+                        >
+                          {track.title}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 mt-0.5">
+                        <span className="truncate">{track.artist}</span>
+                        <span>•</span>
+                        {getSourceBadge(track.source)}
+                      </div>
                     </div>
                   </div>
 
