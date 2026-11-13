@@ -30,6 +30,13 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
+    // Explicitly enforce muted and inline attributes for iOS Safari / Mobile WebKit
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('muted', '');
+
     if (isPlaying) {
       const playPromise = video.play();
       if (playPromise !== undefined) {
@@ -381,36 +388,36 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
      ------------------------------------------------------------- */
   return (
     <div
-      className={`retro-tape-chassis rounded-3xl p-4 md:p-6 shadow-2xl relative select-none w-full max-w-2xl mx-auto ${className}`}
+      className={`retro-tape-chassis rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-2xl relative select-none w-full max-w-2xl mx-auto ${className}`}
     >
       {/* 4 Corner Screws */}
-      <div className="absolute top-3 left-3 retro-screw scale-125" />
-      <div className="absolute top-3 right-3 retro-screw scale-125" />
-      <div className="absolute bottom-3 left-3 retro-screw scale-125" />
-      <div className="absolute bottom-3 right-3 retro-screw scale-125" />
+      <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 retro-screw scale-90 sm:scale-125" />
+      <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 retro-screw scale-90 sm:scale-125" />
+      <div className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 retro-screw scale-90 sm:scale-125" />
+      <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 retro-screw scale-90 sm:scale-125" />
 
       {/* Hi-Fi Header with Silkscreen Markings */}
-      <div className="flex items-center justify-between px-3 pt-2 pb-3 border-b border-white/10 mb-4">
+      <div className="flex items-center justify-between px-2 sm:px-3 pt-1 sm:pt-2 pb-2 sm:pb-3 border-b border-white/10 mb-2 sm:mb-4">
         <div>
-          <h3 className="font-rock text-xl md:text-2xl tracking-widest uppercase text-white flex items-center gap-2">
-            MIXTAPE STEREO CASSETTE DECK
-            <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono-retro font-bold border border-amber-500/30">
-              MODEL 1984
+          <h3 className="font-rock text-lg sm:text-xl md:text-2xl tracking-widest uppercase text-white flex items-center gap-1.5 sm:gap-2">
+            MIXTAPE DECK
+            <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono-retro font-bold border border-amber-500/30">
+              1984
             </span>
           </h3>
-          <p className="text-[11px] text-zinc-400 font-mono-retro">
-            3-HEAD SYSTEM • CLOSED LOOP DUAL CAPSTAN • TYPE II HIGH POSITION
+          <p className="text-[9px] sm:text-[11px] text-zinc-400 font-mono-retro">
+            3-HEAD • DUAL CAPSTAN • TYPE II CrO2
           </p>
         </div>
 
         {/* Big Mechanical Tape Counter */}
         <div className="flex flex-col items-end">
-          <span className="text-[10px] font-mono-retro font-bold text-zinc-400">TAPE COUNTER</span>
-          <div className="retro-counter-display px-2.5 py-1 rounded-md flex items-center gap-1 font-mono-retro text-lg font-bold text-amber-400 tracking-wider">
+          <span className="text-[8px] sm:text-[10px] font-mono-retro font-bold text-zinc-400">COUNTER</span>
+          <div className="retro-counter-display px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md flex items-center gap-0.5 sm:gap-1 font-mono-retro text-sm sm:text-lg font-bold text-amber-400 tracking-wider">
             {counterStr.split('').map((digit, idx) => (
               <span
                 key={idx}
-                className="bg-black/90 px-1.5 py-0.5 rounded text-center min-w-[14px] border border-white/5"
+                className="bg-black/90 px-1 sm:px-1.5 py-0.5 rounded text-center min-w-[10px] sm:min-w-[14px] border border-white/5"
               >
                 {digit}
               </span>
@@ -420,7 +427,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       </div>
 
       {/* Massive Cassette Bay with Rotating Video & Handwritten Label */}
-      <div className="retro-tape-window rounded-2xl aspect-[16/9] w-full relative overflow-hidden shadow-2xl border-4 border-zinc-800">
+      <div className="retro-tape-window rounded-xl sm:rounded-2xl aspect-[16/9] w-full relative overflow-hidden shadow-2xl border-2 sm:border-4 border-zinc-800">
         <video
           ref={videoRef}
           src="./assets/cassette.mp4"
@@ -444,43 +451,43 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group/overlay z-30"
         >
           {!isPlaying && (
-            <div className="w-16 h-16 rounded-full bg-black/70 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl">
-              <Play className="w-8 h-8 text-amber-400 fill-amber-400 ml-1" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-black/70 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl">
+              <Play className="w-6 h-6 sm:w-8 sm:h-8 text-amber-400 fill-amber-400 ml-1" />
             </div>
           )}
         </div>
       </div>
 
       {/* Lower Deck Controls & VU Meters Bar */}
-      <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between flex-wrap gap-4 px-2">
+      <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-white/10 flex items-center justify-between flex-wrap gap-2 sm:gap-4 px-1 sm:px-2">
         {/* Stereo Analog VU Meters with dB Markings */}
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono-retro font-bold text-zinc-400 w-4">CH-L</span>
+        <div className="space-y-1">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">L</span>
             {renderMeterBar(vuLeft)}
-            <span className="text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
+            <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono-retro font-bold text-zinc-400 w-4">CH-R</span>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-[9px] sm:text-[10px] font-mono-retro font-bold text-zinc-400 w-3.5 sm:w-4">R</span>
             {renderMeterBar(vuRight)}
-            <span className="text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
+            <span className="text-[8px] sm:text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
           </div>
         </div>
 
         {/* 80s Rock Tape Specs */}
-        <div className="flex items-center gap-4 text-xs font-mono-retro text-zinc-400">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-mono-retro text-zinc-400">
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <span
-              className={`w-2 h-2 rounded-full ${
+              className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
                 isPlaying ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-zinc-700'
               }`}
             />
             <span className="font-bold text-white">{isPlaying ? 'MOTOR ON' : 'STOP'}</span>
           </div>
-          <span className="hidden sm:inline">|</span>
-          <span className="hidden sm:inline">DOLBY B NR ACTIVE</span>
-          <span className="hidden sm:inline">|</span>
-          <span className="text-amber-400 font-bold">MIXTAPE HI-FI</span>
+          <span className="hidden xs:inline">|</span>
+          <span className="hidden xs:inline">DOLBY B NR</span>
+          <span>|</span>
+          <span className="text-amber-400 font-bold">MIXTAPE '84</span>
         </div>
       </div>
     </div>

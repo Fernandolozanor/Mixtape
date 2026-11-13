@@ -85,6 +85,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       handleNextTrack();
     });
 
+    audioEngine.onError((msg) => {
+      console.warn('Playback error caught in PlayerContext:', msg);
+      setIsLoading(false);
+      setIsPlaying(false);
+    });
+
     // Setup MediaSession hardware controls
     audioEngine.setupMediaSession({
       onPlay: () => audioEngine.play(),

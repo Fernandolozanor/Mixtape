@@ -85,12 +85,12 @@ class AudioEngine {
       ytContainer.id = 'pulse-yt-container';
       // YouTube requires positive viewport dimensions and visibility for audio playback
       ytContainer.style.position = 'fixed';
-      ytContainer.style.bottom = '4px';
-      ytContainer.style.right = '4px';
-      ytContainer.style.width = '180px';
-      ytContainer.style.height = '100px';
-      ytContainer.style.opacity = '0.02';
-      ytContainer.style.pointerEvents = 'none';
+      ytContainer.style.bottom = '0';
+      ytContainer.style.right = '0';
+      ytContainer.style.width = '200px';
+      ytContainer.style.height = '120px';
+      ytContainer.style.opacity = '0.005';
+      ytContainer.style.pointerEvents = 'auto';
       ytContainer.style.zIndex = '1';
       document.body.appendChild(ytContainer);
     }
@@ -98,9 +98,14 @@ class AudioEngine {
     const initPlayer = () => {
       if (this.ytPlayer) return;
       try {
+        const originUrl =
+          typeof window !== 'undefined' && window.location && window.location.origin
+            ? window.location.origin
+            : 'http://localhost:3030';
+
         this.ytPlayer = new window.YT.Player('pulse-yt-container', {
-          height: '100',
-          width: '180',
+          height: '120',
+          width: '200',
           playerVars: {
             playsinline: 1,
             controls: 0,
@@ -108,6 +113,8 @@ class AudioEngine {
             fs: 0,
             rel: 0,
             autoplay: 1,
+            enablejsapi: 1,
+            origin: originUrl,
           },
           events: {
             onReady: () => {
@@ -123,8 +130,9 @@ class AudioEngine {
             },
             onError: (err: any) => {
               console.warn('YouTube Player error code:', err.data);
+              this.notifyState();
               this.onErrorCallbacks.forEach((cb) =>
-                cb('Este vídeo de YouTube tiene restricciones de reproducción externa.')
+                cb('Este vídeo tiene restricciones de reproducción externa en móviles.')
               );
             },
           },
@@ -134,10 +142,12 @@ class AudioEngine {
       }
     };
 
-    if (window.YT && window.YT.Player) {
+    if (typeof window !== 'undefined' && window.YT && window.YT.Player) {
       initPlayer();
-    } else {
+    } else if (typeof window !== 'undefined') {
+      const prevHandler = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
+        if (typeof prevHandler === 'function') prevHandler();
         initPlayer();
       };
       if (!document.getElementById('yt-iframe-script')) {
@@ -288,7 +298,10 @@ class AudioEngine {
         });
         this.ytPlayer.unMute();
         this.ytPlayer.setVolume(Math.round(this.volume * 100));
-        this.ytPlayer.playVideo();
+        const res = this.ytPlayer.playVideo();
+        if (res && typeof res.catch === 'function') {
+          res.catch((e: any) => console.warn('YouTube playVideo rejected on mobile:', e));
+        }
         this.notifyState();
         return true;
       } catch (err) {

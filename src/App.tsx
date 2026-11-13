@@ -47,7 +47,7 @@ const AppContent: React.FC = () => {
   const playlistIdFromRoute = isPlaylistRoute ? activeTab.replace('playlist:', '') : null;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-[#f4f4f5]">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-[#09090b] text-[#f4f4f5]">
       {/* Desktop Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -63,7 +63,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 flex flex-col h-full overflow-y-auto safe-top relative px-4 md:px-10 pt-6">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto safe-top relative px-4 md:px-10 pt-4 md:pt-6 pb-28 md:pb-6">
         {/* Subtle Ambient 80s Rock Tape on the right lateral side (Large screens) */}
         <div className="fixed right-8 bottom-28 pointer-events-none opacity-25 hover:opacity-45 transition-opacity hidden xl:block z-0">
           <RetroTapeDeck variant="ambient-lateral" />

@@ -184,13 +184,13 @@ class RecommendationService {
     // Case 2: User is brand new (cold start) or tastes yielded no results
     if (groups.length === 0) {
       try {
-        const globalHits = await streamResolver.search('Top music hits 2026', 'youtube');
-        if (globalHits.length > 0) {
+        const rockClassics = await streamResolver.search('80s Rock Classics Greatest Hits', 'youtube');
+        if (rockClassics.length > 0) {
           groups.push({
             id: 'popular_discovery',
-            reason: 'Populares para empezar a afinar tus gustos',
-            artistOrGenre: 'Tendencias Globales',
-            tracks: globalHits.slice(0, 8),
+            reason: 'Himnos Legendarios para estrenar tu pletina',
+            artistOrGenre: 'Grandes Clásicos del Rock 80s',
+            tracks: rockClassics.slice(0, 8),
           });
         }
       } catch (e) {
