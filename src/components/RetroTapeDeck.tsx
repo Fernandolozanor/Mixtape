@@ -20,6 +20,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   const [vuLeft, setVuLeft] = useState<number>(0);
   const [vuRight, setVuRight] = useState<number>(0);
 
+  // Dynamic Handwriting state (simulates pen writing on the blank cassette label)
+  const [writtenTitle, setWrittenTitle] = useState<string>('');
+  const [writtenArtist, setWrittenArtist] = useState<string>('');
+  const [isTyping, setIsTyping] = useState<boolean>(false);
+
   // Synchronize video playback strictly with audio isPlaying state
   useEffect(() => {
     const video = videoRef.current;
@@ -37,6 +42,47 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     }
   }, [isPlaying]);
 
+  // Handwriting simulation on the cassette tape label
+  useEffect(() => {
+    if (!currentTrack) {
+      setWrittenTitle('PULSE TAPE');
+      setWrittenArtist('MIXTAPE 1984');
+      setIsTyping(false);
+      return;
+    }
+
+    const title = currentTrack.title.trim();
+    const artist = currentTrack.artist.trim();
+
+    setWrittenTitle('');
+    setWrittenArtist('');
+    setIsTyping(true);
+
+    let tIndex = 0;
+    const titleTimer = setInterval(() => {
+      tIndex++;
+      setWrittenTitle(title.slice(0, tIndex));
+      if (tIndex >= title.length) {
+        clearInterval(titleTimer);
+
+        // After title is written, write artist with pen
+        let aIndex = 0;
+        const artistTimer = setInterval(() => {
+          aIndex++;
+          setWrittenArtist(artist.slice(0, aIndex));
+          if (aIndex >= artist.length) {
+            clearInterval(artistTimer);
+            setIsTyping(false);
+          }
+        }, 32);
+      }
+    }, 38);
+
+    return () => {
+      clearInterval(titleTimer);
+    };
+  }, [currentTrack?.id]);
+
   // Animate vintage VU Meter bars during playback
   useEffect(() => {
     if (!isPlaying) {
@@ -46,8 +92,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     }
 
     const interval = setInterval(() => {
-      // Create organic, bouncy stereo levels characteristic of 80s tape decks
-      const base = 4 + Math.random() * 4; // 4 to 8
+      const base = 4 + Math.random() * 4;
       const l = Math.min(10, Math.max(1, Math.round(base + (Math.random() * 2 - 1))));
       const r = Math.min(10, Math.max(1, Math.round(base + (Math.random() * 2 - 1))));
       setVuLeft(l);
@@ -67,7 +112,6 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       <div className="flex items-center gap-[1.5px] h-2">
         {Array.from({ length: totalSegments }).map((_, i) => {
           const isActive = i < level;
-          // Colors: 0-5 Green (-20dB to -3dB), 6-7 Amber (0dB), 8-9 Red (+1 to +3dB)
           let activeColor = '#22c55e'; // Green
           let glowColor = 'rgba(34, 197, 94, 0.6)';
           if (i >= 6 && i <= 7) {
@@ -89,6 +133,60 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             />
           );
         })}
+      </div>
+    );
+  };
+
+  /**
+   * Renders the handwritten blue ballpoint pen ink directly onto the video's blank masking tape
+   */
+  const renderHandwrittenTapeLabel = (size: 'sm' | 'md' | 'lg') => {
+    return (
+      <div
+        className="absolute pointer-events-none flex flex-col justify-center items-center text-center overflow-hidden z-20"
+        style={{
+          top: '11%',
+          left: '14.5%',
+          width: '71%',
+          height: '18%',
+          transform: 'rotate(-0.25deg)',
+        }}
+      >
+        <div className="w-full h-full flex flex-col items-center justify-center px-1 overflow-hidden leading-tight">
+          {/* Track Title in Bic Blue Ballpoint Pen */}
+          <p
+            className="font-marker font-bold truncate max-w-full"
+            style={{
+              color: '#153b6e', // Authentic Bic Blue Ink
+              fontSize: size === 'sm' ? '11px' : size === 'lg' ? '20px' : '14px',
+              textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
+              mixBlendMode: 'multiply',
+            }}
+          >
+            {writtenTitle || (currentTrack ? '' : 'PULSE TAPE')}
+            {isTyping && writtenTitle.length < (currentTrack?.title.length || 0) && (
+              <span className="inline-block w-1 h-3 bg-[#153b6e] ml-0.5 animate-pulse rounded-sm" />
+            )}
+          </p>
+
+          {/* Artist Name in handwriting right underneath */}
+          {(writtenArtist || !currentTrack) && (
+            <p
+              className="font-marker truncate max-w-full opacity-90 mt-0.5"
+              style={{
+                color: '#1a4682',
+                fontSize: size === 'sm' ? '8px' : size === 'lg' ? '14px' : '10px',
+                textShadow: '0 0 0.5px rgba(26, 70, 130, 0.6)',
+                mixBlendMode: 'multiply',
+              }}
+            >
+              {writtenArtist || (currentTrack ? '' : 'MIXTAPE 1984')}
+              {isTyping && writtenTitle.length >= (currentTrack?.title.length || 0) && (
+                <span className="inline-block w-0.5 h-2 bg-[#1a4682] ml-0.5 animate-pulse rounded-sm" />
+              )}
+            </p>
+          )}
+        </div>
       </div>
     );
   };
@@ -138,7 +236,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           </div>
         </div>
 
-        {/* Cassette Acrylic Window with Video */}
+        {/* Cassette Acrylic Window with Video and Handwritten Label */}
         <div className="retro-tape-window rounded-xl aspect-[16/9] w-full relative overflow-hidden group/video shadow-inner">
           <video
             ref={videoRef}
@@ -150,6 +248,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             preload="auto"
             className="w-full h-full object-cover brightness-95 contrast-105"
           />
+
+          {/* Handwritten Ink on Blank Tape Label */}
+          {renderHandwrittenTapeLabel('sm')}
 
           {/* Realistic Acrylic Glass Reflection */}
           <div className="retro-glass-glare" />
@@ -246,7 +347,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             </div>
           </div>
 
-          {/* Spinning Cassette View */}
+          {/* Spinning Cassette View with Handwritten Label */}
           <div className="retro-tape-window rounded-2xl aspect-[16/9] w-full relative overflow-hidden">
             <video
               ref={videoRef}
@@ -258,6 +359,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               preload="auto"
               className="w-full h-full object-cover"
             />
+            {renderHandwrittenTapeLabel('md')}
             <div className="retro-glass-glare" />
           </div>
 
@@ -290,21 +392,21 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       {/* Hi-Fi Header with Silkscreen Markings */}
       <div className="flex items-center justify-between px-3 pt-2 pb-3 border-b border-white/10 mb-4">
         <div>
-          <h3 className="text-base font-extrabold tracking-widest uppercase text-white flex items-center gap-2">
+          <h3 className="font-rock text-xl md:text-2xl tracking-widest uppercase text-white flex items-center gap-2">
             PULSE STEREO CASSETTE DECK
-            <span className="text-[9px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono font-bold border border-amber-500/30">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono-retro font-bold border border-amber-500/30">
               MODEL 1984
             </span>
           </h3>
-          <p className="text-[10px] text-zinc-400 font-mono">
+          <p className="text-[11px] text-zinc-400 font-mono-retro">
             3-HEAD SYSTEM • CLOSED LOOP DUAL CAPSTAN • TYPE II HIGH POSITION
           </p>
         </div>
 
         {/* Big Mechanical Tape Counter */}
         <div className="flex flex-col items-end">
-          <span className="text-[9px] font-mono-retro font-bold text-zinc-400">TAPE COUNTER</span>
-          <div className="retro-counter-display px-2.5 py-1 rounded-md flex items-center gap-1 font-mono-retro text-base font-bold text-amber-400 tracking-wider">
+          <span className="text-[10px] font-mono-retro font-bold text-zinc-400">TAPE COUNTER</span>
+          <div className="retro-counter-display px-2.5 py-1 rounded-md flex items-center gap-1 font-mono-retro text-lg font-bold text-amber-400 tracking-wider">
             {counterStr.split('').map((digit, idx) => (
               <span
                 key={idx}
@@ -317,7 +419,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         </div>
       </div>
 
-      {/* Massive Cassette Bay with Rotating Video */}
+      {/* Massive Cassette Bay with Rotating Video & Handwritten Label */}
       <div className="retro-tape-window rounded-2xl aspect-[16/9] w-full relative overflow-hidden shadow-2xl border-4 border-zinc-800">
         <video
           ref={videoRef}
@@ -330,29 +432,20 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           className="w-full h-full object-cover"
         />
 
+        {/* Handwritten Ink on the physical blank label of the cassette */}
+        {renderHandwrittenTapeLabel('lg')}
+
         {/* Realistic Acrylic Sheen Overlay */}
         <div className="retro-glass-glare" />
-
-        {/* Vintage Tape Label Handwritten Overlay */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 w-3/4 max-w-sm pointer-events-none">
-          <div className="bg-[#f0e6d2] text-[#1d3d6b] px-4 py-1.5 rounded-sm shadow-md border border-[#c4b595] transform -rotate-0.5">
-            <p className="font-marker text-xs md:text-sm truncate text-center tracking-wide font-bold">
-              {currentTrack ? currentTrack.title : 'Pulse Music Player'}
-            </p>
-            <p className="text-[9px] font-mono text-zinc-600 text-center truncate">
-              {currentTrack ? currentTrack.artist : 'Mixtape 1984'}
-            </p>
-          </div>
-        </div>
 
         {/* Click to Play/Pause on the Window */}
         <div
           onClick={togglePlay}
-          className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group/overlay"
+          className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/20 transition-colors group/overlay z-30"
         >
           {!isPlaying && (
-            <div className="w-14 h-14 rounded-full bg-black/60 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl">
-              <Play className="w-7 h-7 text-amber-400 fill-amber-400 ml-1" />
+            <div className="w-16 h-16 rounded-full bg-black/70 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl">
+              <Play className="w-8 h-8 text-amber-400 fill-amber-400 ml-1" />
             </div>
           )}
         </div>
@@ -363,19 +456,19 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         {/* Stereo Analog VU Meters with dB Markings */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono-retro font-bold text-zinc-400 w-3">CH-L</span>
+            <span className="text-[10px] font-mono-retro font-bold text-zinc-400 w-4">CH-L</span>
             {renderMeterBar(vuLeft)}
-            <span className="text-[9px] font-mono text-zinc-500">-20 0 +3 dB</span>
+            <span className="text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono-retro font-bold text-zinc-400 w-3">CH-R</span>
+            <span className="text-[10px] font-mono-retro font-bold text-zinc-400 w-4">CH-R</span>
             {renderMeterBar(vuRight)}
-            <span className="text-[9px] font-mono text-zinc-500">-20 0 +3 dB</span>
+            <span className="text-[10px] font-mono-retro text-zinc-500">-20 0 +3 dB</span>
           </div>
         </div>
 
         {/* 80s Rock Tape Specs */}
-        <div className="flex items-center gap-4 text-xs font-mono text-zinc-400">
+        <div className="flex items-center gap-4 text-xs font-mono-retro text-zinc-400">
           <div className="flex items-center gap-1.5">
             <span
               className={`w-2 h-2 rounded-full ${
