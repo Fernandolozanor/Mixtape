@@ -304,10 +304,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       <div
         className="absolute pointer-events-none flex flex-col justify-center items-center text-center overflow-hidden z-20"
         style={{
-          top: '6.5%',
+          top: '10.5%',
           left: '14%',
           width: '72%',
-          height: '18%',
+          height: '14%',
           transform: 'rotate(-0.25deg)',
         }}
       >
@@ -323,9 +323,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                     size === 'sm'
                       ? '9px'
                       : size === 'lg'
-                      ? 'clamp(9.5px, 2.7vw, 12.5px)'
+                      ? 'clamp(10px, 2.7vw, 13px)'
                       : '10px',
-                  lineHeight: 1.05,
+                  lineHeight: 1.1,
                   textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                   mixBlendMode: 'multiply',
                 }}
@@ -344,9 +344,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                     size === 'sm'
                       ? '9px'
                       : size === 'lg'
-                      ? 'clamp(9.5px, 2.7vw, 12.5px)'
+                      ? 'clamp(10px, 2.7vw, 13px)'
                       : '10px',
-                  lineHeight: 1.05,
+                  lineHeight: 1.1,
                   textShadow: '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                   mixBlendMode: 'multiply',
                 }}
@@ -364,11 +364,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                     color: '#b91c1c', // Authentic Bic / Pilot Red Pen Ink
                     fontSize:
                       size === 'sm'
-                        ? '7px'
+                        ? '7.5px'
                         : size === 'lg'
-                        ? 'clamp(7.5px, 2vw, 9.5px)'
+                        ? 'clamp(7.5px, 2.1vw, 10px)'
                         : '8px',
-                    lineHeight: 1.0,
+                    lineHeight: 1.05,
                     textShadow: '0 0 0.5px rgba(185, 28, 28, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                     mixBlendMode: 'multiply',
                   }}
@@ -385,11 +385,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
                     color: '#b91c1c', // Authentic Bic / Pilot Red Pen Ink
                     fontSize:
                       size === 'sm'
-                        ? '7px'
+                        ? '7.5px'
                         : size === 'lg'
-                        ? 'clamp(7.5px, 2vw, 9.5px)'
+                        ? 'clamp(7.5px, 2.1vw, 10px)'
                         : '8px',
-                    lineHeight: 1.0,
+                    lineHeight: 1.05,
                     textShadow: '0 0 0.5px rgba(185, 28, 28, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)',
                     mixBlendMode: 'multiply',
                   }}
