@@ -487,7 +487,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           <span className="hidden xs:inline">|</span>
           <span className="hidden xs:inline">DOLBY B NR</span>
           <span>|</span>
-          <span className="text-amber-400 font-bold">MIXTAPE '84</span>
+          <span className="text-amber-400 font-bold">MIXTAPE</span>
         </div>
       </div>
     </div>

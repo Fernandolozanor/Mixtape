@@ -1,4 +1,4 @@
-# 📼 Mixtape '84 (PWA)
+# 📼 Mixtape (PWA)
 
 > Reproductor de música con auténtica estética **80s Rock Hi-Fi Cassette Deck**, pletina de casette giratoria sincronizada con tinta a bolígrafo escrita a mano en tiempo real, búsqueda sin límites, recomendaciones personalizadas basadas en tus gustos, canales continuos y soporte completo para **iPhone (iOS), Android, Windows y macOS**.
 

@@ -197,7 +197,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Info */}
         <div className="text-center text-xs text-zinc-500">
-          <p>Mixtape '84 • Hi-Fi Cassette Deck PWA</p>
+          <p>Mixtape • Hi-Fi Cassette Deck PWA</p>
           <p>Compatible con iPhone, Android, Windows y macOS</p>
         </div>
       </div>

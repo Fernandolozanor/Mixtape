@@ -96,7 +96,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
           </div>
 
           <h1 className="font-rock text-3xl sm:text-5xl md:text-6xl text-white tracking-widest drop-shadow-md leading-none">
-            SISTEMA HI-FI ESTÉREO <span className="text-amber-400">'84</span>
+            SISTEMA HI-FI ESTÉREO
           </h1>
 
           <p className="text-zinc-300 font-stereo text-sm sm:text-base tracking-wide">
