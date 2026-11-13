@@ -14,6 +14,7 @@ import type { Track } from './types/music';
 
 const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
@@ -26,7 +27,8 @@ const AppContent: React.FC = () => {
     setIsPlaylistModalOpen(true);
   };
 
-  const handleSearchGenre = (_genre: string) => {
+  const handleSearchGenre = (genre: string) => {
+    setSearchQuery(genre);
     setActiveTab('search');
   };
 
@@ -57,7 +59,10 @@ const AppContent: React.FC = () => {
         )}
 
         {activeTab === 'search' && (
-          <SearchTab onSelectTrackForPlaylist={handleOpenAddToPlaylist} />
+          <SearchTab
+            onSelectTrackForPlaylist={handleOpenAddToPlaylist}
+            initialQuery={searchQuery}
+          />
         )}
 
         {activeTab === 'library' && (

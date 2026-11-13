@@ -6,6 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   base: './', // Ensures relative assets work on GitHub Pages out of the box
+  server: {
+    port: 3030,
+    strictPort: true,
+    open: false,
+  },
   plugins: [
     react(),
     tailwindcss(),

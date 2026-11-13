@@ -19,15 +19,23 @@ const GENRE_TAGS = [
 
 interface SearchTabProps {
   onSelectTrackForPlaylist: (track: Track) => void;
+  initialQuery?: string;
 }
 
-export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist }) => {
-  const [query, setQuery] = useState('');
+export const SearchTab: React.FC<SearchTabProps> = ({ onSelectTrackForPlaylist, initialQuery = '' }) => {
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<Track[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   const { playTrack, currentTrack } = usePlayer();
   const { isLiked, toggleLike } = useLibrary();
+
+  React.useEffect(() => {
+    if (initialQuery && initialQuery.trim()) {
+      setQuery(initialQuery);
+      handleSearch(initialQuery);
+    }
+  }, [initialQuery]);
 
   const handleSearch = async (searchTerm: string) => {
     const term = searchTerm.trim();
