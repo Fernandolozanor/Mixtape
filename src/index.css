@@ -398,3 +398,19 @@
   display: inline-block;
   animation: marquee-pingpong var(--marquee-duration, 6s) ease-in-out infinite;
 }
+
+/* ==========================================================================
+   AUTHENTIC 33⅓ RPM VINYL RECORD ROTATION (1.8s per turn)
+   ========================================================================== */
+@keyframes vinyl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-vinyl-spin {
+  animation: vinyl-spin 1.8s linear infinite;
+}

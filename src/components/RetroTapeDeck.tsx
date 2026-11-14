@@ -431,36 +431,151 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   };
 
   /**
+   * Authentic Spinning Vinyl Center Label:
+   * Placed strictly over the video's circular paper label (cx: 45.37%, cy: 51.22%, diameter: 20.63%),
+   * rotating at exact 33⅓ RPM turntable speed (1.8s per revolution, clockwise).
+   */
+  const renderSpinningVinylLabel = (size: 'sm' | 'md' | 'lg') => {
+    const titleText = (writtenTitle || currentTrack?.title || 'VINILO MASTER').trim();
+    const artistText = (writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA').trim();
+
+    return (
+      <div
+        className="absolute pointer-events-none select-none z-20"
+        style={{
+          left: '45.37%',
+          top: '51.22%',
+          transform: 'translate(-50%, -50%)',
+          width: '20.63%',
+          aspectRatio: '1 / 1',
+        }}
+      >
+        {/* Rotating Circular Vinyl Label: Exact 33⅓ RPM speed (1.8s per revolution) */}
+        <div
+          className="w-full h-full rounded-full flex flex-col items-center justify-between p-0.5 sm:p-1 relative overflow-hidden will-change-transform"
+          style={{
+            animation: 'vinyl-spin 1.8s linear infinite',
+            animationPlayState: isPlaying ? 'running' : 'paused',
+            transformOrigin: 'center center',
+          }}
+        >
+          {/* Concentric authentic record label rings */}
+          <div className="absolute inset-0.5 sm:inset-1 rounded-full border border-zinc-500/25 pointer-events-none" />
+          <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-zinc-400/20 pointer-events-none" />
+
+          {/* Top Arc / Header Label */}
+          <div className="w-full text-center pt-0.5 z-10">
+            <span
+              className="font-mono-retro font-bold uppercase tracking-widest text-zinc-600 block truncate px-1"
+              style={{
+                fontSize: size === 'sm' ? '5px' : size === 'lg' ? '7px' : '6px',
+                lineHeight: 1,
+                mixBlendMode: 'multiply',
+              }}
+            >
+              STEREO • 33⅓
+            </span>
+          </div>
+
+          {/* Center Assembly: Song Title, Spindle Hole, Artist */}
+          <div className="w-full flex flex-col items-center justify-center my-auto px-0.5 z-10">
+            {/* Song Title stamped on the vinyl label */}
+            <p
+              className="font-bold text-center text-zinc-950 max-w-full truncate px-0.5"
+              style={{
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                fontSize: size === 'sm' ? '6.5px' : size === 'lg' ? '9.5px' : '8px',
+                lineHeight: 1.1,
+                mixBlendMode: 'multiply',
+                textShadow: '0 0 0.5px rgba(0,0,0,0.3)',
+              }}
+              title={titleText}
+            >
+              {titleText}
+            </p>
+
+            {/* Spindle hole grommet */}
+            <div
+              className="my-0.5 rounded-full bg-zinc-950 border border-amber-600/80 shadow-inner flex items-center justify-center"
+              style={{
+                width: size === 'sm' ? '5.5px' : size === 'lg' ? '8.5px' : '7px',
+                height: size === 'sm' ? '5.5px' : size === 'lg' ? '8.5px' : '7px',
+              }}
+            >
+              <div className="w-1 h-1 rounded-full bg-black" />
+            </div>
+
+            {/* Artist Name stamped on the vinyl label */}
+            <p
+              className="font-semibold text-center text-rose-900 max-w-full truncate px-0.5"
+              style={{
+                fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                fontSize: size === 'sm' ? '5.5px' : size === 'lg' ? '7.5px' : '6.5px',
+                lineHeight: 1.05,
+                mixBlendMode: 'multiply',
+                letterSpacing: '0.02em',
+              }}
+              title={artistText}
+            >
+              {artistText}
+            </p>
+          </div>
+
+          {/* Bottom Arc / Footer Label */}
+          <div className="w-full text-center pb-0.5 z-10">
+            <span
+              className="font-mono-retro font-bold uppercase tracking-wider text-zinc-600 block truncate px-1"
+              style={{
+                fontSize: size === 'sm' ? '4.5px' : size === 'lg' ? '6px' : '5px',
+                lineHeight: 1,
+                mixBlendMode: 'multiply',
+              }}
+            >
+              MIXTAPE LP • SIDE A
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /**
    * Adaptive Media Overlay:
-   * When playing a Favorite track, renders the Vinyl record 33⅓ RPM hi-fi plaque.
+   * When playing a Favorite track, renders the Vinyl record 33⅓ RPM spinning center label and hi-fi plaque.
    * When playing standard tracks, renders the handwritten cassette tape label.
    */
   const renderMediaOverlay = (size: 'sm' | 'md' | 'lg') => {
     if (isFavorite) {
       return (
-        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2 sm:p-3 z-20 select-none">
-          {/* Top Badges */}
-          <div className="flex items-center justify-between">
-            <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-amber-400/40 text-[7.5px] sm:text-[9px] font-mono-retro font-bold text-amber-400 shadow-md flex items-center gap-1">
-              <Disc3 className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isPlaying ? 'animate-spin' : ''}`} />
-              <span>33⅓ RPM • HI-FI VINILO</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-rose-500/90 backdrop-blur-md text-white text-[7.5px] sm:text-[9px] font-mono-retro font-extrabold shadow-md flex items-center gap-1 animate-pulse">
-              <Heart className="w-2.5 h-2.5 fill-white" />
-              <span>FAVORITOS</span>
-            </span>
-          </div>
+        <>
+          {/* 1. Real Spinning Vinyl Record Center Label (Rotating at exact 33⅓ RPM turntable speed) */}
+          {renderSpinningVinylLabel(size)}
 
-          {/* Track title plaque on vinyl */}
-          <div className="bg-black/75 backdrop-blur-md px-3 py-1 sm:py-1.5 rounded-xl border border-amber-400/30 text-center mx-auto max-w-[92%] shadow-2xl">
-            <p className="font-rock text-xs sm:text-sm text-white tracking-wider truncate">
-              {writtenTitle || currentTrack?.title || 'VINILO MASTER'}
-            </p>
-            <p className="text-[9px] sm:text-[10.5px] text-amber-400 font-mono truncate mt-0.5">
-              {writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA'}
-            </p>
+          {/* 2. Top Badges & Bottom Plaque */}
+          <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2 sm:p-3 z-20 select-none">
+            {/* Top Badges */}
+            <div className="flex items-center justify-between">
+              <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-amber-400/40 text-[7.5px] sm:text-[9px] font-mono-retro font-bold text-amber-400 shadow-md flex items-center gap-1">
+                <Disc3 className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isPlaying ? 'animate-spin' : ''}`} />
+                <span>33⅓ RPM • HI-FI VINILO</span>
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-rose-500/90 backdrop-blur-md text-white text-[7.5px] sm:text-[9px] font-mono-retro font-extrabold shadow-md flex items-center gap-1 animate-pulse">
+                <Heart className="w-2.5 h-2.5 fill-white" />
+                <span>FAVORITOS</span>
+              </span>
+            </div>
+
+            {/* Track title plaque on vinyl */}
+            <div className="bg-black/75 backdrop-blur-md px-3 py-1 sm:py-1.5 rounded-xl border border-amber-400/30 text-center mx-auto max-w-[92%] shadow-2xl">
+              <p className="font-rock text-xs sm:text-sm text-white tracking-wider truncate">
+                {writtenTitle || currentTrack?.title || 'VINILO MASTER'}
+              </p>
+              <p className="text-[9px] sm:text-[10.5px] text-amber-400 font-mono truncate mt-0.5">
+                {writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA'}
+              </p>
+            </div>
           </div>
-        </div>
+        </>
       );
     }
     return renderHandwrittenTapeLabel(size);
