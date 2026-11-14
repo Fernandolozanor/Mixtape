@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useId } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -431,13 +431,41 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   };
 
   /**
-   * Authentic Spinning Vinyl Center Label:
-   * Placed strictly over the video's circular paper label (cx: 45.37%, cy: 51.22%, diameter: 20.63%),
-   * rotating at exact 33⅓ RPM turntable speed (1.8s per revolution, clockwise).
+   * Authentic Spinning Vinyl Center Label with Circular Text:
+   * Curves the complete song title circularly along the upper arc of the label,
+   * fitting even long song titles without clipping, rotating at exact 33⅓ RPM.
    */
+  const labelUniqueId = useId().replace(/:/g, '');
+
   const renderSpinningVinylLabel = (size: 'sm' | 'md' | 'lg') => {
-    const titleText = (writtenTitle || currentTrack?.title || 'VINILO MASTER').trim();
-    const artistText = (writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA').trim();
+    const titleText = (writtenTitle || currentTrack?.title || 'VINILO MASTER').trim().toUpperCase();
+    const artistText = (writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA').trim().toUpperCase();
+
+    const titleArcId = `titleArc-${labelUniqueId}-${size}`;
+    const artistArcId = `artistArc-${labelUniqueId}-${size}`;
+
+    // Dynamic font sizing proportional to string length so complete title fits comfortably
+    const titleLen = titleText.length;
+    const titleFontSize =
+      titleLen <= 16
+        ? 12
+        : titleLen <= 26
+        ? 10.5
+        : titleLen <= 38
+        ? 9
+        : titleLen <= 52
+        ? 7.8
+        : 6.8;
+
+    const artistLen = artistText.length;
+    const artistFontSize =
+      artistLen <= 14
+        ? 10
+        : artistLen <= 24
+        ? 8.5
+        : artistLen <= 36
+        ? 7.2
+        : 6.2;
 
     return (
       <div
@@ -452,88 +480,129 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       >
         {/* Rotating Circular Vinyl Label: Exact 33⅓ RPM speed (1.8s per revolution) */}
         <div
-          className="w-full h-full rounded-full flex flex-col items-center justify-between p-0.5 sm:p-1 relative overflow-hidden will-change-transform"
+          className="w-full h-full rounded-full relative overflow-hidden will-change-transform"
           style={{
             animation: 'vinyl-spin 1.8s linear infinite',
             animationPlayState: isPlaying ? 'running' : 'paused',
             transformOrigin: 'center center',
           }}
         >
-          {/* Concentric authentic record label rings */}
-          <div className="absolute inset-0.5 sm:inset-1 rounded-full border border-zinc-500/25 pointer-events-none" />
-          <div className="absolute inset-1.5 sm:inset-2 rounded-full border border-zinc-400/20 pointer-events-none" />
+          <svg
+            viewBox="0 0 200 200"
+            className="w-full h-full"
+            style={{
+              mixBlendMode: 'multiply',
+              filter: 'drop-shadow(0 0 0.5px rgba(0,0,0,0.4))',
+            }}
+          >
+            <defs>
+              {/* Upper Circular Arc for Title (spans 260 deg clockwise, centered at top apex) */}
+              <path
+                id={titleArcId}
+                d="M 47.9,143.7 A 68,68 0 1,1 152.1,143.7"
+                fill="none"
+              />
+              {/* Lower Circular Arc for Artist (spans 100 deg, centered at bottom apex) */}
+              <path
+                id={artistArcId}
+                d="M 47.9,143.7 A 68,68 0 0,0 152.1,143.7"
+                fill="none"
+              />
+            </defs>
 
-          {/* Top Arc / Header Label */}
-          <div className="w-full text-center pt-0.5 z-10">
-            <span
-              className="font-mono-retro font-bold uppercase tracking-widest text-zinc-600 block truncate px-1"
-              style={{
-                fontSize: size === 'sm' ? '5px' : size === 'lg' ? '7px' : '6px',
-                lineHeight: 1,
-                mixBlendMode: 'multiply',
-              }}
-            >
-              STEREO • 33⅓
-            </span>
-          </div>
+            {/* Concentric authentic record label grooves */}
+            <circle
+              cx="100"
+              cy="100"
+              r="96"
+              fill="none"
+              stroke="#52525b"
+              strokeWidth="1.5"
+              strokeOpacity="0.4"
+            />
+            <circle
+              cx="100"
+              cy="100"
+              r="92"
+              fill="none"
+              stroke="#71717a"
+              strokeWidth="0.8"
+              strokeOpacity="0.3"
+            />
+            <circle
+              cx="100"
+              cy="100"
+              r="34"
+              fill="none"
+              stroke="#a1a1aa"
+              strokeWidth="0.8"
+              strokeOpacity="0.35"
+            />
 
-          {/* Center Assembly: Song Title, Spindle Hole, Artist */}
-          <div className="w-full flex flex-col items-center justify-center my-auto px-0.5 z-10">
-            {/* Song Title stamped on the vinyl label */}
-            <p
-              className="font-bold text-center text-zinc-950 max-w-full truncate px-0.5"
-              style={{
-                fontFamily: 'Georgia, "Times New Roman", serif',
-                fontSize: size === 'sm' ? '6.5px' : size === 'lg' ? '9.5px' : '8px',
-                lineHeight: 1.1,
-                mixBlendMode: 'multiply',
-                textShadow: '0 0 0.5px rgba(0,0,0,0.3)',
-              }}
-              title={titleText}
+            {/* Circular Song Title curved along the upper arc */}
+            <text
+              fontFamily="Georgia, 'Times New Roman', serif"
+              fontSize={titleFontSize}
+              fontWeight="bold"
+              fill="#09090b"
+              letterSpacing={titleLen > 40 ? '0.4' : '0.8'}
             >
-              {titleText}
-            </p>
+              <textPath href={`#${titleArcId}`} startOffset="50%" textAnchor="middle">
+                {titleText}
+              </textPath>
+            </text>
 
-            {/* Spindle hole grommet */}
-            <div
-              className="my-0.5 rounded-full bg-zinc-950 border border-amber-600/80 shadow-inner flex items-center justify-center"
-              style={{
-                width: size === 'sm' ? '5.5px' : size === 'lg' ? '8.5px' : '7px',
-                height: size === 'sm' ? '5.5px' : size === 'lg' ? '8.5px' : '7px',
-              }}
+            {/* Technical Silkscreen Markings above & below spindle */}
+            <text
+              x="100"
+              y="85"
+              textAnchor="middle"
+              fontFamily="monospace"
+              fontSize="6.5"
+              fontWeight="bold"
+              fill="#52525b"
+              letterSpacing="1.5"
             >
-              <div className="w-1 h-1 rounded-full bg-black" />
-            </div>
+              STEREO
+            </text>
 
-            {/* Artist Name stamped on the vinyl label */}
-            <p
-              className="font-semibold text-center text-rose-900 max-w-full truncate px-0.5"
-              style={{
-                fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-                fontSize: size === 'sm' ? '5.5px' : size === 'lg' ? '7.5px' : '6.5px',
-                lineHeight: 1.05,
-                mixBlendMode: 'multiply',
-                letterSpacing: '0.02em',
-              }}
-              title={artistText}
-            >
-              {artistText}
-            </p>
-          </div>
+            {/* Spindle hole grommet in the exact center */}
+            <circle
+              cx="100"
+              cy="100"
+              r="8.5"
+              fill="#09090b"
+              stroke="#d97706"
+              strokeWidth="2.2"
+            />
+            <circle cx="100" cy="100" r="3.5" fill="#000000" />
 
-          {/* Bottom Arc / Footer Label */}
-          <div className="w-full text-center pb-0.5 z-10">
-            <span
-              className="font-mono-retro font-bold uppercase tracking-wider text-zinc-600 block truncate px-1"
-              style={{
-                fontSize: size === 'sm' ? '4.5px' : size === 'lg' ? '6px' : '5px',
-                lineHeight: 1,
-                mixBlendMode: 'multiply',
-              }}
+            <text
+              x="100"
+              y="118"
+              textAnchor="middle"
+              fontFamily="monospace"
+              fontSize="5.8"
+              fontWeight="bold"
+              fill="#71717a"
+              letterSpacing="1"
             >
-              MIXTAPE LP • SIDE A
-            </span>
-          </div>
+              33⅓ RPM • LP
+            </text>
+
+            {/* Circular Artist Name curved along the lower arc */}
+            <text
+              fontFamily="ui-sans-serif, system-ui, sans-serif"
+              fontSize={artistFontSize}
+              fontWeight="bold"
+              fill="#991b1b"
+              letterSpacing="0.8"
+            >
+              <textPath href={`#${artistArcId}`} startOffset="50%" textAnchor="middle">
+                {artistText}
+              </textPath>
+            </text>
+          </svg>
         </div>
       </div>
     );
