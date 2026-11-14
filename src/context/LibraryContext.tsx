@@ -38,6 +38,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   normalizeVolume: true,
   cacheSongsOffline: true,
   activeInstanceIndex: 0,
+  vuMeterStyle: 'analog',
 };
 
 const LibraryContext = createContext<LibraryContextType | null>(null);

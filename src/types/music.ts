@@ -47,6 +47,7 @@ export interface UserSettings {
   normalizeVolume: boolean;
   cacheSongsOffline: boolean;
   activeInstanceIndex: number;
+  vuMeterStyle?: 'analog' | 'led';
   firebaseConfig?: {
     apiKey: string;
     authDomain: string;

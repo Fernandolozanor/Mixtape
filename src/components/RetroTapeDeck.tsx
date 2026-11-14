@@ -19,9 +19,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   forceMedia,
 }) => {
   const { currentTrack, isPlaying, togglePlay, currentTime, volume, playbackRate } = usePlayer();
-  const { isLiked } = useLibrary();
+  const { isLiked, settings } = useLibrary();
   const { currentTheme } = useTheme();
   const isSteel = currentTheme.id === 'retro-rock-80s';
+  const vuStyle = settings.vuMeterStyle || 'analog'; // 'analog' | 'led'
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Playback mode: forceMedia prop overrides, or automatic: DISCO.mp4 for Favorites, cassette.mp4 for normal tracks
@@ -284,25 +285,31 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
    * Warm Analog Backlit Incandescent Needle VU Meter (Sony SQD-2020 / TA-1150 style)
    * Direct DOM ref driven with physical ballistic spring inertia.
    */
-  const renderNeedleMeter = (channel: 'left' | 'right', label: string) => {
+  const renderNeedleMeter = (channel: 'left' | 'right', label: string, compact = false) => {
     return (
       <div className="flex flex-col items-center">
-        <div className="w-16 sm:w-24 h-8 sm:h-11 retro-vu-meter-incandescent rounded-md p-0.5 sm:p-1 relative flex flex-col justify-between overflow-hidden shadow-inner border border-zinc-900 select-none">
+        <div
+          className={`${
+            compact ? 'w-14 h-7' : 'w-16 sm:w-24 h-8 sm:h-11'
+          } retro-vu-meter-incandescent rounded-md p-0.5 sm:p-1 relative flex flex-col justify-between overflow-hidden shadow-inner border border-zinc-900 select-none`}
+        >
           {/* Subtle Glass glare highlight */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-transparent to-black/20 pointer-events-none z-20" />
 
           {/* Scale curved arc & markings */}
           <div className="relative z-10 flex justify-between items-center text-[7px] sm:text-[8.5px] font-mono-retro font-black px-0.5 sm:px-1 text-amber-950">
             <span>-20</span>
-            <span>-7</span>
+            {!compact && <span>-7</span>}
             <span>0</span>
-            <span className="text-rose-700 font-extrabold">+3dB</span>
+            <span className="text-rose-700 font-extrabold">+3</span>
           </div>
 
           {/* Moving Physical Needle */}
           <div
             ref={channel === 'left' ? needleLeftRef : needleRightRef}
-            className="absolute bottom-[-1px] left-1/2 w-[1.5px] sm:w-[2px] h-6 sm:h-9 bg-zinc-950 origin-bottom z-10 will-change-transform"
+            className={`absolute bottom-[-1px] left-1/2 ${
+              compact ? 'w-[1.2px] h-5' : 'w-[1.5px] sm:w-[2px] h-6 sm:h-9'
+            } bg-zinc-950 origin-bottom z-10 will-change-transform`}
             style={{
               transform: 'translateX(-50%) rotate(-34deg)',
               boxShadow: '0 0 1.5px rgba(0,0,0,0.9)',
@@ -310,10 +317,14 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           />
 
           {/* Pivot Black Round Cap */}
-          <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-zinc-950 border border-amber-600/60 z-20 shadow-md" />
+          <div
+            className={`absolute bottom-[-3px] left-1/2 -translate-x-1/2 ${
+              compact ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5 sm:w-4 sm:h-4'
+            } rounded-full bg-zinc-950 border border-amber-600/60 z-20 shadow-md`}
+          />
 
           {/* Channel Label */}
-          <span className="absolute bottom-0.5 right-1 text-[7px] sm:text-[8.5px] font-mono-retro font-bold text-amber-950/80 z-10">
+          <span className="absolute bottom-0.5 right-1 text-[6.5px] sm:text-[8.5px] font-mono-retro font-bold text-amber-950/80 z-10">
             {label}
           </span>
         </div>
@@ -741,17 +752,24 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
         {/* Vintage Stereo VU-Meters & Tape Head Metadata */}
         <div className="mt-2 px-1 pt-1 border-t border-white/5 flex items-center justify-between text-[10px]">
-          {/* Stereo VU Levels */}
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] font-mono-retro font-bold text-zinc-500 w-2.5">L</span>
-              {renderMeterBar(vuLeft)}
+          {/* Stereo VU Levels (Selected by User: Analog vs LED) */}
+          {vuStyle === 'analog' ? (
+            <div className="flex items-center gap-1.5 py-0.5">
+              {renderNeedleMeter('left', 'L', true)}
+              {renderNeedleMeter('right', 'R', true)}
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[8px] font-mono-retro font-bold text-zinc-500 w-2.5">R</span>
-              {renderMeterBar(vuRight)}
+          ) : (
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[8px] font-mono-retro font-bold text-zinc-500 w-2.5">L</span>
+                {renderMeterBar(vuLeft)}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[8px] font-mono-retro font-bold text-zinc-500 w-2.5">R</span>
+                {renderMeterBar(vuRight)}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Dolby NR & Tape Type Silkscreen Label */}
           <div className="text-right">
@@ -821,11 +839,20 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
           {/* VU Meters Bar */}
           <div className="mt-2.5 flex items-center justify-between px-2">
-            <span className="text-[9px] font-mono text-zinc-400">ANALOG VU</span>
-            <div className="flex items-center gap-2">
-              {renderMeterBar(vuLeft)}
-              {renderMeterBar(vuRight)}
-            </div>
+            <span className="text-[9px] font-mono text-zinc-400">
+              {vuStyle === 'analog' ? 'ANALOG VU' : 'LED VU'}
+            </span>
+            {vuStyle === 'analog' ? (
+              <div className="flex items-center gap-1.5">
+                {renderNeedleMeter('left', 'L', true)}
+                {renderNeedleMeter('right', 'R', true)}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                {renderMeterBar(vuLeft)}
+                {renderMeterBar(vuRight)}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -969,14 +996,14 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           isSteel ? 'border-t border-slate-400/35' : 'border-t border-white/10'
         } flex items-center justify-between gap-1.5 px-0.5 sm:px-2`}
       >
-        {/* Authentic Analog Backlit Incandescent VU Meters when in Steel mode, or LED meters */}
-        {isSteel ? (
+        {/* User-selected VU Meter Style: Agujas Analógicas vs Luces Digitales LED */}
+        {vuStyle === 'analog' ? (
           <div className="flex items-center gap-1.5 sm:gap-2.5">
             {renderNeedleMeter('left', 'LEFT')}
             {renderNeedleMeter('right', 'RIGHT')}
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 py-1">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <span className="text-[8px] sm:text-[9px] font-mono-retro font-bold text-zinc-400 w-3">
                 L
