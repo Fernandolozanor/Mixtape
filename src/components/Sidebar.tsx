@@ -1,8 +1,9 @@
 import React from 'react';
-import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette } from 'lucide-react';
+import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette, Baby, Shield } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePlayer } from '../context/PlayerContext';
+import { useKidsMode } from '../context/KidsModeContext';
 import { RetroTapeDeck } from './RetroTapeDeck';
 
 interface SidebarProps {
@@ -10,6 +11,8 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   openNewPlaylistModal: () => void;
   openSettingsModal: () => void;
+  openKidsModal: () => void;
+  openExitKidsModal: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -17,10 +20,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   openNewPlaylistModal,
   openSettingsModal,
+  openKidsModal,
+  openExitKidsModal,
 }) => {
   const { playlists } = useLibrary();
   const { currentTheme, setThemeById, themes } = useTheme();
   const { setFullScreenPlayerOpen } = usePlayer();
+  const { isKidsMode } = useKidsMode();
 
   const navItems = [
     { id: 'home', label: 'Escuchar', icon: Compass },
@@ -78,6 +84,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           );
         })}
+        {/* Kids Mode Toggle Button */}
+        {isKidsMode ? (
+          <button
+            onClick={openExitKidsModal}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-stereo text-sm font-bold tracking-wider uppercase transition-all bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-300 border border-emerald-500/50 shadow-lg shadow-emerald-500/10 active:scale-95"
+          >
+            <div className="flex items-center gap-3">
+              <Baby className="w-4 h-4 text-emerald-400" />
+              <span>🧸 Modo Niños</span>
+            </div>
+            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-black/50 text-amber-300 border border-amber-400/40 font-mono">
+              <Shield className="w-2.5 h-2.5" /> Salir
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={openKidsModal}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 active:scale-95 group"
+          >
+            <div className="flex items-center gap-3">
+              <Baby className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span>🧸 Modo Niños</span>
+            </div>
+            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+              SAFE
+            </span>
+          </button>
+        )}
       </nav>
 
       {/* Playlists Section - Mixtape Rack */}

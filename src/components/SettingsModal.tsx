@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Cloud, Shield, Database, Trash2, LogIn, LogOut } from 'lucide-react';
+import { X, Cloud, Shield, Database, Trash2, LogIn, LogOut, Baby } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
+import { useKidsMode } from '../context/KidsModeContext';
 import { firebaseService } from '../services/firebase';
 import { cacheService } from '../services/cacheService';
 import { ThemeSelector } from './ThemeSelector';
@@ -8,10 +9,12 @@ import { ThemeSelector } from './ThemeSelector';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenKidsModal?: () => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, onOpenKidsModal }) => {
   const { settings, updateSettings, saveFirebaseCredentials } = useLibrary();
+  const { isKidsMode } = useKidsMode();
   const [firebaseJson, setFirebaseJson] = useState('');
   const [firebaseStatusMsg, setFirebaseStatusMsg] = useState<string | null>(null);
   const [cacheClearedMsg, setCacheClearedMsg] = useState(false);
@@ -70,6 +73,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         {/* Section 0: Color Theme Selection */}
         <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
           <ThemeSelector />
+        </div>
+
+        {/* Section 0.5: Kids Safe Mode */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                <Baby className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Modo Seguro para Niños</span>
+                  {isKidsMode && (
+                    <span className="text-[9px] px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-mono font-bold">
+                      ACTIVO
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-zinc-400">Filtro infantil, volumen seguro y temporizador</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                onOpenKidsModal?.();
+              }}
+              className="py-1.5 px-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-95"
+            >
+              Configurar
+            </button>
+          </div>
         </div>
 
         {/* Section 1: Firebase Cloud Sync */}

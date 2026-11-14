@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { LibraryProvider } from './context/LibraryContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { KidsModeProvider, useKidsMode } from './context/KidsModeContext';
 import { Sidebar } from './components/Sidebar';
 import { BottomNav } from './components/BottomNav';
 import { MiniPlayer } from './components/MiniPlayer';
@@ -9,8 +10,11 @@ import { FullScreenPlayer } from './components/FullScreenPlayer';
 import { HomeTab } from './components/HomeTab';
 import { SearchTab } from './components/SearchTab';
 import { LibraryTab } from './components/LibraryTab';
+import { KidsTab } from './components/KidsTab';
 import { PlaylistModal } from './components/PlaylistModal';
 import { SettingsModal } from './components/SettingsModal';
+import { KidsModeModal } from './components/KidsModeModal';
+import { ParentalExitModal } from './components/ParentalExitModal';
 import { RetroTapeDeck } from './components/RetroTapeDeck';
 import type { Track } from './types/music';
 
@@ -19,11 +23,14 @@ const AppContent: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isKidsModalOpen, setIsKidsModalOpen] = useState(false);
+  const [isParentalExitOpen, setIsParentalExitOpen] = useState(false);
   const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
   const [tracksToAdd, setTracksToAdd] = useState<Track[] | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
   const { currentTrack, isFullScreenPlayerOpen, setFullScreenPlayerOpen } = usePlayer();
+  const { isKidsMode } = useKidsMode();
 
   const handleOpenAddToPlaylist = (track?: Track | null) => {
     setTrackToAdd(track ?? currentTrack);
@@ -60,52 +67,63 @@ const AppContent: React.FC = () => {
           setIsPlaylistModalOpen(true);
         }}
         openSettingsModal={() => setIsSettingsModalOpen(true)}
+        openKidsModal={() => setIsKidsModalOpen(true)}
+        openExitKidsModal={() => setIsParentalExitOpen(true)}
       />
 
       {/* Main View Area - Responsive with min-w-0 to prevent flex horizontal overflow */}
       <main className="flex-1 flex flex-col h-full w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden safe-top relative px-2.5 sm:px-6 md:px-10 pt-3 md:pt-6 pb-44 md:pb-8">
-        {/* Subtle Ambient 80s Rock Tape on the right lateral side (Large screens) */}
-        <div className="fixed right-8 bottom-28 pointer-events-none opacity-25 hover:opacity-45 transition-opacity hidden xl:block z-0">
-          <RetroTapeDeck variant="ambient-lateral" />
-        </div>
-        {activeTab === 'home' && (
-          <HomeTab onSearchGenre={handleSearchGenre} />
+        {/* Subtle Ambient 80s Rock Tape on the right lateral side (Large screens, hidden in Kids Mode) */}
+        {!isKidsMode && (
+          <div className="fixed right-8 bottom-28 pointer-events-none opacity-25 hover:opacity-45 transition-opacity hidden xl:block z-0">
+            <RetroTapeDeck variant="ambient-lateral" />
+          </div>
         )}
 
-        {activeTab === 'search' && (
-          <SearchTab
-            onSelectTrackForPlaylist={handleOpenAddToPlaylist}
-            onSelectMultipleForPlaylist={handleOpenAddMultipleToPlaylist}
-            initialQuery={searchQuery}
-          />
-        )}
+        {isKidsMode ? (
+          <KidsTab onOpenExitModal={() => setIsParentalExitOpen(true)} />
+        ) : (
+          <>
+            {activeTab === 'home' && (
+              <HomeTab onSearchGenre={handleSearchGenre} />
+            )}
 
-        {activeTab === 'library' && (
-          <LibraryTab
-            openNewPlaylistModal={() => {
-              setTrackToAdd(null);
-              setIsPlaylistModalOpen(true);
-            }}
-            selectedPlaylistId={selectedPlaylistId}
-            setSelectedPlaylistId={setSelectedPlaylistId}
-          />
-        )}
+            {activeTab === 'search' && (
+              <SearchTab
+                onSelectTrackForPlaylist={handleOpenAddToPlaylist}
+                onSelectMultipleForPlaylist={handleOpenAddMultipleToPlaylist}
+                initialQuery={searchQuery}
+              />
+            )}
 
-        {activeTab === 'favorites' && (
-          <LibraryTab
-            openNewPlaylistModal={() => {}}
-            selectedPlaylistId="favorites"
-            setSelectedPlaylistId={() => setActiveTab('library')}
-            isFavoritesView={true}
-          />
-        )}
+            {activeTab === 'library' && (
+              <LibraryTab
+                openNewPlaylistModal={() => {
+                  setTrackToAdd(null);
+                  setIsPlaylistModalOpen(true);
+                }}
+                selectedPlaylistId={selectedPlaylistId}
+                setSelectedPlaylistId={setSelectedPlaylistId}
+              />
+            )}
 
-        {isPlaylistRoute && playlistIdFromRoute && (
-          <LibraryTab
-            openNewPlaylistModal={() => {}}
-            selectedPlaylistId={playlistIdFromRoute}
-            setSelectedPlaylistId={() => setActiveTab('library')}
-          />
+            {activeTab === 'favorites' && (
+              <LibraryTab
+                openNewPlaylistModal={() => {}}
+                selectedPlaylistId="favorites"
+                setSelectedPlaylistId={() => setActiveTab('library')}
+                isFavoritesView={true}
+              />
+            )}
+
+            {isPlaylistRoute && playlistIdFromRoute && (
+              <LibraryTab
+                openNewPlaylistModal={() => {}}
+                selectedPlaylistId={playlistIdFromRoute}
+                setSelectedPlaylistId={() => setActiveTab('library')}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -128,6 +146,14 @@ const AppContent: React.FC = () => {
             setFullScreenPlayerOpen(false);
             setIsSettingsModalOpen(true);
           }}
+          openKidsModal={() => {
+            setFullScreenPlayerOpen(false);
+            setIsKidsModalOpen(true);
+          }}
+          openExitKidsModal={() => {
+            setFullScreenPlayerOpen(false);
+            setIsParentalExitOpen(true);
+          }}
         />
       )}
 
@@ -146,6 +172,17 @@ const AppContent: React.FC = () => {
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+        onOpenKidsModal={() => setIsKidsModalOpen(true)}
+      />
+
+      <KidsModeModal
+        isOpen={isKidsModalOpen}
+        onClose={() => setIsKidsModalOpen(false)}
+      />
+
+      <ParentalExitModal
+        isOpen={isParentalExitOpen}
+        onClose={() => setIsParentalExitOpen(false)}
       />
     </div>
   );
@@ -156,7 +193,9 @@ export function App() {
     <ThemeProvider>
       <LibraryProvider>
         <PlayerProvider>
-          <AppContent />
+          <KidsModeProvider>
+            <AppContent />
+          </KidsModeProvider>
         </PlayerProvider>
       </LibraryProvider>
     </ThemeProvider>
