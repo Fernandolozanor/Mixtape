@@ -151,60 +151,115 @@ class StreamResolver {
   }
 
   /**
-   * Live YouTube Search via open Invidious instances with CORS support for static hosting (GitHub Pages)
+   * Live YouTube Search via high-speed parallel race across verified Invidious & Piped CORS endpoints
    */
   private async searchYouTubeLive(query: string, page: number = 1): Promise<Track[]> {
-    const instances = [
-      'https://yt.chocolatemoo53.com',
-      'https://invidious.jing.rocks',
-      'https://invidious.nerdvpn.de',
+    const invidiousParser = async (res: Response): Promise<Track[]> => {
+      if (!res.ok) throw new Error(`Invidious HTTP ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) throw new Error('No items');
+      return data
+        .filter((item: any) => item.videoId && item.title)
+        .map((item: any) => {
+          const vidId = item.videoId;
+          const dur = item.lengthSeconds || 210;
+          const views = item.viewCount || 0;
+          let viewsFormatted = '';
+          if (views >= 1_000_000_000) {
+            viewsFormatted = (views / 1_000_000_000).toFixed(1) + 'B reprod.';
+          } else if (views >= 1_000_000) {
+            viewsFormatted = (views / 1_000_000).toFixed(1) + 'M reprod.';
+          } else if (views >= 1_000) {
+            viewsFormatted = Math.round(views / 1_000) + 'K reprod.';
+          }
+
+          const thumb =
+            item.videoThumbnails?.find((t: any) => t.quality === 'medium' || t.quality === 'high')?.url ||
+            `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+
+          return {
+            id: vidId,
+            title: item.title,
+            artist: item.author || 'YouTube Music',
+            album: 'YouTube',
+            duration: dur,
+            thumbnail: thumb,
+            source: 'youtube' as const,
+            youtubeId: vidId,
+            views,
+            viewsFormatted,
+          };
+        });
+    };
+
+    const pipedParser = async (res: Response): Promise<Track[]> => {
+      if (!res.ok) throw new Error(`Piped HTTP ${res.status}`);
+      const data = await res.json();
+      const items = data.items || [];
+      const streams = items.filter((i: any) => i.type === 'stream' && i.url);
+      if (streams.length === 0) throw new Error('No streams');
+      return streams.map((i: any) => {
+        const vidId = i.url.replace('/watch?v=', '').split('&')[0];
+        const views = i.views || 0;
+        let viewsFormatted = '';
+        if (views >= 1_000_000_000) {
+          viewsFormatted = (views / 1_000_000_000).toFixed(1) + 'B reprod.';
+        } else if (views >= 1_000_000) {
+          viewsFormatted = (views / 1_000_000).toFixed(1) + 'M reprod.';
+        } else if (views >= 1_000) {
+          viewsFormatted = Math.round(views / 1_000) + 'K reprod.';
+        }
+
+        return {
+          id: vidId,
+          title: i.title,
+          artist: i.uploaderName || 'YouTube Music',
+          album: 'YouTube',
+          duration: i.duration || 210,
+          thumbnail: `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`,
+          source: 'youtube' as const,
+          youtubeId: vidId,
+          views,
+          viewsFormatted,
+        };
+      });
+    };
+
+    const endpoints = [
+      {
+        url: `https://yt.chocolatemoo53.com/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=${page}`,
+        parser: invidiousParser,
+      },
+      {
+        url: `https://api.piped.private.coffee/search?q=${encodeURIComponent(query)}&filter=all`,
+        parser: pipedParser,
+      },
+      {
+        url: `https://pipedapi.ducks.party/search?q=${encodeURIComponent(query)}&filter=all`,
+        parser: pipedParser,
+      },
     ];
 
-    for (const inst of instances) {
-      try {
-        const url = `${inst}/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=${page}`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(5500) });
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            return data
-              .filter((item: any) => item.videoId && item.title)
-              .map((item: any) => {
-                const vidId = item.videoId;
-                const dur = item.lengthSeconds || 210;
-                const views = item.viewCount || 0;
-                let viewsFormatted = '';
-                if (views >= 1_000_000_000) {
-                  viewsFormatted = (views / 1_000_000_000).toFixed(1) + 'B reprod.';
-                } else if (views >= 1_000_000) {
-                  viewsFormatted = (views / 1_000_000).toFixed(1) + 'M reprod.';
-                } else if (views >= 1_000) {
-                  viewsFormatted = Math.round(views / 1_000) + 'K reprod.';
-                }
-
-                const thumb =
-                  item.videoThumbnails?.find((t: any) => t.quality === 'medium' || t.quality === 'high')?.url ||
-                  `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
-
-                return {
-                  id: vidId,
-                  title: item.title,
-                  artist: item.author || 'YouTube Music',
-                  album: 'YouTube',
-                  duration: dur,
-                  thumbnail: thumb,
-                  source: 'youtube' as const,
-                  youtubeId: vidId,
-                  views,
-                  viewsFormatted,
-                };
-              });
-          }
-        }
-      } catch {
-        // Try next instance
+    try {
+      const results = await Promise.any(
+        endpoints.map(async (ep) => {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 7500);
+          const res = await fetch(ep.url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+            signal: controller.signal,
+          });
+          clearTimeout(tid);
+          return ep.parser(res);
+        })
+      );
+      if (Array.isArray(results) && results.length > 0) {
+        return results;
       }
+    } catch (e) {
+      console.warn('Parallel search race error:', e);
     }
+
     return [];
   }
 
