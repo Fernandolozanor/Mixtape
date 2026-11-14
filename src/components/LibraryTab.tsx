@@ -9,6 +9,8 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
+  Disc3,
+  List,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -16,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
+import { VinylRecordCard } from './VinylRecordCard';
 import type { Playlist } from '../types/music';
 
 interface LibraryTabProps {
@@ -42,8 +45,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     clearLikedTracks,
   } = useLibrary();
 
-  const { playTrack, currentTrack, setFullScreenPlayerOpen } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, setFullScreenPlayerOpen } = usePlayer();
   const { currentTheme } = useTheme();
+
+  // Favorites view mode: 'vinyl' (default 3D vinyl records) or 'list'
+  const [favoritesViewMode, setFavoritesViewMode] = useState<'vinyl' | 'list'>('vinyl');
 
   const handlePlayPlaylistFromRack = (playlist: Playlist) => {
     if (playlist.tracks.length > 0) {
@@ -94,21 +100,54 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {likedTracks.length > 0 && !isEditingMode && (
               <button
-                onClick={() => playTrack(likedTracks[0], likedTracks)}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl text-white font-semibold shadow-lg transition theme-btn"
+                onClick={() => {
+                  playTrack(likedTracks[0], likedTracks);
+                  setFullScreenPlayerOpen(true);
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-white font-semibold shadow-lg transition theme-btn text-sm"
               >
                 <Play className="w-4 h-4 fill-white" />
                 <span>Reproducir Todo</span>
               </button>
             )}
 
+            {/* View switcher: Vinilos vs Lista */}
+            {likedTracks.length > 0 && (
+              <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/10 shadow-inner">
+                <button
+                  onClick={() => setFavoritesViewMode('vinyl')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                    favoritesViewMode === 'vinyl'
+                      ? 'bg-amber-400 text-black shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                  title="Vista Discos de Vinilo"
+                >
+                  <Disc3 className="w-3.5 h-3.5" />
+                  <span>Vinilos</span>
+                </button>
+                <button
+                  onClick={() => setFavoritesViewMode('list')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                    favoritesViewMode === 'list'
+                      ? 'bg-amber-400 text-black shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                  title="Vista Lista de Canciones"
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>Lista</span>
+                </button>
+              </div>
+            )}
+
             {likedTracks.length > 0 && (
               <button
                 onClick={() => setIsEditingMode(!isEditingMode)}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold transition border ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-semibold transition border ${
                   isEditingMode
                     ? 'bg-white text-black border-white shadow-md'
                     : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
@@ -116,13 +155,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               >
                 {isEditingMode ? (
                   <>
-                    <Check className="w-4 h-4" />
+                    <Check className="w-3.5 h-3.5" />
                     <span>Listo</span>
                   </>
                 ) : (
                   <>
-                    <Edit3 className="w-4 h-4" />
-                    <span>Editar Orden / Borrar</span>
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Editar / Borrar</span>
                   </>
                 )}
               </button>
@@ -136,10 +175,10 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     setIsEditingMode(false);
                   }
                 }}
-                className="px-3.5 py-2.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-sm font-semibold transition border border-red-500/20"
+                className="px-3.5 py-2 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition border border-red-500/20"
                 title="Vaciar favoritos"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -150,6 +189,25 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="text-lg font-medium text-white">No tienes canciones favoritas aún</p>
             <p className="text-sm">Toca el icono de corazón en cualquier canción para guardarla aquí.</p>
+          </div>
+        ) : favoritesViewMode === 'vinyl' ? (
+          /* 3D Vinyl Records Grid */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
+            {likedTracks.map((track, idx) => (
+              <VinylRecordCard
+                key={track.id}
+                track={track}
+                index={idx}
+                isCurrent={currentTrack?.id === track.id}
+                isPlaying={isPlaying}
+                onPlay={() => {
+                  playTrack(track, likedTracks);
+                  setFullScreenPlayerOpen(true);
+                }}
+                onRemove={() => removeLikedTrack(track.id)}
+                isEditingMode={isEditingMode}
+              />
+            ))}
           </div>
         ) : (
           <div className="space-y-1.5">
