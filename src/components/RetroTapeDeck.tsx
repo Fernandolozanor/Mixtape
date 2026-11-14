@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext';
+import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
-import { Play, Pause, Disc3, Maximize2 } from 'lucide-react';
+import { Play, Pause, Disc3, Maximize2, Heart } from 'lucide-react';
 import { MarqueeTitle } from './MarqueeTitle';
 
 interface RetroTapeDeckProps {
@@ -16,9 +17,15 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   className = '',
 }) => {
   const { currentTrack, isPlaying, togglePlay, currentTime, volume } = usePlayer();
+  const { isLiked } = useLibrary();
   const { currentTheme } = useTheme();
   const isSteel = currentTheme.id === 'retro-rock-80s';
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Playback mode: DISCO.mp4 for Favorites, cassette.mp4 for normal tracks
+  const isFavorite = currentTrack ? isLiked(currentTrack.id) : false;
+  const videoSrc = isFavorite ? './assets/disco.mp4' : './assets/cassette.mp4';
+  const videoPoster = isFavorite ? './assets/disco.png' : './assets/cassette-poster.webp';
 
   // Moving analog VU needles for Left and Right channels (direct DOM refs for 60fps physics)
   const needleLeftRef = useRef<HTMLDivElement>(null);
@@ -33,7 +40,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   const [writtenArtist, setWrittenArtist] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
 
-  // Synchronize video playback strictly with audio isPlaying state
+  // Synchronize video playback strictly with audio isPlaying state & video source switch
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -55,7 +62,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     } else {
       video.pause();
     }
-  }, [isPlaying]);
+  }, [isPlaying, videoSrc]);
 
   // Handwriting simulation on the cassette tape label
   useEffect(() => {
@@ -402,6 +409,42 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     );
   };
 
+  /**
+   * Adaptive Media Overlay:
+   * When playing a Favorite track, renders the Vinyl record 33⅓ RPM hi-fi plaque.
+   * When playing standard tracks, renders the handwritten cassette tape label.
+   */
+  const renderMediaOverlay = (size: 'sm' | 'md' | 'lg') => {
+    if (isFavorite) {
+      return (
+        <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2 sm:p-3 z-20 select-none">
+          {/* Top Badges */}
+          <div className="flex items-center justify-between">
+            <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-amber-400/40 text-[7.5px] sm:text-[9px] font-mono-retro font-bold text-amber-400 shadow-md flex items-center gap-1">
+              <Disc3 className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isPlaying ? 'animate-spin' : ''}`} />
+              <span>33⅓ RPM • HI-FI VINILO</span>
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-rose-500/90 backdrop-blur-md text-white text-[7.5px] sm:text-[9px] font-mono-retro font-extrabold shadow-md flex items-center gap-1 animate-pulse">
+              <Heart className="w-2.5 h-2.5 fill-white" />
+              <span>FAVORITOS</span>
+            </span>
+          </div>
+
+          {/* Track title plaque on vinyl */}
+          <div className="bg-black/75 backdrop-blur-md px-3 py-1 sm:py-1.5 rounded-xl border border-amber-400/30 text-center mx-auto max-w-[92%] shadow-2xl">
+            <p className="font-rock text-xs sm:text-sm text-white tracking-wider truncate">
+              {writtenTitle || currentTrack?.title || 'VINILO MASTER'}
+            </p>
+            <p className="text-[9px] sm:text-[10.5px] text-amber-400 font-mono truncate mt-0.5">
+              {writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA'}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return renderHandwrittenTapeLabel(size);
+  };
+
   /* -------------------------------------------------------------
      VARIANT A: SIDEBAR CASSETTE DECK (Pinned in Left Sidebar)
      ------------------------------------------------------------- */
@@ -414,14 +457,18 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
           <div className="flex items-center gap-1.5">
             <Disc3
-              className={`w-3.5 h-3.5 text-amber-500 ${isPlaying ? 'animate-spin' : ''}`}
+              className={`w-3.5 h-3.5 ${isFavorite ? 'text-rose-400' : 'text-amber-500'} ${isPlaying ? 'animate-spin' : ''}`}
               style={{ animationDuration: '3s' }}
             />
             <span className="text-[10px] font-extrabold tracking-widest uppercase text-zinc-300">
-              MIXTAPE DECK
+              {isFavorite ? 'VINILO DECK' : 'MIXTAPE DECK'}
             </span>
-            <span className="text-[8px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-400 font-mono font-bold">
-              CrO2
+            <span
+              className={`text-[8px] px-1 py-0.2 rounded font-mono font-bold ${
+                isFavorite ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'
+              }`}
+            >
+              {isFavorite ? 'FAV' : 'CrO2'}
             </span>
           </div>
 
@@ -441,12 +488,13 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           </div>
         </div>
 
-        {/* Cassette Acrylic Window with Video and Handwritten Label */}
+        {/* Cassette / Vinyl Window with Video and Adaptive Label */}
         <div className="retro-tape-window rounded-xl aspect-[16/9] w-full relative overflow-hidden group/video shadow-inner">
           <video
+            key={videoSrc}
             ref={videoRef}
-            src="./assets/cassette.mp4"
-            poster="./assets/cassette-poster.webp"
+            src={videoSrc}
+            poster={videoPoster}
             loop
             muted
             playsInline
@@ -454,8 +502,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             className="w-full h-full object-cover brightness-95 contrast-105"
           />
 
-          {/* Handwritten Ink on Blank Tape Label */}
-          {renderHandwrittenTapeLabel('sm')}
+          {/* Adaptive Label (Vinyl plaque or Handwritten ink) */}
+          {renderMediaOverlay('sm')}
 
           {/* Realistic Acrylic Glass Reflection */}
           <div className="retro-glass-glare" />
@@ -542,9 +590,13 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           {/* Deck Header */}
           <div className="flex items-center justify-between px-2 pb-2">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isFavorite ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+                }`}
+              />
               <span className="text-xs font-bold tracking-widest text-zinc-300 font-mono-retro">
-                HI-FI CASSETTE
+                {isFavorite ? 'VINILO HI-FI' : 'HI-FI CASSETTE'}
               </span>
             </div>
             <div className="retro-counter-display px-2 py-0.5 rounded font-mono-retro text-xs font-bold text-amber-400">
@@ -552,19 +604,20 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             </div>
           </div>
 
-          {/* Spinning Cassette View with Handwritten Label */}
+          {/* Spinning Cassette / Vinyl View with Adaptive Label */}
           <div className="retro-tape-window rounded-2xl aspect-[16/9] w-full relative overflow-hidden">
             <video
+              key={videoSrc}
               ref={videoRef}
-              src="./assets/cassette.mp4"
-              poster="./assets/cassette-poster.webp"
+              src={videoSrc}
+              poster={videoPoster}
               loop
               muted
               playsInline
               preload="auto"
               className="w-full h-full object-cover"
             />
-            {renderHandwrittenTapeLabel('md')}
+            {renderMediaOverlay('md')}
             <div className="retro-glass-glare" />
           </div>
 
@@ -614,15 +667,17 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               isSteel ? 'text-slate-900' : 'text-white'
             }`}
           >
-            MIXTAPE DECK
+            {isFavorite ? 'TOCADISCOS VINILO HI-FI' : 'MIXTAPE DECK'}
             <span
               className={`text-[8px] sm:text-[9.5px] px-1 sm:px-1.5 py-0.2 rounded font-mono-retro font-bold border ${
-                isSteel
+                isFavorite
+                  ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                  : isSteel
                   ? 'bg-amber-500/20 text-amber-900 border-amber-600/40'
                   : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
               }`}
             >
-              SOLID STATE
+              {isFavorite ? 'FAVORITOS • 33⅓ RPM' : 'SOLID STATE'}
             </span>
           </h3>
           <p
@@ -630,7 +685,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               isSteel ? 'text-slate-600' : 'text-zinc-400'
             }`}
           >
-            3-HEAD • DUAL CAPSTAN • TYPE II CrO2
+            {isFavorite
+              ? 'DIRECT DRIVE • SHURE M97xE • VINILO AUDIÓFILO'
+              : '3-HEAD • DUAL CAPSTAN • TYPE II CrO2'}
           </p>
         </div>
 
@@ -660,16 +717,17 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         </div>
       </div>
 
-      {/* Cassette Bay with Rotating Video & Handwritten Label - Uncropped True 16:9 Aspect */}
+      {/* Cassette / Vinyl Bay with Rotating Video & Adaptive Label - Uncropped True 16:9 Aspect */}
       <div
         className={`retro-tape-window rounded-xl aspect-[16/9] w-full max-w-[325px] sm:max-w-[420px] relative overflow-hidden shadow-2xl border-2 sm:border-3 mx-auto ${
           isSteel ? 'border-slate-700/80' : 'border-zinc-800'
         }`}
       >
         <video
+          key={videoSrc}
           ref={videoRef}
-          src="./assets/cassette.mp4"
-          poster="./assets/cassette-poster.webp"
+          src={videoSrc}
+          poster={videoPoster}
           loop
           muted
           playsInline
@@ -677,8 +735,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           className="w-full h-full object-contain sm:object-cover"
         />
 
-        {/* Handwritten Ink on the physical blank label of the cassette */}
-        {renderHandwrittenTapeLabel('lg')}
+        {/* Media Overlay: Vinyl gold plaque or Handwritten tape label */}
+        {renderMediaOverlay('lg')}
 
         {/* Realistic Acrylic Sheen Overlay */}
         <div className="retro-glass-glare" />

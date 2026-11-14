@@ -403,7 +403,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             }`}
           >
             <Disc3 className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin' : ''}`} />
-            <span>Cinta 80s</span>
+            <span>{liked ? 'Vinilo' : 'Cinta 80s'}</span>
           </button>
 
           <button
