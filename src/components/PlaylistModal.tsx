@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Check, ListMusic } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,10 +26,23 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
 
   const hasTracks = allTracksToAdd.length > 0;
 
-  const [isCreatingNew, setIsCreatingNew] = useState(!hasTracks || playlists.length === 0);
+  // Always default to creating a new playlist if no tracks were provided or if no playlists exist yet
+  const [isCreatingNew, setIsCreatingNew] = useState(true);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistDesc, setNewPlaylistDesc] = useState('');
   const [addedSuccessId, setAddedSuccessId] = useState<string | null>(null);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      if (!hasTracks || playlists.length === 0) {
+        setIsCreatingNew(true);
+      }
+      setNewPlaylistName('');
+      setNewPlaylistDesc('');
+      setAddedSuccessId(null);
+    }
+  }, [isOpen, hasTracks, playlists.length]);
 
   if (!isOpen) return null;
 
@@ -73,14 +86,18 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold text-white mb-1">
-          {hasTracks
-            ? allTracksToAdd.length === 1
-              ? 'Añadir a lista'
-              : `Añadir ${allTracksToAdd.length} canciones a lista`
-            : 'Nueva lista de reproducción'}
+        <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+          {!hasTracks && <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24] shrink-0" />}
+          <span>
+            {hasTracks
+              ? allTracksToAdd.length === 1
+                ? 'Añadir a lista / cinta'
+                : `Añadir ${allTracksToAdd.length} canciones`
+              : 'Grabar Nueva Cinta (Mixtape)'}
+          </span>
         </h2>
-        {hasTracks && (
+
+        {hasTracks ? (
           <p className="text-xs text-zinc-400 truncate mb-4">
             {allTracksToAdd.length === 1 ? (
               <>
@@ -92,9 +109,13 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
               </span>
             )}
           </p>
+        ) : (
+          <p className="text-xs text-zinc-400 mb-4">
+            Escribe el nombre de la cinta para rotularla y colocarla en tu estantería.
+          </p>
         )}
 
-        {/* Option to create new or select existing */}
+        {/* Option to create new or select existing (shown when tracks are present and playlists exist) */}
         {hasTracks && playlists.length > 0 && (
           <div className="flex gap-2 mb-4 p-1 bg-white/5 rounded-xl text-xs font-semibold">
             <button
@@ -126,14 +147,14 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
-                Nombre de la lista
+                Nombre de la cinta / lista
               </label>
               <input
                 type="text"
                 required
                 value={newPlaylistName}
                 onChange={(e) => setNewPlaylistName(e.target.value)}
-                placeholder="Ej. Favoritos para el coche"
+                placeholder="Ej. Lo Mejor del Rock 80s, Éxitos en Español..."
                 className="w-full px-4 py-2.5 rounded-xl glass-input text-sm"
                 autoFocus
               />
@@ -147,7 +168,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 type="text"
                 value={newPlaylistDesc}
                 onChange={(e) => setNewPlaylistDesc(e.target.value)}
-                placeholder="Ej. Para escuchar concentrado"
+                placeholder="Ej. Grabada en casette TDK D-90"
                 className="w-full px-4 py-2.5 rounded-xl glass-input text-sm"
               />
             </div>
@@ -164,7 +185,7 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 type="submit"
                 className="px-5 py-2 rounded-xl text-white text-sm font-semibold shadow-md transition theme-btn"
               >
-                {hasTracks ? `Guardar y Añadir (${allTracksToAdd.length})` : 'Guardar Lista'}
+                {hasTracks ? `Guardar y Añadir (${allTracksToAdd.length})` : 'Grabar Cinta'}
               </button>
             </div>
           </form>
@@ -197,6 +218,15 @@ export const PlaylistModal: React.FC<PlaylistModalProps> = ({
                 </button>
               );
             })}
+
+            {/* Quick button inside the list to switch to creating a new tape */}
+            <button
+              onClick={() => setIsCreatingNew(true)}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-white/20 hover:border-amber-400 text-zinc-300 hover:text-amber-400 text-sm font-semibold transition bg-white/5 hover:bg-white/10 mt-3"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Grabar nueva cinta / lista</span>
+            </button>
           </div>
         )}
       </div>
