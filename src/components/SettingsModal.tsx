@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { X, Cloud, Shield, Database, Trash2, LogIn, LogOut, Baby, QrCode, ChevronDown, ChevronUp, KeyRound } from 'lucide-react';
+import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useKidsMode } from '../context/KidsModeContext';
 import { useAuth } from '../context/AuthContext';
-import { firebaseService } from '../services/firebase';
 import { cacheService } from '../services/cacheService';
 import { ThemeSelector } from './ThemeSelector';
 
@@ -20,52 +19,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenKidsModal,
   onOpenSyncModal,
 }) => {
-  const { settings, syncState, updateSettings, saveFirebaseCredentials } = useLibrary();
+  const { settings, syncState, updateSettings } = useLibrary();
   const { isKidsMode } = useKidsMode();
   const { session, setAdminModalOpen } = useAuth();
-  const [firebaseJson, setFirebaseJson] = useState('');
-  const [firebaseStatusMsg, setFirebaseStatusMsg] = useState<string | null>(null);
   const [cacheClearedMsg, setCacheClearedMsg] = useState(false);
-  const [showAdvancedFirebase, setShowAdvancedFirebase] = useState(false);
-  const [user, setUser] = useState(firebaseService.getCurrentUser());
 
   if (!isOpen) return null;
-
-  const handleSaveFirebase = async () => {
-    try {
-      const parsed = JSON.parse(firebaseJson);
-      const ok = await saveFirebaseCredentials(parsed);
-      if (ok) {
-        setFirebaseStatusMsg('¡Firebase conectado con éxito! Listas sincronizadas.');
-        setUser(firebaseService.getCurrentUser());
-      } else {
-        setFirebaseStatusMsg('Error: Configuración incompleta (se requiere apiKey y projectId).');
-      }
-    } catch {
-      setFirebaseStatusMsg('Error de sintaxis JSON. Asegúrate de copiar el objeto completo.');
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    const u = await firebaseService.loginWithGoogle();
-    if (u) {
-      setUser(u);
-      setFirebaseStatusMsg(`Conectado como ${u.displayName || u.email}`);
-    }
-  };
-
-  const handleLogout = async () => {
-    await firebaseService.logout();
-    setUser(null);
-  };
 
   const handleClearCache = async () => {
     await cacheService.clearAllCache();
     setCacheClearedMsg(true);
     setTimeout(() => setCacheClearedMsg(false), 2000);
   };
-
-  const isConfigured = firebaseService.isConfigured();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pb-6 safe-top bg-black/75 backdrop-blur-md select-none animate-in fade-in overflow-y-auto">
@@ -172,71 +137,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               Abrir QR
             </button>
-          </div>
-
-          {/* Optional Advanced Firebase Toggle */}
-          <div className="pt-2 border-t border-white/10">
-            <button
-              type="button"
-              onClick={() => setShowAdvancedFirebase((prev) => !prev)}
-              className="w-full flex items-center justify-between text-[11px] text-zinc-400 hover:text-zinc-200 font-mono"
-            >
-              <span className="flex items-center gap-1.5">
-                <Cloud className="w-3.5 h-3.5 text-pink-400" />
-                Firebase Propio (Opcional / Avanzado)
-              </span>
-              {showAdvancedFirebase ? (
-                <ChevronUp className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
-              )}
-            </button>
-
-            {showAdvancedFirebase && (
-              <div className="mt-3 space-y-2 pt-2 border-t border-white/5">
-                {isConfigured && user ? (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-300">Sesión: {user.email || 'Anónimo'}</span>
-                    <button
-                      onClick={handleLogout}
-                      className="text-red-400 hover:underline inline-flex items-center gap-1"
-                    >
-                      <LogOut className="w-3.5 h-3.5" /> Cerrar sesión
-                    </button>
-                  </div>
-                ) : isConfigured ? (
-                  <button
-                    onClick={handleGoogleLogin}
-                    className="w-full py-2 rounded-xl bg-white text-black font-semibold text-xs flex items-center justify-center gap-2 hover:bg-zinc-200 transition"
-                  >
-                    <LogIn className="w-4 h-4" /> Iniciar sesión con Google
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-zinc-400">
-                      Pega aquí tu configuración de Firebase Console (Proyecto web):
-                    </p>
-                    <textarea
-                      rows={3}
-                      value={firebaseJson}
-                      onChange={(e) => setFirebaseJson(e.target.value)}
-                      placeholder='{"apiKey": "...", "projectId": "...", ...}'
-                      className="w-full p-2.5 rounded-xl glass-input text-xs font-mono"
-                    />
-                    <button
-                      onClick={handleSaveFirebase}
-                      className="px-4 py-1.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-xs font-semibold transition"
-                    >
-                      Guardar Configuración
-                    </button>
-                  </div>
-                )}
-
-                {firebaseStatusMsg && (
-                  <p className="text-xs text-pink-400 font-medium">{firebaseStatusMsg}</p>
-                )}
-              </div>
-            )}
           </div>
         </div>
 

@@ -24,7 +24,7 @@ import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
 import { RetroTapeDeck } from './RetroTapeDeck';
 import { MarqueeTitle } from './MarqueeTitle';
-import { Disc3, Image as ImageIcon, Gauge } from 'lucide-react';
+import { Disc3, Gauge } from 'lucide-react';
 import { bpmService } from '../services/bpmService';
 
 interface FullScreenPlayerProps {
@@ -58,9 +58,10 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const { isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
 
-  // Active Center View: 'deck' | 'artwork' | 'lyrics' | 'queue'
+  // Active Center View: 'deck' | 'lyrics' | 'queue'
   // When 'deck' is active, RetroTapeDeck automatically displays vinyl for favorites and cassette for regular tracks
-  const [centerView, setCenterView] = useState<'deck' | 'artwork' | 'lyrics' | 'queue'>('deck');
+  const [centerView, setCenterView] = useState<'deck' | 'lyrics' | 'queue'>('deck');
+  const [showPitchControl, setShowPitchControl] = useState(false);
 
   const liked = currentTrack ? isLiked(currentTrack.id) : false;
   const isSteel = currentTheme.id === 'retro-rock-80s';
@@ -135,23 +136,6 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         {centerView === 'deck' && (
           <div className="w-full max-w-xl my-auto px-1 sm:px-2 animate-in fade-in duration-300">
             <RetroTapeDeck variant="fullscreen" />
-          </div>
-        )}
-
-        {centerView === 'artwork' && (
-          <div className="w-full max-w-[280px] sm:max-w-sm aspect-square my-auto relative group animate-in fade-in duration-300">
-            <div
-              className="w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-white/10 transition-transform duration-500"
-              style={{
-                boxShadow: `0 20px 50px rgba(${currentTheme.rgb}, 0.25)`,
-              }}
-            >
-              <img
-                src={currentTrack.thumbnail}
-                alt={currentTrack.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
           </div>
         )}
 
@@ -402,53 +386,55 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           </span>
         </div>
 
-        {/* Technics Quartz Pitch / RPM Speed Control */}
-        <div
-          className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1 rounded-xl shadow-inner ${
-            isSteel
-              ? 'bg-slate-900/90 border border-slate-700'
-              : 'bg-black/50 border border-white/10'
-          }`}
-        >
-          <button
-            onClick={() => setPlaybackRate(1)}
-            className={`px-2 py-1 rounded-lg active:scale-95 transition shrink-0 border text-[10px] font-mono-retro font-bold flex items-center gap-1 ${
-              playbackRate === 1
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+        {/* Technics Quartz Pitch / RPM Speed Control (Collapsible) */}
+        {(showPitchControl || playbackRate !== 1) && (
+          <div
+            className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1 rounded-xl shadow-inner animate-in fade-in ${
+              isSteel
+                ? 'bg-slate-900/90 border border-slate-700'
+                : 'bg-black/50 border border-white/10'
             }`}
-            title="Restablecer velocidad original (Quartz Lock 0%)"
           >
-            <Gauge className="w-3.5 h-3.5" />
-            <span>
-              {Math.round(bpmService.getTrackBpm(currentTrack) * playbackRate)} BPM
+            <button
+              onClick={() => setPlaybackRate(1)}
+              className={`px-2 py-1 rounded-lg active:scale-95 transition shrink-0 border text-[10px] font-mono-retro font-bold flex items-center gap-1 ${
+                playbackRate === 1
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`}
+              title="Restablecer velocidad original (Quartz Lock 0%)"
+            >
+              <Gauge className="w-3.5 h-3.5" />
+              <span>
+                {Math.round(bpmService.getTrackBpm(currentTrack) * playbackRate)} BPM
+              </span>
+            </button>
+
+            <span className="text-[9px] font-mono-retro font-bold text-zinc-400 uppercase tracking-wider hidden xs:inline shrink-0">
+              PITCH
             </span>
-          </button>
 
-          <span className="text-[9px] font-mono-retro font-bold text-zinc-400 uppercase tracking-wider hidden xs:inline shrink-0">
-            PITCH
-          </span>
+            <div className="relative flex-1 flex items-center py-1">
+              <input
+                type="range"
+                min={0.85}
+                max={1.15}
+                step={0.01}
+                value={playbackRate}
+                onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+                className="retro-slider"
+                aria-label="Control de velocidad Pitch / RPM"
+              />
+            </div>
 
-          <div className="relative flex-1 flex items-center py-1">
-            <input
-              type="range"
-              min={0.85}
-              max={1.15}
-              step={0.01}
-              value={playbackRate}
-              onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
-              className="retro-slider"
-              aria-label="Control de velocidad Pitch / RPM"
-            />
+            <span className="text-[10px] sm:text-xs font-mono-retro font-bold text-emerald-400 w-10 text-right shrink-0">
+              {playbackRate >= 1 ? '+' : ''}
+              {Math.round((playbackRate - 1) * 100)}%
+            </span>
           </div>
+        )}
 
-          <span className="text-[10px] sm:text-xs font-mono-retro font-bold text-emerald-400 w-10 text-right shrink-0">
-            {playbackRate >= 1 ? '+' : ''}
-            {Math.round((playbackRate - 1) * 100)}%
-          </span>
-        </div>
-
-        {/* Bottom Switcher: Reproductor Retro / Portada / Letra / Cola */}
+        {/* Bottom Switcher: Cinta/Vinilo / Letra / Cola / Pitch */}
         <div className="flex items-center justify-around pt-1 border-t border-white/10 flex-wrap gap-1">
           <button
             onClick={() => setCenterView('deck')}
@@ -462,20 +448,6 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           >
             <Disc3 className={`w-3.5 h-3.5 ${isPlaying && centerView === 'deck' ? 'animate-spin' : ''}`} />
             <span>{liked ? 'Vinilo' : 'Cinta'}</span>
-          </button>
-
-          <button
-            onClick={() => setCenterView('artwork')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
-              centerView === 'artwork'
-                ? isSteel
-                  ? 'retro-btn-aluminum text-slate-900 font-bold shadow-md'
-                  : 'bg-white text-black shadow-md'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <ImageIcon className="w-3.5 h-3.5" />
-            <span>Portada</span>
           </button>
 
           <button
@@ -504,6 +476,19 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           >
             <ListMusic className="w-3.5 h-3.5" />
             <span>Cola</span>
+          </button>
+
+          <button
+            onClick={() => setShowPitchControl((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
+              showPitchControl || playbackRate !== 1
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+            title="Mostrar/ocultar control de velocidad Pitch / BPM"
+          >
+            <Gauge className="w-3.5 h-3.5" />
+            <span>Pitch</span>
           </button>
         </div>
       </footer>

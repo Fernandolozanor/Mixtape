@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette, Baby, Shield, KeyRound, LogOut, Clock, UserCheck, QrCode } from 'lucide-react';
+import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Baby, Shield, KeyRound, LogOut, Clock, UserCheck, QrCode } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   openSyncModal,
 }) => {
   const { playlists, syncState } = useLibrary();
-  const { currentTheme, setThemeById, themes } = useTheme();
+  const { currentTheme } = useTheme();
   const { setFullScreenPlayerOpen } = usePlayer();
   const { isKidsMode } = useKidsMode();
   const {
@@ -174,28 +174,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           variant="sidebar"
           onExpand={() => setFullScreenPlayerOpen(true)}
         />
-      </div>
-
-      {/* Quick Theme Swatches Bar */}
-      <div className="pt-3 pb-2 border-t border-white/5">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <span className="text-[11px] font-semibold text-zinc-400 flex items-center gap-1.5">
-            <Palette className="w-3.5 h-3.5" /> Esquema
-          </span>
-        </div>
-        <div className="flex items-center justify-between px-2">
-          {themes.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setThemeById(t.id)}
-              className={`w-6 h-6 rounded-full transition-transform ${
-                currentTheme.id === t.id ? 'scale-125 ring-2 ring-white/60' : 'opacity-70 hover:opacity-100 hover:scale-110'
-              }`}
-              style={{ background: t.gradient }}
-              title={t.name}
-            />
-          ))}
-        </div>
       </div>
 
       {/* Settings & Auth Footer */}

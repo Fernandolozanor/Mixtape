@@ -16,6 +16,7 @@ import {
   ArrowUpDown,
   Sparkles,
   Layers,
+  Radio,
 } from 'lucide-react';
 import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
@@ -50,7 +51,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   initialQuery = '',
 }) => {
   const [query, setQuery] = useState(initialQuery);
-  const [selectedFilter, setSelectedFilter] = useState<AudioSourceType | 'all'>('all');
   const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title'>('views');
   const [results, setResults] = useState<Track[]>([]);
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
@@ -58,6 +58,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [visibleCount, setVisibleCount] = useState<number>(25);
+  const [showRadioDial, setShowRadioDial] = useState(false);
 
   // Multi-selection state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -70,7 +71,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   const handleSearch = async (
     searchTerm: string,
-    filter: AudioSourceType | 'all' = selectedFilter
+    filter: AudioSourceType | 'all' = 'all'
   ) => {
     const term = searchTerm.trim();
     if (!term) return;
@@ -95,7 +96,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
-      const additionalTracks = await streamResolver.search(query, selectedFilter, nextPage);
+      const additionalTracks = await streamResolver.search(query, 'all', nextPage);
       if (additionalTracks.length > 0) {
         setResults((prev) => {
           const existingIds = new Set(prev.map((t) => t.id));
@@ -122,13 +123,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch(query);
-    }
-  };
-
-  const handleFilterChange = (filter: AudioSourceType | 'all') => {
-    setSelectedFilter(filter);
-    if (query.trim()) {
-      handleSearch(query, filter);
     }
   };
 
@@ -253,78 +247,83 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48 relative">
-      {/* Header and Search Box */}
-      <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 md:p-6 shadow-2xl border-2 border-[#262f40] relative w-full min-w-0 overflow-hidden">
-        <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
-          <div>
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-              <span className="font-mono-retro text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-zinc-400">
-                DIAL DE BÚSQUEDA • FRECUENCIA DIRECTA
-              </span>
-            </div>
-            <h1 className="font-rock text-2xl sm:text-3xl md:text-4xl tracking-widest text-white leading-tight">
-              SINTONIZADOR DE MÚSICA
+      {/* Header and Direct Search Box */}
+      <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl border-2 border-[#262f40] relative w-full min-w-0 overflow-hidden space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+            <h1 className="font-rock text-2xl sm:text-3xl tracking-widest text-white leading-none">
+              BUSCAR MÚSICA
             </h1>
           </div>
 
-          {/* Multi-select toggle button */}
-          {results.length > 0 && (
-            <div className="flex items-center gap-2">
-              {isMultiSelectMode && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Toggle FM Radio Dial */}
+            <button
+              type="button"
+              onClick={() => setShowRadioDial((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition border flex items-center gap-1.5 ${
+                showRadioDial
+                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 font-bold'
+                  : 'bg-[#151a24] hover:bg-[#1e2534] text-zinc-300 border-white/10'
+              }`}
+              title="Mostrar u ocultar el sintonizador analógico FM"
+            >
+              <Radio className="w-3.5 h-3.5 text-amber-400" />
+              <span>Dial FM</span>
+            </button>
+
+            {/* Multi-select toggle button */}
+            {results.length > 0 && (
+              <>
+                {isMultiSelectMode && (
+                  <button
+                    onClick={selectAll}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition flex items-center gap-1.5 border border-white/10"
+                  >
+                    {selectedIds.size === sortedResults.length ? (
+                      <>
+                        <Square className="w-3.5 h-3.5" />
+                        <span>Deseleccionar</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckSquare className="w-3.5 h-3.5" />
+                        <span>Todo ({sortedResults.length})</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button
-                  onClick={selectAll}
-                  className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-stereo text-[11px] sm:text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition flex items-center gap-1.5 border border-white/10"
+                  onClick={() => {
+                    setIsMultiSelectMode(!isMultiSelectMode);
+                    if (isMultiSelectMode) setSelectedIds(new Set());
+                  }}
+                  className={`px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition border flex items-center gap-1.5 ${
+                    isMultiSelectMode
+                      ? 'bg-amber-400 text-black border-amber-400 shadow-md font-bold'
+                      : 'bg-[#151a24] hover:bg-[#1e2534] text-zinc-300 border-white/10'
+                  }`}
                 >
-                  {selectedIds.size === sortedResults.length ? (
+                  {isMultiSelectMode ? (
                     <>
-                      <Square className="w-3.5 h-3.5" />
-                      <span>Deseleccionar</span>
+                      <X className="w-3.5 h-3.5" />
+                      <span>Cancelar</span>
                     </>
                   ) : (
                     <>
                       <CheckSquare className="w-3.5 h-3.5" />
-                      <span>Todo ({sortedResults.length})</span>
+                      <span>Varios</span>
                     </>
                   )}
                 </button>
-              )}
-
-              <button
-                onClick={() => {
-                  setIsMultiSelectMode(!isMultiSelectMode);
-                  if (isMultiSelectMode) setSelectedIds(new Set());
-                }}
-                className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition border flex items-center gap-1.5 ${
-                  isMultiSelectMode
-                    ? 'bg-amber-400 text-black border-amber-400 shadow-md font-bold'
-                    : 'bg-[#151a24] hover:bg-[#1e2534] text-zinc-300 border-white/10'
-                }`}
-              >
-                {isMultiSelectMode ? (
-                  <>
-                    <X className="w-3.5 h-3.5" />
-                    <span>Cancelar</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckSquare className="w-3.5 h-3.5" />
-                    <span>Selección Múltiple</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Vintage Radio FM/AM Tuner Dial with Moving Physical Needle & Audio Sweep */}
-        <RadioTunerDial
-          isSearching={isSearching}
-          query={query}
-          hasResults={results.length > 0}
-          className="mb-3.5 sm:mb-4"
-        />
-
+        {/* Immediate Top Search Input */}
         <div className="relative w-full min-w-0">
           <SearchIcon className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-amber-500 pointer-events-none" />
           <input
@@ -332,7 +331,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Artista de rock, canción, disco o enlace..."
+            placeholder="Artista, canción, álbum o género..."
             className="w-full min-w-0 pl-10 sm:pl-12 pr-24 sm:pr-28 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl glass-input font-stereo text-sm sm:text-base placeholder:text-zinc-500 shadow-xl transition"
           />
           <button
@@ -340,71 +339,42 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             disabled={isSearching}
             className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 px-3 sm:px-5 py-1.5 rounded-lg sm:rounded-xl text-amber-300 hover:text-white font-rock text-xs sm:text-base tracking-wider transition disabled:opacity-50 theme-btn active:scale-95"
           >
-            {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : 'SINTONIZAR'}
+            {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : 'BUSCAR'}
           </button>
         </div>
 
-        {/* Source Filter Switcher & Sort Options */}
-        <div className="flex items-center justify-between gap-2.5 mt-3 sm:mt-4 overflow-x-auto pb-1 text-xs flex-wrap border-t border-white/5 pt-2.5 sm:pt-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="font-mono-retro text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase mr-0.5">
-              FUENTE:
-            </span>
-            <button
-              onClick={() => handleFilterChange('all')}
-              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg font-stereo font-bold uppercase tracking-wider text-[10px] sm:text-xs transition border ${
-                selectedFilter === 'all'
-                  ? 'bg-amber-400 text-black border-amber-400 shadow-md'
-                  : 'bg-black/40 text-zinc-400 hover:text-white border-white/5'
-              }`}
-            >
-              TODAS
-            </button>
-            <button
-              onClick={() => handleFilterChange('youtube')}
-              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg font-stereo font-bold uppercase tracking-wider text-[10px] sm:text-xs transition border ${
-                selectedFilter === 'youtube'
-                  ? 'bg-red-500 text-white border-red-500 shadow-md'
-                  : 'bg-black/40 text-zinc-400 hover:text-white border-white/5'
-              }`}
-            >
-              YOUTUBE
-            </button>
-            <button
-              onClick={() => handleFilterChange('audius')}
-              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg font-stereo font-bold uppercase tracking-wider text-[10px] sm:text-xs transition border ${
-                selectedFilter === 'audius'
-                  ? 'bg-cyan-500 text-black border-cyan-500 shadow-md'
-                  : 'bg-black/40 text-zinc-400 hover:text-white border-white/5'
-              }`}
-            >
-              AUDIUS
-            </button>
-          </div>
+        {/* Collapsible Vintage Radio FM/AM Tuner Dial */}
+        {showRadioDial && (
+          <RadioTunerDial
+            isSearching={isSearching}
+            query={query}
+            hasResults={results.length > 0}
+            className="pt-1 animate-in fade-in"
+          />
+        )}
 
-          {/* Sort By Dropdown */}
-          {results.length > 0 && (
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <ArrowUpDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
-              <span className="font-mono-retro text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase">ORDEN:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-black/70 border border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs text-amber-400 font-mono-retro focus:outline-none max-w-[170px] sm:max-w-none truncate"
-              >
-                <option value="views" className="bg-zinc-900 text-white">
-                  Más reproducidos (Destacados)
-                </option>
-                <option value="duration" className="bg-zinc-900 text-white">
-                  Mayor duración (Conciertos)
-                </option>
-                <option value="title" className="bg-zinc-900 text-white">
-                  Título (A-Z)
-                </option>
-              </select>
-            </div>
-          )}
-        </div>
+        {/* Sort By Dropdown (Only shown when there are results) */}
+        {results.length > 0 && (
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2 pt-2 border-t border-white/5 text-xs">
+            <ArrowUpDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
+            <span className="font-mono-retro text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase">ORDEN:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-black/70 border border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs text-amber-400 font-mono-retro focus:outline-none max-w-[190px] sm:max-w-none truncate"
+            >
+              <option value="views" className="bg-zinc-900 text-white">
+                Más reproducidos (Destacados)
+              </option>
+              <option value="duration" className="bg-zinc-900 text-white">
+                Mayor duración (Conciertos)
+              </option>
+              <option value="title" className="bg-zinc-900 text-white">
+                Título (A-Z)
+              </option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Quick Category Chips */}

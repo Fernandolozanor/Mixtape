@@ -83,94 +83,57 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal
   };
 
   return (
-    <div className="space-y-6 sm:space-y-10 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
-      {/* 80s Rock Audio Hi-Fi Receiver Hero Banner */}
-      <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-10 relative overflow-hidden shadow-2xl border-2 border-[#262f40] w-full min-w-0">
-        <div className="max-w-2xl space-y-3.5 relative z-10">
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-black/60 border border-amber-500/40 font-mono-retro text-[10px] sm:text-xs font-bold text-amber-400">
-            <Radio className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-            <span>PLETINA ANALÓGICA DE ALTA FIDELIDAD • MODEL 1984</span>
+    <div className="space-y-6 sm:space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
+      {/* Compact Header Bar */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-md shrink-0"
+            style={{ background: currentTheme.gradient }}
+          >
+            <Wand2 className="w-5 h-5 text-white" />
           </div>
-
-          <h1 className="font-rock text-3xl sm:text-5xl md:text-6xl text-white tracking-widest drop-shadow-md leading-none">
-            SISTEMA HI-FI ESTÉREO
-          </h1>
-
-          <p className="text-zinc-300 font-stereo text-sm sm:text-base tracking-wide">
-            Reproducción analógica de catálogo completo sin anuncios. El cabezal aprende de tus escuchas para recomendarte directos míticos, rarezas y temas afines.
-          </p>
-
-          <div className="pt-2 flex items-center gap-3 flex-wrap">
-            <button
-              onClick={() => onSearchGenre('80s Rock Classics')}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl theme-btn active:scale-95 text-base"
-            >
-              <Play className="w-4 h-4 fill-current ml-0.5" />
-              <span>Explorar Grandes Éxitos</span>
-            </button>
-
-            <button
-              onClick={() => loadRecommendations(true)}
-              disabled={isLoadingRecs}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-black/50 hover:bg-black/70 text-zinc-300 hover:text-white font-stereo text-sm font-semibold tracking-wider transition border border-white/10 active:scale-95 disabled:opacity-50"
-              title="Volver a analizar gustos y actualizar pletina"
-            >
-              <RefreshCw className={`w-4 h-4 text-amber-400 ${isLoadingRecs ? 'animate-spin' : ''}`} />
-              <span>Sintonizar Preferencias</span>
-            </button>
-
-            {onOpenSyncModal && (
-              <button
-                onClick={onOpenSyncModal}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-stereo text-sm font-bold tracking-wider transition border border-amber-500/40 active:scale-95"
-                title="Sincronizar listas y favoritos entre dispositivos con QR"
-              >
-                <QrCode className="w-4 h-4 text-amber-400" />
-                <span>Sincronizar QR</span>
-              </button>
-            )}
+          <div>
+            <div className="flex items-center gap-2">
+              <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+              <span className="font-mono-retro text-[10px] uppercase font-bold tracking-widest text-amber-400">
+                SELECCIÓN PERSONALIZADA
+              </span>
+            </div>
+            <h1 className="font-rock text-3xl sm:text-4xl tracking-widest text-white leading-none">
+              PARA TI
+            </h1>
           </div>
         </div>
 
-        {/* Vintage VU meter aesthetic overlay in corner */}
-        <div className="absolute right-4 bottom-4 hidden lg:flex items-center gap-3 bg-black/50 p-3 rounded-xl border border-white/10 font-mono-retro text-[10px] text-zinc-400">
-          <div className="flex flex-col gap-1">
-            <span className="text-amber-400 font-bold">STEREO PEAK</span>
-            <span>TYPE II CrO2</span>
-          </div>
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+        <div className="flex items-center gap-2">
+          {onOpenSyncModal && (
+            <button
+              onClick={onOpenSyncModal}
+              className="px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95"
+              title="Sincronizar con otros dispositivos mediante código QR"
+            >
+              <QrCode className="w-3.5 h-3.5 text-amber-400" />
+              <span>QR</span>
+            </button>
+          )}
+          <button
+            onClick={() => loadRecommendations(true)}
+            disabled={isLoadingRecs}
+            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+            title="Actualizar recomendaciones"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isLoadingRecs ? 'animate-spin' : ''}`} />
+            <span>Actualizar</span>
+          </button>
         </div>
       </div>
 
-      {/* Turntable RPM / Rhythm BPM Playlist Generator */}
+      {/* Turntable RPM / Rhythm BPM Playlist Generator (Collapsible) */}
       <RpmPlaylistGenerator />
 
       {/* Personalized Recommendations Section */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md"
-              style={{ background: currentTheme.gradient }}
-            >
-              <Wand2 className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Hecho Para Ti</h2>
-              <p className="text-xs text-zinc-400">
-                Basado en tu historial de búsquedas, listas creadas y temas que te gustan
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => loadRecommendations(true)}
-            className="text-xs font-semibold text-zinc-400 hover:text-white flex items-center gap-1.5 transition"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingRecs ? 'animate-spin' : ''}`} />
-            <span>Refrescar</span>
-          </button>
-        </div>
 
         {isLoadingRecs && recommendations.length === 0 ? (
           <div className="p-12 text-center text-zinc-400 glass-card rounded-3xl">

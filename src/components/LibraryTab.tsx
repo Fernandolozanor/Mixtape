@@ -20,7 +20,6 @@ import { audioEngine } from '../services/audioEngine';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
-import { RpmPlaylistGenerator } from './RpmPlaylistGenerator';
 import { bpmService } from '../services/bpmService';
 import type { Playlist, Track } from '../types/music';
 
@@ -55,6 +54,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
   // Favorites view mode: 'vinyl' (default 3D vinyl records) or 'list'
   const [favoritesViewMode, setFavoritesViewMode] = useState<'vinyl' | 'list'>('vinyl');
+  // Library playlists view mode: 'rack' (3D cassette shelf) or 'grid' (cards)
+  const [libraryViewMode, setLibraryViewMode] = useState<'rack' | 'grid'>('rack');
 
   const handlePlayPlaylistFromRack = (playlist: Playlist) => {
     if (playlist.tracks.length > 0) {
@@ -620,20 +621,48 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* View Mode Toggle: Estantería vs Cuadrícula */}
+          <div className="flex items-center bg-black/50 p-1 rounded-xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => setLibraryViewMode('rack')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono-retro font-bold uppercase transition ${
+                libraryViewMode === 'rack'
+                  ? 'bg-amber-400 text-black shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="Vista de estantería de cintas 3D"
+            >
+              <span>Estantería</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setLibraryViewMode('grid')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono-retro font-bold uppercase transition ${
+                libraryViewMode === 'grid'
+                  ? 'bg-amber-400 text-black shadow-md'
+                  : 'text-zinc-400 hover:text-white'
+              }`}
+              title="Vista de cuadrícula con carátulas"
+            >
+              <span>Cuadrícula</span>
+            </button>
+          </div>
+
           {openSyncModal && (
             <button
               onClick={openSyncModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95"
               title="Sincronizar listas y favoritos entre dispositivos con QR"
             >
               <QrCode className="w-4 h-4 text-amber-400" />
-              <span>SINCRONIZAR QR</span>
+              <span>QR</span>
             </button>
           )}
 
           <button
             onClick={openNewPlaylistModal}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl theme-btn text-base active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl theme-btn text-sm active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>GRABAR CINTA +</span>
@@ -641,100 +670,99 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </div>
       </div>
 
-      {/* Authentic 80s Wooden Cassette Rack Shelf with Handwritten Spine Labels */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <p className="font-mono-retro text-[10px] sm:text-xs font-bold uppercase tracking-widest text-zinc-400">
-            ESTANTERÍA DE CINTAS • TUS LISTAS EN EL LOMO ({playlists.length}/48)
-          </p>
-          <span className="text-[9px] font-mono text-amber-400/80 hidden sm:inline">
-            Toca una cinta para reproducirla directamente en la pletina
-          </span>
-        </div>
-        <CassetteRack
-          playlists={playlists}
-          onSelectPlaylist={(id) => setSelectedPlaylistId(id)}
-          onPlayPlaylist={handlePlayPlaylistFromRack}
-          onNewPlaylist={openNewPlaylistModal}
-        />
-      </div>
-
-      {/* Turntable RPM / Rhythm BPM Playlist Generator */}
-      <RpmPlaylistGenerator />
-
-      {/* Playlists Grid - Mixtape Rack */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="font-mono-retro text-xs font-bold uppercase tracking-widest text-zinc-400">
-            TUS MIXTAPES GRABADAS ({playlists.length})
-          </p>
-        </div>
-
-        {playlists.length === 0 ? (
-          <div className="p-10 text-center retro-tape-chassis rounded-3xl border border-white/10 text-zinc-400">
-            <p className="font-rock text-xl text-white tracking-wider mb-1">LA PLETINA ESTÁ VACÍA</p>
-            <p className="text-xs font-mono text-zinc-400">No has grabado ninguna cinta de casette todavía.</p>
-            <button
-              onClick={openNewPlaylistModal}
-              className="mt-4 px-5 py-2 rounded-xl theme-btn text-sm"
-            >
-              Grabar mi primera cinta
-            </button>
+      {libraryViewMode === 'rack' ? (
+        /* Authentic 80s Wooden Cassette Rack Shelf with Handwritten Spine Labels */
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <p className="font-mono-retro text-[10px] sm:text-xs font-bold uppercase tracking-widest text-zinc-400">
+              ESTANTERÍA DE CINTAS • TUS LISTAS EN EL LOMO ({playlists.length}/48)
+            </p>
+            <span className="text-[9px] font-mono text-amber-400/80 hidden sm:inline">
+              Toca una cinta para reproducirla directamente en la pletina
+            </span>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {playlists.map((playlist) => (
-              <div
-                key={playlist.id}
-                onClick={() => setSelectedPlaylistId(playlist.id)}
-                className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
+          <CassetteRack
+            playlists={playlists}
+            onSelectPlaylist={(id) => setSelectedPlaylistId(id)}
+            onPlayPlaylist={handlePlayPlaylistFromRack}
+            onNewPlaylist={openNewPlaylistModal}
+          />
+        </div>
+      ) : (
+        /* Playlists Grid - Mixtape Cards */
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="font-mono-retro text-xs font-bold uppercase tracking-widest text-zinc-400">
+              TUS MIXTAPES GRABADAS ({playlists.length})
+            </p>
+          </div>
+
+          {playlists.length === 0 ? (
+            <div className="p-10 text-center retro-tape-chassis rounded-3xl border border-white/10 text-zinc-400">
+              <p className="font-rock text-xl text-white tracking-wider mb-1">LA PLETINA ESTÁ VACÍA</p>
+              <p className="text-xs font-mono text-zinc-400">No has grabado ninguna cinta de casette todavía.</p>
+              <button
+                onClick={openNewPlaylistModal}
+                className="mt-4 px-5 py-2 rounded-xl theme-btn text-sm"
               >
-                {/* Cassette Cover Window */}
-                <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
-                  {playlist.coverUrl ? (
-                    <img
-                      src={playlist.coverUrl}
-                      alt={playlist.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                  ) : playlist.tracks[0]?.thumbnail ? (
-                    <img
-                      src={playlist.tracks[0].thumbnail}
-                      alt={playlist.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                  ) : (
-                    <ListMusic className="w-10 h-10 text-zinc-600" />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                    <Play className="w-6 h-6 fill-white text-white" />
+                Grabar mi primera cinta
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {playlists.map((playlist) => (
+                <div
+                  key={playlist.id}
+                  onClick={() => setSelectedPlaylistId(playlist.id)}
+                  className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
+                >
+                  {/* Cassette Cover Window */}
+                  <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
+                    {playlist.coverUrl ? (
+                      <img
+                        src={playlist.coverUrl}
+                        alt={playlist.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    ) : playlist.tracks[0]?.thumbnail ? (
+                      <img
+                        src={playlist.tracks[0].thumbnail}
+                        alt={playlist.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                      />
+                    ) : (
+                      <ListMusic className="w-10 h-10 text-zinc-600" />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                      <Play className="w-6 h-6 fill-white text-white" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="overflow-hidden">
+                      <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
+                      <p className="text-xs text-zinc-400 truncate">
+                        {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPlaylistToEdit(playlist);
+                      }}
+                      className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition shrink-0"
+                      title="Editar lista"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-
-                <div className="flex items-start justify-between gap-1">
-                  <div className="overflow-hidden">
-                    <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
-                    <p className="text-xs text-zinc-400 truncate">
-                      {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPlaylistToEdit(playlist);
-                    }}
-                    className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition shrink-0"
-                    title="Editar lista"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal to edit playlist metadata */}
       <EditPlaylistModal
