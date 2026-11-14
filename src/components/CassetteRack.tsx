@@ -92,6 +92,17 @@ export const CassetteRack: React.FC<CassetteRackProps> = ({
             : '0 0 0.5px rgba(21, 59, 110, 0.7), 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.15)';
           const inkRotation = (slot.index % 3 === 0 ? -0.35 : slot.index % 2 === 0 ? 0.35 : -0.15) + 'deg';
 
+          // Adaptive font size based on playlist name length so it fits perfectly on the spine
+          const nameLen = playlist ? playlist.name.trim().length : 0;
+          const fontSizeStyle =
+            nameLen > 24
+              ? 'clamp(6.5px, 1.25vw, 10.5px)'
+              : nameLen > 18
+              ? 'clamp(7.5px, 1.55vw, 12px)'
+              : nameLen > 12
+              ? 'clamp(8.5px, 1.85vw, 13.5px)'
+              : 'clamp(9.5px, 2.1vw, 15px)';
+
           return (
             <div
               key={slot.index}
@@ -121,33 +132,27 @@ export const CassetteRack: React.FC<CassetteRackProps> = ({
             >
               {hasPlaylist ? (
                 <>
-                  {/* Handwritten Pen Ink directly on the white tape spine label */}
+                  {/* Handwritten Pen Ink directly centered on the white tape spine label */}
                   <div
                     style={{
                       left: slot.labelLeft,
                       width: slot.labelWidth,
                       transform: `rotate(${inkRotation})`,
                     }}
-                    className="absolute top-[12%] bottom-[12%] flex items-center justify-between px-1 sm:px-1.5 overflow-hidden pointer-events-none"
+                    className="absolute top-[8%] bottom-[8%] flex items-center justify-center text-center px-1 overflow-hidden pointer-events-none"
                   >
-                    {/* Handwritten Title */}
+                    {/* Handwritten Title centered with adaptive size */}
                     <span
-                      className="font-marker font-bold truncate tracking-tight text-[8px] sm:text-[11px] md:text-sm lg:text-base leading-none"
+                      className="font-marker font-bold truncate tracking-tight text-center max-w-full leading-none block"
                       style={{
                         color: inkColor,
                         textShadow,
                         mixBlendMode: 'multiply',
+                        fontSize: fontSizeStyle,
                       }}
+                      title={playlist.name}
                     >
                       {playlist.name}
-                    </span>
-
-                    {/* Track count badge in tiny handwriting */}
-                    <span
-                      className="text-[6.5px] sm:text-[8px] md:text-[10px] font-marker font-semibold opacity-75 shrink-0 ml-1 hidden min-[480px]:inline"
-                      style={{ color: inkColor, mixBlendMode: 'multiply' }}
-                    >
-                      {playlist.tracks.length}T
                     </span>
                   </div>
 
