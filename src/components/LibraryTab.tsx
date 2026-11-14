@@ -45,7 +45,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     clearLikedTracks,
   } = useLibrary();
 
-  const { playTrack, currentTrack, isPlaying, setFullScreenPlayerOpen } = usePlayer();
+  const { playTrack, currentTrack, isPlaying } = usePlayer();
   const { currentTheme } = useTheme();
 
   // Favorites view mode: 'vinyl' (default 3D vinyl records) or 'list'
@@ -54,7 +54,6 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const handlePlayPlaylistFromRack = (playlist: Playlist) => {
     if (playlist.tracks.length > 0) {
       playTrack(playlist.tracks[0], playlist.tracks);
-      setFullScreenPlayerOpen(true);
     } else {
       setSelectedPlaylistId(playlist.id);
     }
@@ -105,7 +104,6 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               <button
                 onClick={() => {
                   playTrack(likedTracks[0], likedTracks);
-                  setFullScreenPlayerOpen(true);
                 }}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-white font-semibold shadow-lg transition theme-btn text-sm"
               >
@@ -202,7 +200,6 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 isPlaying={isPlaying}
                 onPlay={() => {
                   playTrack(track, likedTracks);
-                  setFullScreenPlayerOpen(true);
                 }}
                 onRemove={() => removeLikedTrack(track.id)}
                 isEditingMode={isEditingMode}

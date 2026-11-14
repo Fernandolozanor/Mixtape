@@ -18,6 +18,7 @@ interface PlayerContextType {
   lyrics: LyricLine[];
   activeLyricIndex: number;
   isFullScreenPlayerOpen: boolean;
+  deckActivationTrigger: number;
   isQueueOpen: boolean;
   isLyricsOpen: boolean;
   playTrack: (track: Track, newQueue?: Track[]) => Promise<void>;
@@ -55,6 +56,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // UI Modals / Sheets
   const [isFullScreenPlayerOpen, setFullScreenPlayerOpen] = useState<boolean>(false);
+  const [deckActivationTrigger, setDeckActivationTrigger] = useState<number>(0);
   const [isQueueOpen, setQueueOpen] = useState<boolean>(false);
   const [isLyricsOpen, setLyricsOpen] = useState<boolean>(false);
 
@@ -119,10 +121,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveLyricIndex(found);
   }, [currentTime, lyrics]);
 
+  // Auto-activate cassette or vinyl (FullScreenPlayer in 'deck' view) after 3 seconds of active playback
+  useEffect(() => {
+    if (!isPlaying || isLoading || !currentTrack) return;
+
+    const timer = setTimeout(() => {
+      setFullScreenPlayerOpen(true);
+      setDeckActivationTrigger(Date.now());
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [isPlaying, isLoading, currentTrack?.id]);
+
   const playTrack = async (track: Track, newQueue?: Track[]) => {
     setIsLoading(true);
     setCurrentTrack(track);
-    setFullScreenPlayerOpen(true);
 
     let updatedQueue = newQueue || queueRef.current;
     if (newQueue) {
@@ -271,6 +284,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         lyrics,
         activeLyricIndex,
         isFullScreenPlayerOpen,
+        deckActivationTrigger,
         isQueueOpen,
         isLyricsOpen,
         playTrack,

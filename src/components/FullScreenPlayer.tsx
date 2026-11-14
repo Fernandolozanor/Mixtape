@@ -48,6 +48,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     isShuffle,
     toggleShuffle,
     isFullScreenPlayerOpen,
+    deckActivationTrigger,
     setFullScreenPlayerOpen,
   } = usePlayer();
 
@@ -61,12 +62,12 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const liked = currentTrack ? isLiked(currentTrack.id) : false;
   const isSteel = currentTheme.id === 'retro-rock-80s';
 
-  // Fixed default view is always the retro deck
+  // Ensure retro deck (cassette or vinyl as appropriate) is activated when track changes or 3-second auto-trigger fires
   useEffect(() => {
     if (currentTrack) {
       setCenterView('deck');
     }
-  }, [currentTrack?.id]);
+  }, [currentTrack?.id, deckActivationTrigger, liked]);
 
   if (!isFullScreenPlayerOpen || !currentTrack) return null;
 
