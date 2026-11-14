@@ -12,6 +12,44 @@ declare global {
   }
 }
 
+/**
+ * Generates a valid 3-second 16-bit 44.1kHz mono PCM silent WAV Blob.
+ * Used as a fallback background audio anchor for mobile web viewports.
+ */
+function generateSilentWavBlob(): Blob {
+  const sampleRate = 44100;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const numSamples = sampleRate * 3;
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numSamples * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  const writeStr = (offset: number, str: string) => {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  };
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // Linear PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 class AudioEngine {
   private audio: HTMLAudioElement;
   private ytPlayer: any = null;
@@ -28,6 +66,8 @@ class AudioEngine {
   private hasPostMessageListener: boolean = false;
   private shouldBePlaying: boolean = false;
   private backgroundAudio: HTMLAudioElement | null = null;
+  private bgMediaStream: MediaStream | null = null;
+  private silentBlobUrl: string | null = null;
   private preloadAudio: HTMLAudioElement | null = null;
   private preloadedTrackId: string | null = null;
 
@@ -47,6 +87,8 @@ class AudioEngine {
     this.audio = new Audio();
     this.audio.preload = 'auto';
     this.audio.crossOrigin = 'anonymous';
+    this.audio.setAttribute('playsinline', 'true');
+    this.audio.setAttribute('webkit-playsinline', 'true');
 
     this.setupAudioListeners();
     this.setupVisibilityListener();
@@ -175,32 +217,41 @@ class AudioEngine {
       if (document.hidden) {
         // Screen locked or tab minimized / backgrounded
         if (this.shouldBePlaying) {
-          // Native audio element: ensure playback continues uninterrupted
+          // Always ensure the background audio anchor is spinning
+          this.keepBackgroundAudioAlive();
+
           if (!this.isUsingYouTube) {
             if (this.audio.paused) {
               this.audio.play().catch(() => {});
             }
           } else if (this.ytPlayer) {
-            this.keepBackgroundAudioAlive();
-            setTimeout(() => {
+            // Screen locked while playing YouTube iframe:
+            // Mobile browsers automatically pause iframes when document becomes hidden.
+            // With background audio holding the OS audio session, repeatedly command YouTube to continue playback.
+            const resumeYouTube = () => {
               if (this.shouldBePlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-                this.ytPlayer.playVideo();
+                try {
+                  this.ytPlayer.playVideo();
+                } catch {}
               }
-            }, 80);
-            setTimeout(() => {
-              if (this.shouldBePlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-                this.ytPlayer.playVideo();
-              }
-            }, 500);
+            };
+            setTimeout(resumeYouTube, 60);
+            setTimeout(resumeYouTube, 200);
+            setTimeout(resumeYouTube, 600);
           }
         }
       } else {
         // Returned to foreground
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(() => {});
+        }
         if (this.shouldBePlaying) {
           if (!this.isUsingYouTube && this.audio.paused) {
             this.audio.play().catch(() => {});
           } else if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-            this.ytPlayer.playVideo();
+            try {
+              this.ytPlayer.playVideo();
+            } catch {}
           }
         }
       }
@@ -212,12 +263,68 @@ class AudioEngine {
     try {
       if (!this.backgroundAudio) {
         this.backgroundAudio = new Audio();
-        // 48-byte silent PCM WAV base64 loop to maintain mobile background audio entitlement
-        this.backgroundAudio.src =
-          'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-        this.backgroundAudio.loop = true;
-        this.backgroundAudio.volume = 0.001;
+        this.backgroundAudio.setAttribute('playsinline', 'true');
+        this.backgroundAudio.setAttribute('webkit-playsinline', 'true');
+        this.backgroundAudio.preload = 'auto';
       }
+
+      // Tier 1: Continuous Web Audio API MediaStream Destination (Gold standard for iOS Safari & Android Chrome)
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          if (!this.audioContext) {
+            this.audioContext = new AudioCtx();
+          }
+          if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume().catch(() => {});
+          }
+
+          if (!this.bgMediaStream && typeof this.audioContext.createMediaStreamDestination === 'function') {
+            const dest = this.audioContext.createMediaStreamDestination();
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+
+            // Continuous inaudible low-frequency carrier (25Hz @ 0.005 gain)
+            // Supplies continuous non-zero acoustic frames to the OS audio subsystem without audible noise
+            osc.frequency.setValueAtTime(25, this.audioContext.currentTime);
+            gain.gain.setValueAtTime(0.005, this.audioContext.currentTime);
+
+            osc.connect(gain);
+            gain.connect(dest);
+            osc.start();
+
+            this.bgMediaStream = dest.stream;
+          }
+
+          if (this.bgMediaStream) {
+            if (this.backgroundAudio.srcObject !== this.bgMediaStream) {
+              this.backgroundAudio.srcObject = this.bgMediaStream;
+            }
+            this.backgroundAudio.volume = 0.08;
+            const playPromise = this.backgroundAudio.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+              playPromise.catch(() => {});
+            }
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Web Audio MediaStream anchor fallback:', err);
+      }
+
+      // Tier 2: Valid 3-second PCM silent WAV buffer (Fallback for browsers without MediaStreamDestination)
+      if (!this.silentBlobUrl) {
+        const blob = generateSilentWavBlob();
+        this.silentBlobUrl = URL.createObjectURL(blob);
+      }
+
+      if (this.backgroundAudio.src !== this.silentBlobUrl) {
+        this.backgroundAudio.srcObject = null;
+        this.backgroundAudio.src = this.silentBlobUrl;
+        this.backgroundAudio.loop = true;
+        this.backgroundAudio.volume = 0.05;
+      }
+
       const playPromise = this.backgroundAudio.play();
       if (playPromise && typeof playPromise.catch === 'function') {
         playPromise.catch(() => {});
@@ -521,12 +628,15 @@ class AudioEngine {
     } else {
       if (state === 2 && typeof document !== 'undefined' && document.hidden && this.shouldBePlaying) {
         // YouTube was automatically paused by the mobile OS when the screen locked or tab was minimized!
-        // Immediately resume playback so audio continues uninterrupted with screen off
+        // Immediately re-engage keepalive and resume playback so audio continues uninterrupted with screen off
+        this.keepBackgroundAudioAlive();
         setTimeout(() => {
           if (this.shouldBePlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-            this.ytPlayer.playVideo();
+            try {
+              this.ytPlayer.playVideo();
+            } catch {}
           }
-        }, 120);
+        }, 100);
         return;
       }
 
@@ -578,6 +688,11 @@ class AudioEngine {
 
     try {
       navigator.mediaSession.setActionHandler('play', () => {
+        this.shouldBePlaying = true;
+        this.keepBackgroundAudioAlive();
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume().catch(() => {});
+        }
         this.play();
         actions.onPlay();
       });
@@ -585,8 +700,14 @@ class AudioEngine {
         this.pause();
         actions.onPause();
       });
-      navigator.mediaSession.setActionHandler('nexttrack', actions.onNext);
-      navigator.mediaSession.setActionHandler('previoustrack', actions.onPrev);
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        this.keepBackgroundAudioAlive();
+        actions.onNext();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        this.keepBackgroundAudioAlive();
+        actions.onPrev();
+      });
       navigator.mediaSession.setActionHandler('seekto', (details) => {
         if (details.seekTime !== undefined) {
           actions.onSeek(details.seekTime);
@@ -690,6 +811,7 @@ class AudioEngine {
   public async playTrack(track: Track): Promise<boolean> {
     this.currentTrack = track;
     this.shouldBePlaying = true;
+    this.keepBackgroundAudioAlive();
     this.updateMediaSessionMetadata(track);
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
@@ -708,7 +830,6 @@ class AudioEngine {
         if (directAudioUrl) {
           this.isUsingYouTube = false;
           this.stopYouTubeSync();
-          this.stopBackgroundAudioAnchor();
           if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
             this.ytPlayer.pauseVideo();
           }
@@ -763,7 +884,6 @@ class AudioEngine {
     if (track.audioUrl) {
       this.isUsingYouTube = false;
       this.stopYouTubeSync();
-      this.stopBackgroundAudioAnchor();
       if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
         this.ytPlayer.pauseVideo();
       }
@@ -823,16 +943,17 @@ class AudioEngine {
 
   public play(): Promise<void> {
     this.shouldBePlaying = true;
-    if (this.isUsingYouTube) {
-      this.keepBackgroundAudioAlive();
-    } else {
-      this.stopBackgroundAudioAnchor();
+    this.keepBackgroundAudioAlive();
+    if (this.audioContext && this.audioContext.state === 'suspended') {
+      this.audioContext.resume().catch(() => {});
     }
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'playing';
     }
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-      this.ytPlayer.playVideo();
+      try {
+        this.ytPlayer.playVideo();
+      } catch {}
       return Promise.resolve();
     }
     return this.audio.play();
@@ -845,7 +966,9 @@ class AudioEngine {
       navigator.mediaSession.playbackState = 'paused';
     }
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
-      this.ytPlayer.pauseVideo();
+      try {
+        this.ytPlayer.pauseVideo();
+      } catch {}
       return;
     }
     this.audio.pause();
