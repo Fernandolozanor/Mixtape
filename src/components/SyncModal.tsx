@@ -52,14 +52,27 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   const scanIntervalRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const stopCamera = () => {
+    if (scanIntervalRef.current) {
+      window.clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setIsCameraOpen(false);
+  };
+
   const shareUrl = useMemo(() => syncService.getShareUrl(), [syncState.syncCode]);
   const qrMatrix = useMemo(() => {
+    if (!isOpen) return [];
     try {
       return generateQrMatrix(shareUrl);
     } catch {
       return generateQrMatrix(syncState.syncCode);
     }
-  }, [shareUrl, syncState.syncCode]);
+  }, [isOpen, shareUrl, syncState.syncCode]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -72,18 +85,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const stopCamera = () => {
-    if (scanIntervalRef.current) {
-      window.clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    setIsCameraOpen(false);
-  };
 
   const startCameraScanner = async () => {
     setCameraError(null);
