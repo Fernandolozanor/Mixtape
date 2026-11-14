@@ -64,14 +64,26 @@ export const MiniPlayer: React.FC = () => {
             <MarqueeTitle
               text={currentTrack.title}
               as="p"
-              className="font-stereo text-sm sm:text-base font-bold text-white tracking-wide"
+              className={`font-stereo text-sm sm:text-base font-black tracking-wide ${
+                isSteel ? 'text-black drop-shadow-none' : 'text-white'
+              }`}
             />
             <div className="flex items-center gap-2 text-xs truncate">
-              <span className="text-amber-400 font-mono font-semibold truncate">
+              <span
+                className={`font-mono font-bold truncate ${
+                  isSteel ? 'text-amber-950' : 'text-amber-400'
+                }`}
+              >
                 {currentTrack.artist}
               </span>
-              <span className="text-zinc-600">•</span>
-              <span className="text-[10px] font-mono-retro font-bold px-1.5 py-0.2 rounded bg-black/50 text-emerald-400 border border-emerald-500/30">
+              <span className={isSteel ? 'text-slate-700 font-bold' : 'text-zinc-600'}>•</span>
+              <span
+                className={`text-[10px] font-mono-retro font-bold px-1.5 py-0.2 rounded border ${
+                  isSteel
+                    ? 'bg-emerald-950/20 text-emerald-900 border-emerald-700/40'
+                    : 'bg-black/50 text-emerald-400 border-emerald-500/30'
+                }`}
+              >
                 {sourceLabel}
               </span>
             </div>
@@ -100,11 +112,19 @@ export const MiniPlayer: React.FC = () => {
           {/* Previous Track Button - Mechanical bevel */}
           <button
             onClick={prevTrack}
-            className="p-2.5 rounded-xl bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-t border-white/20 border-b-2 border-black/80 transition active:translate-y-0.5"
+            className={`p-2.5 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
+              isSteel
+                ? 'retro-btn-aluminum shadow-md text-amber-900 border-slate-400'
+                : 'bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-white/20 border-black/80'
+            }`}
             aria-label="Canción anterior"
             title="REW ⏪"
           >
-            <SkipBack className="w-4 h-4 text-amber-400 fill-amber-400" />
+            <SkipBack
+              className={`w-4 h-4 ${
+                isSteel ? 'text-amber-900 fill-amber-900' : 'text-amber-400 fill-amber-400'
+              }`}
+            />
           </button>
 
           {/* Main Play / Pause Key */}
@@ -127,11 +147,19 @@ export const MiniPlayer: React.FC = () => {
           {/* Next Track Button - Mechanical bevel */}
           <button
             onClick={nextTrack}
-            className="p-2.5 rounded-xl bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-t border-white/20 border-b-2 border-black/80 transition active:translate-y-0.5"
+            className={`p-2.5 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
+              isSteel
+                ? 'retro-btn-aluminum shadow-md text-amber-900 border-slate-400'
+                : 'bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-white/20 border-black/80'
+            }`}
             aria-label="Siguiente"
             title="FF ⏩"
           >
-            <SkipForward className="w-4 h-4 text-amber-400 fill-amber-400" />
+            <SkipForward
+              className={`w-4 h-4 ${
+                isSteel ? 'text-amber-900 fill-amber-900' : 'text-amber-400 fill-amber-400'
+              }`}
+            />
           </button>
         </div>
 
