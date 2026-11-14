@@ -11,6 +11,7 @@ interface PlayerContextType {
   duration: number;
   buffered: number;
   volume: number;
+  playbackRate: number;
   repeatMode: RepeatMode;
   isShuffle: boolean;
   queue: Track[];
@@ -27,6 +28,7 @@ interface PlayerContextType {
   prevTrack: () => void;
   seek: (seconds: number) => void;
   setVolume: (vol: number) => void;
+  setPlaybackRate: (rate: number) => void;
   toggleRepeat: () => void;
   toggleShuffle: () => void;
   addToQueue: (track: Track) => void;
@@ -47,6 +49,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [duration, setDuration] = useState<number>(0);
   const [buffered, setBuffered] = useState<number>(0);
   const [volume, setVolumeState] = useState<number>(1);
+  const [playbackRate, setPlaybackRateState] = useState<number>(1);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [queue, setQueue] = useState<Track[]>([]);
@@ -236,6 +239,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     audioEngine.setVolume(vol);
   };
 
+  const setPlaybackRate = (rate: number) => {
+    const clamped = Math.max(0.75, Math.min(1.35, Number(rate.toFixed(2))));
+    setPlaybackRateState(clamped);
+    audioEngine.setPlaybackRate(clamped);
+  };
+
   const toggleRepeat = () => {
     setRepeatMode((prev) => {
       if (prev === 'off') return 'all';
@@ -277,6 +286,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         duration,
         buffered,
         volume,
+        playbackRate,
         repeatMode,
         isShuffle,
         queue,
@@ -293,6 +303,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         prevTrack: handlePrevTrack,
         seek,
         setVolume,
+        setPlaybackRate,
         toggleRepeat,
         toggleShuffle,
         addToQueue,

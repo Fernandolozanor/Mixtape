@@ -18,6 +18,7 @@ import {
   type RecommendationGroup,
   type FeaturedCollection,
 } from '../services/recommendationService';
+import { RpmPlaylistGenerator } from './RpmPlaylistGenerator';
 
 interface HomeTabProps {
   onSearchGenre: (genre: string) => void;
@@ -127,6 +128,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
         </div>
       </div>
+
+      {/* Turntable RPM / Rhythm BPM Playlist Generator */}
+      <RpmPlaylistGenerator />
 
       {/* Personalized Recommendations Section */}
       <div className="space-y-6">

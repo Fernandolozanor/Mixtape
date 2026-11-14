@@ -19,7 +19,9 @@ import { audioEngine } from '../services/audioEngine';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
-import type { Playlist } from '../types/music';
+import { RpmPlaylistGenerator } from './RpmPlaylistGenerator';
+import { bpmService } from '../services/bpmService';
+import type { Playlist, Track } from '../types/music';
 
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
@@ -62,6 +64,82 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   // Editing state
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
+
+  // RPM / BPM filter and sort state
+  const [rpmFilter, setRpmFilter] = useState<'all' | '33' | '45' | '78'>('all');
+  const [rpmSort, setRpmSort] = useState<'default' | 'asc' | 'desc'>('default');
+
+  const filterAndSortByRpm = (tracks: Track[]): Track[] => {
+    let list = tracks.filter((t) => {
+      if (rpmFilter === 'all') return true;
+      const bpm = bpmService.getTrackBpm(t);
+      return bpmService.getRpmTier(bpm).id === rpmFilter;
+    });
+
+    if (rpmSort === 'asc') {
+      list = [...list].sort((a, b) => bpmService.getTrackBpm(a) - bpmService.getTrackBpm(b));
+    } else if (rpmSort === 'desc') {
+      list = [...list].sort((a, b) => bpmService.getTrackBpm(b) - bpmService.getTrackBpm(a));
+    }
+    return list;
+  };
+
+  const renderRpmFilterBar = () => (
+    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-black/40 border border-white/10 text-xs font-mono">
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[10px] font-mono-retro font-bold uppercase tracking-wider text-zinc-400 mr-1">
+          FILTRAR VELOCIDAD:
+        </span>
+        {(
+          [
+            { id: 'all', label: 'Todas' },
+            { id: '33', label: '33⅓ RPM (Lento)' },
+            { id: '45', label: '45 RPM (Medio)' },
+            { id: '78', label: '78 RPM (Rápido)' },
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setRpmFilter(item.id)}
+            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition ${
+              rpmFilter === item.id
+                ? 'bg-amber-400 text-black border-amber-300'
+                : 'bg-white/5 text-zinc-400 hover:text-white border-white/10'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] font-mono-retro font-bold uppercase tracking-wider text-zinc-400">
+          ORDEN RITMO:
+        </span>
+        {(
+          [
+            { id: 'default', label: 'Original' },
+            { id: 'asc', label: 'BPM ↑' },
+            { id: 'desc', label: 'BPM ↓' },
+          ] as const
+        ).map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => setRpmSort(s.id)}
+            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition ${
+              rpmSort === s.id
+                ? 'bg-emerald-400 text-black border-emerald-300'
+                : 'bg-white/5 text-zinc-400 hover:text-white border-white/10'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
@@ -182,6 +260,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         </div>
 
+        {likedTracks.length > 0 && renderRpmFilterBar()}
+
         {likedTracks.length === 0 ? (
           <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
             <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -191,7 +271,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         ) : favoritesViewMode === 'vinyl' ? (
           /* 3D Vinyl Records Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
-            {likedTracks.map((track, idx) => (
+            {filterAndSortByRpm(likedTracks).map((track, idx) => (
               <VinylRecordCard
                 key={track.id}
                 track={track}
@@ -199,7 +279,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 isCurrent={currentTrack?.id === track.id}
                 isPlaying={isPlaying}
                 onPlay={() => {
-                  playTrack(track, likedTracks);
+                  playTrack(track, filterAndSortByRpm(likedTracks));
                 }}
                 onRemove={() => removeLikedTrack(track.id)}
                 isEditingMode={isEditingMode}
@@ -208,10 +288,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {likedTracks.map((track, idx) => (
+            {filterAndSortByRpm(likedTracks).map((track, idx) => {
+              const bpm = bpmService.getTrackBpm(track);
+              const tier = bpmService.getRpmTier(bpm);
+              return (
               <div
                 key={track.id}
-                onClick={() => !isEditingMode && playTrack(track, likedTracks)}
+                onClick={() => !isEditingMode && playTrack(track, filterAndSortByRpm(likedTracks))}
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
                   isEditingMode ? 'cursor-default' : 'cursor-pointer'
                 } ${
@@ -256,6 +339,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-mono-retro font-bold px-2 py-0.5 rounded border hidden sm:inline-block ${tier.badgeClass}`}>
+                    {bpm} BPM • {tier.rpmLabel}
+                  </span>
                   {isEditingMode ? (
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
@@ -289,7 +375,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -401,6 +488,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         </div>
 
+        {selectedPlaylist.tracks.length > 0 && renderRpmFilterBar()}
+
         {selectedPlaylist.tracks.length === 0 ? (
           <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
             <ListMusic className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -409,10 +498,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {selectedPlaylist.tracks.map((track, idx) => (
+            {filterAndSortByRpm(selectedPlaylist.tracks).map((track, idx) => {
+              const bpm = bpmService.getTrackBpm(track);
+              const tier = bpmService.getRpmTier(bpm);
+              return (
               <div
                 key={`${track.id}-${idx}`}
-                onClick={() => !isEditingMode && playTrack(track, selectedPlaylist.tracks)}
+                onClick={() => !isEditingMode && playTrack(track, filterAndSortByRpm(selectedPlaylist.tracks))}
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
                   isEditingMode ? 'cursor-default' : 'cursor-pointer'
                 } ${
@@ -457,6 +549,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-mono-retro font-bold px-2 py-0.5 rounded border hidden sm:inline-block ${tier.badgeClass}`}>
+                    {bpm} BPM • {tier.rpmLabel}
+                  </span>
                   {isEditingMode ? (
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
@@ -490,7 +585,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 
@@ -546,6 +642,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           onNewPlaylist={openNewPlaylistModal}
         />
       </div>
+
+      {/* Turntable RPM / Rhythm BPM Playlist Generator */}
+      <RpmPlaylistGenerator />
 
       {/* Playlists Grid - Mixtape Rack */}
       <div className="space-y-3">

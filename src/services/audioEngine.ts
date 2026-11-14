@@ -22,6 +22,7 @@ class AudioEngine {
   private sponsorSegments: SponsorSegment[] = [];
   private skipSponsors: boolean = true;
   private volume: number = 1.0;
+  private playbackRate: number = 1.0;
   private syncTimer: any = null;
   private isAdActive: boolean = false;
   private hasPostMessageListener: boolean = false;
@@ -601,6 +602,7 @@ class AudioEngine {
           this.audio.src = directAudioUrl;
           this.audio.currentTime = 0;
           this.audio.volume = this.volume;
+          this.audio.playbackRate = this.playbackRate;
 
           let hasRetriedCompanion = false;
           const onAudioError = async (e: any) => {
@@ -617,6 +619,7 @@ class AudioEngine {
                   this.audio.src = backupUrl;
                   this.audio.currentTime = 0;
                   this.audio.volume = this.volume;
+                  this.audio.playbackRate = this.playbackRate;
                   await this.audio.play();
                   this.notifyState();
                   return;
@@ -655,6 +658,7 @@ class AudioEngine {
         this.audio.src = track.audioUrl;
         this.audio.currentTime = 0;
         this.audio.volume = this.volume;
+        this.audio.playbackRate = this.playbackRate;
         await this.audio.play();
         this.notifyState();
         return true;
@@ -760,6 +764,23 @@ class AudioEngine {
     this.audio.volume = this.volume;
     this.audio.muted = this.volume === 0;
     this.notifyState();
+  }
+
+  public setPlaybackRate(rate: number): void {
+    this.playbackRate = Math.max(0.75, Math.min(1.35, rate));
+    try {
+      this.audio.playbackRate = this.playbackRate;
+    } catch {}
+    if (this.ytPlayer && typeof this.ytPlayer.setPlaybackRate === 'function') {
+      try {
+        this.ytPlayer.setPlaybackRate(this.playbackRate);
+      } catch {}
+    }
+    this.notifyState();
+  }
+
+  public getPlaybackRate(): number {
+    return this.playbackRate;
   }
 
   public isPlaying(): boolean {

@@ -14,6 +14,7 @@ export interface Track {
   viewsFormatted?: string;
   streamExpiry?: number;
   addedAt?: number;
+  bpm?: number;
 }
 
 export interface Playlist {

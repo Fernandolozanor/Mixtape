@@ -24,7 +24,8 @@ import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
 import { RetroTapeDeck } from './RetroTapeDeck';
 import { MarqueeTitle } from './MarqueeTitle';
-import { Disc3, Image as ImageIcon } from 'lucide-react';
+import { Disc3, Image as ImageIcon, Gauge } from 'lucide-react';
+import { bpmService } from '../services/bpmService';
 
 interface FullScreenPlayerProps {
   onOpenAddToPlaylist: () => void;
@@ -43,6 +44,8 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     seek,
     volume,
     setVolume,
+    playbackRate,
+    setPlaybackRate,
     repeatMode,
     toggleRepeat,
     isShuffle,
@@ -396,6 +399,52 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
           <span className="text-[10px] sm:text-xs font-mono-retro font-bold text-amber-400 w-8 text-right shrink-0">
             {Math.round(volume * 100)}%
+          </span>
+        </div>
+
+        {/* Technics Quartz Pitch / RPM Speed Control */}
+        <div
+          className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1 rounded-xl shadow-inner ${
+            isSteel
+              ? 'bg-slate-900/90 border border-slate-700'
+              : 'bg-black/50 border border-white/10'
+          }`}
+        >
+          <button
+            onClick={() => setPlaybackRate(1)}
+            className={`px-2 py-1 rounded-lg active:scale-95 transition shrink-0 border text-[10px] font-mono-retro font-bold flex items-center gap-1 ${
+              playbackRate === 1
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+            }`}
+            title="Restablecer velocidad original (Quartz Lock 0%)"
+          >
+            <Gauge className="w-3.5 h-3.5" />
+            <span>
+              {Math.round(bpmService.getTrackBpm(currentTrack) * playbackRate)} BPM
+            </span>
+          </button>
+
+          <span className="text-[9px] font-mono-retro font-bold text-zinc-400 uppercase tracking-wider hidden xs:inline shrink-0">
+            PITCH
+          </span>
+
+          <div className="relative flex-1 flex items-center py-1">
+            <input
+              type="range"
+              min={0.85}
+              max={1.15}
+              step={0.01}
+              value={playbackRate}
+              onChange={(e) => setPlaybackRate(parseFloat(e.target.value))}
+              className="retro-slider"
+              aria-label="Control de velocidad Pitch / RPM"
+            />
+          </div>
+
+          <span className="text-[10px] sm:text-xs font-mono-retro font-bold text-emerald-400 w-10 text-right shrink-0">
+            {playbackRate >= 1 ? '+' : ''}
+            {Math.round((playbackRate - 1) * 100)}%
           </span>
         </div>
 

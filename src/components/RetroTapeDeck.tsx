@@ -18,7 +18,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   className = '',
   forceMedia,
 }) => {
-  const { currentTrack, isPlaying, togglePlay, currentTime, volume } = usePlayer();
+  const { currentTrack, isPlaying, togglePlay, currentTime, volume, playbackRate } = usePlayer();
   const { isLiked } = useLibrary();
   const { currentTheme } = useTheme();
   const isSteel = currentTheme.id === 'retro-rock-80s';
@@ -54,6 +54,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     // Explicitly enforce muted and inline attributes for iOS Safari / Mobile WebKit
     video.muted = true;
     video.playsInline = true;
+    video.playbackRate = playbackRate || 1;
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
     video.setAttribute('muted', '');
@@ -83,7 +84,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isPlaying, videoSrc]);
+  }, [isPlaying, videoSrc, playbackRate]);
 
   // Handwriting simulation on the cassette tape label
   useEffect(() => {
@@ -478,11 +479,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           aspectRatio: '1 / 1',
         }}
       >
-        {/* Rotating Circular Vinyl Label: Exact 33⅓ RPM speed (1.8s per revolution) */}
+        {/* Rotating Circular Vinyl Label: Exact 33⅓ RPM speed scaled by pitch playbackRate */}
         <div
           className="w-full h-full rounded-full relative overflow-hidden will-change-transform"
           style={{
-            animation: 'vinyl-spin 1.8s linear infinite',
+            animation: `vinyl-spin ${(1.8 / (playbackRate || 1)).toFixed(2)}s linear infinite`,
             animationPlayState: isPlaying ? 'running' : 'paused',
             transformOrigin: 'center center',
           }}
