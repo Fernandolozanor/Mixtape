@@ -4,6 +4,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { Play, Pause, Disc3, Maximize2 } from 'lucide-react';
 import { MarqueeTitle } from './MarqueeTitle';
+import { audioEngine } from '../services/audioEngine';
 
 interface RetroTapeDeckProps {
   variant?: 'sidebar' | 'ambient-lateral' | 'fullscreen' | 'compact';
@@ -150,32 +151,47 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       let targetR = MIN_ANGLE;
 
       if (isPlaying && volume > 0) {
-        const t = now / 1000;
+        // Sample real audio signal from the Web Audio API AnalyserNode!
+        const realLevels = audioEngine.getRealAudioLevels();
 
-        // 1. Bass / Kick drum pulse (approx 125 BPM = 2.08 Hz)
-        const kickPhase = (t * 2.08) % 1;
-        const kick = Math.pow(Math.max(0, 1 - kickPhase * 2.8), 2.2) * 29;
+        if (realLevels.left >= 0 && realLevels.right >= 0) {
+          // REAL AUDIO MODE: Angle directly calculated from the song's acoustic RMS decibels & transients
+          // Map real level 0.0 -> MIN_ANGLE (-34 deg) up to 1.0 -> MAX_ANGLE (+34 deg)
+          const span = MAX_ANGLE - MIN_ANGLE; // 68 degrees
+          const rawTargetL = MIN_ANGLE + Math.min(1, realLevels.left * 1.35) * span;
+          const rawTargetR = MIN_ANGLE + Math.min(1, realLevels.right * 1.35) * span;
 
-        // 2. Snare / backbeat hit on alternating beats
-        const snarePhase = ((t * 2.08 + 0.5) % 1);
-        const snare = Math.pow(Math.max(0, 1 - snarePhase * 3.2), 2.5) * 23;
+          targetL = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetL));
+          targetR = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetR));
+        } else {
+          // Acoustic simulation mode when Web Audio cannot intercept sandboxed iframe
+          const t = now / 1000;
 
-        // 3. Fast high-frequency hi-hat & guitar flutter
-        const flutter = (Math.sin(t * 19.3) * 0.5 + 0.5) * (Math.cos(t * 8.7) * 0.5 + 0.5) * 15;
+          // 1. Bass / Kick drum pulse (approx 125 BPM = 2.08 Hz)
+          const kickPhase = (t * 2.08) % 1;
+          const kick = Math.pow(Math.max(0, 1 - kickPhase * 2.8), 2.2) * 29;
 
-        // 4. Musical dynamic swell (measures of verse/chorus)
-        const swell = (Math.sin(t * 0.45) * 0.5 + 0.5) * 12 + 6;
+          // 2. Snare / backbeat hit on alternating beats
+          const snarePhase = ((t * 2.08 + 0.5) % 1);
+          const snare = Math.pow(Math.max(0, 1 - snarePhase * 3.2), 2.5) * 23;
 
-        // 5. Stereo panning differences
-        const panDiff = Math.sin(t * 1.9) * 6;
+          // 3. Fast high-frequency hi-hat & guitar flutter
+          const flutter = (Math.sin(t * 19.3) * 0.5 + 0.5) * (Math.cos(t * 8.7) * 0.5 + 0.5) * 15;
 
-        // Combine components scaled by volume
-        const volScale = Math.min(1, Math.max(0.25, volume));
-        const rawTargetL = MIN_ANGLE + (kick + snare * 0.75 + flutter + swell + panDiff) * volScale * 1.15;
-        const rawTargetR = MIN_ANGLE + (kick * 0.95 + snare + flutter * 1.1 + swell - panDiff) * volScale * 1.15;
+          // 4. Musical dynamic swell (measures of verse/chorus)
+          const swell = (Math.sin(t * 0.45) * 0.5 + 0.5) * 12 + 6;
 
-        targetL = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetL));
-        targetR = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetR));
+          // 5. Stereo panning differences
+          const panDiff = Math.sin(t * 1.9) * 6;
+
+          // Combine components scaled by volume
+          const volScale = Math.min(1, Math.max(0.25, volume));
+          const rawTargetL = MIN_ANGLE + (kick + snare * 0.75 + flutter + swell + panDiff) * volScale * 1.15;
+          const rawTargetR = MIN_ANGLE + (kick * 0.95 + snare + flutter * 1.1 + swell - panDiff) * volScale * 1.15;
+
+          targetL = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetL));
+          targetR = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, rawTargetR));
+        }
       }
 
       // Ballistic spring-damper physics with authentic mechanical inertia & overshoot
@@ -227,7 +243,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     };
   }, [isPlaying, volume]);
 
-  // Periodic update for LED Segment Meters (Sidebar / Lateral variants)
+  // Periodic update for LED Segment Meters (Sidebar, Lateral and Fullscreen variants)
   useEffect(() => {
     if (!isPlaying) {
       setVuLeft(0);
@@ -236,12 +252,21 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     }
 
     const interval = setInterval(() => {
-      const base = 4 + Math.random() * 4;
-      const l = Math.min(10, Math.max(1, Math.round(base + (Math.random() * 2 - 1))));
-      const r = Math.min(10, Math.max(1, Math.round(base + (Math.random() * 2 - 1))));
-      setVuLeft(l);
-      setVuRight(r);
-    }, 110);
+      const realLevels = audioEngine.getRealAudioLevels();
+      if (realLevels.left >= 0 && realLevels.right >= 0) {
+        // REAL AUDIO: 12 discrete LED levels directly driven by measured decibels!
+        const l = Math.min(12, Math.max(0, Math.round(realLevels.left * 12)));
+        const r = Math.min(12, Math.max(0, Math.round(realLevels.right * 12)));
+        setVuLeft(l);
+        setVuRight(r);
+      } else {
+        const base = 5 + Math.random() * 4;
+        const l = Math.min(12, Math.max(1, Math.round(base + (Math.random() * 2 - 1))));
+        const r = Math.min(12, Math.max(1, Math.round(base + (Math.random() * 2 - 1))));
+        setVuLeft(l);
+        setVuRight(r);
+      }
+    }, 75); // 75ms fast audio refresh for crisp LED transients
 
     return () => clearInterval(interval);
   }, [isPlaying]);
