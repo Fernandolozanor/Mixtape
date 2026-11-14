@@ -27,6 +27,8 @@ class AudioEngine {
   private hasPostMessageListener: boolean = false;
   private shouldBePlaying: boolean = false;
   private backgroundAudio: HTMLAudioElement | null = null;
+  private preloadAudio: HTMLAudioElement | null = null;
+  private preloadedTrackId: string | null = null;
 
   private onTrackEndCallbacks: PlaybackCallback[] = [];
   private onTimeUpdateCallbacks: TimeUpdateCallback[] = [];
@@ -36,7 +38,6 @@ class AudioEngine {
   constructor() {
     this.audio = new Audio();
     this.audio.preload = 'auto';
-    this.audio.crossOrigin = 'anonymous';
 
     this.setupAudioListeners();
     this.setupVisibilityListener();
@@ -579,7 +580,7 @@ class AudioEngine {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    // 1. YouTube playback: First attempt ad-free direct stream via Invidious / Worker
+    // 1. YouTube playback: First attempt ad-free direct stream via verified companion nodes
     if (track.source === 'youtube' && track.youtubeId) {
       const ytId = track.youtubeId;
 
@@ -601,9 +602,31 @@ class AudioEngine {
           this.audio.currentTime = 0;
           this.audio.volume = this.volume;
 
-          const onAudioError = (e: any) => {
-            console.warn('Direct stream error, falling back to YouTube iframe:', e);
+          let hasRetriedCompanion = false;
+          const onAudioError = async (e: any) => {
             this.audio.removeEventListener('error', onAudioError);
+            if (this.currentTrack?.youtubeId !== ytId) return;
+
+            if (!hasRetriedCompanion) {
+              hasRetriedCompanion = true;
+              try {
+                streamResolver.invalidateStreamCache(ytId);
+                const failedOrigin = new URL(directAudioUrl).origin;
+                const backupUrl = await streamResolver.resolveDirectAudioStream(ytId, failedOrigin);
+                if (backupUrl && this.currentTrack?.youtubeId === ytId) {
+                  this.audio.src = backupUrl;
+                  this.audio.currentTime = 0;
+                  this.audio.volume = this.volume;
+                  await this.audio.play();
+                  this.notifyState();
+                  return;
+                }
+              } catch {
+                // Proceed to fallback
+              }
+            }
+
+            console.warn('Direct stream error after retry, falling back to YouTube iframe:', e);
             this.fallbackToYouTubeIFrame(track);
           };
           this.audio.addEventListener('error', onAudioError, { once: true });
@@ -643,8 +666,41 @@ class AudioEngine {
     return false;
   }
 
-  public preloadNextTrack(_track: Track): void {
-    // Gapless preloading
+  /**
+   * Resolves and buffers the next track in memory while the current song is playing (zero disk storage).
+   */
+  public preloadNextTrack(track: Track): void {
+    if (!track || typeof window === 'undefined') return;
+    if (this.preloadedTrackId === track.id) return;
+    this.preloadedTrackId = track.id;
+
+    const bufferUrlInMemory = (url: string) => {
+      try {
+        if (!this.preloadAudio) {
+          this.preloadAudio = new Audio();
+          this.preloadAudio.preload = 'auto';
+          this.preloadAudio.muted = true;
+          this.preloadAudio.volume = 0;
+        }
+        this.preloadAudio.src = url;
+        this.preloadAudio.load();
+      } catch {
+        // Ignore background preload errors
+      }
+    };
+
+    if (track.source === 'youtube' && track.youtubeId) {
+      streamResolver
+        .resolveDirectAudioStream(track.youtubeId)
+        .then((directUrl) => {
+          if (directUrl && this.preloadedTrackId === track.id) {
+            bufferUrlInMemory(directUrl);
+          }
+        })
+        .catch(() => {});
+    } else if (track.audioUrl) {
+      bufferUrlInMemory(track.audioUrl);
+    }
   }
 
   public play(): Promise<void> {

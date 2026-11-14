@@ -2,6 +2,13 @@ import type { Track, AudioSourceType, SponsorSegment } from '../types/music';
 import { ROCK_ANTHOLOGY } from '../data/rockAnthology';
 
 class StreamResolver {
+  private streamCache = new Map<string, { url: string; expiresAt: number }>();
+  private pendingResolutions = new Map<string, Promise<string | null>>();
+
+  public invalidateStreamCache(youtubeId: string): void {
+    this.streamCache.delete(youtubeId);
+  }
+
   /**
    * Search full-length tracks across YouTube, Built-in 80s Rock Anthology, and Audius.
    * Seamlessly works on desktop local dev, GitHub Pages, and mobile devices with zero backend requirement.
@@ -246,7 +253,6 @@ class StreamResolver {
           const controller = new AbortController();
           const tid = setTimeout(() => controller.abort(), 7500);
           const res = await fetch(ep.url, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
             signal: controller.signal,
           });
           clearTimeout(tid);
@@ -265,48 +271,125 @@ class StreamResolver {
 
   /**
    * Resolves direct, ad-free audio stream URL for a YouTube ID.
-   * Extracts clean AAC/MP4 stream via CORS-enabled Invidious backend with Cloudflare Worker support.
+   * Uses a parallel race across 6 dedicated companion streaming nodes with Simple GET
+   * (zero custom headers = zero CORS OPTIONS preflight) and in-memory caching for instant gapless playback.
    */
-  async resolveDirectAudioStream(youtubeId: string): Promise<string | null> {
+  async resolveDirectAudioStream(youtubeId: string, excludeOrigin?: string): Promise<string | null> {
     if (!youtubeId) return null;
 
-    // 1. Direct Invidious CORS resolution (fast, direct, zero intermediate latency)
-    const instances = [
-      'https://yt.chocolatemoo53.com',
-    ];
-
-    for (const inst of instances) {
-      try {
-        const res = await fetch(`${inst}/api/v1/videos/${youtubeId}`, {
-          signal: AbortSignal.timeout(2800),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const audios = (data.adaptiveFormats || []).filter((f: any) => f.type && f.type.includes('audio'));
-          if (audios.length > 0) {
-            const format140 = audios.find((f: any) => f.itag === 140 || f.itag === '140');
-            const best = format140 || audios.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0))[0];
-            if (best && best.url) {
-              return best.url.replace(/^https:\/\/[^\/]+/, inst);
-            }
-          }
-        }
-      } catch {
-        // Try next instance
+    // 1. Return immediately if a valid verified stream URL is already cached in memory
+    const cached = this.streamCache.get(youtubeId);
+    if (cached && cached.expiresAt > Date.now()) {
+      if (!excludeOrigin || !cached.url.startsWith(excludeOrigin)) {
+        return cached.url;
       }
     }
 
-    // 2. Try User's Cloudflare Worker meta endpoint as fallback
+    // 2. If this track is already being resolved (e.g. via preloadNextTrack), reuse the in-flight Promise
+    if (!excludeOrigin && this.pendingResolutions.has(youtubeId)) {
+      return this.pendingResolutions.get(youtubeId)!;
+    }
+
+    const resolutionPromise = this.performCompanionStreamRace(youtubeId, excludeOrigin);
+    if (!excludeOrigin) {
+      this.pendingResolutions.set(youtubeId, resolutionPromise);
+    }
+
     try {
-      const res = await fetch(`https://mixtape-stream.fernandolozanor.workers.dev/?id=${youtubeId}&meta=true`, {
-        signal: AbortSignal.timeout(2500),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.streamUrl) return data.streamUrl;
+      const resolvedUrl = await resolutionPromise;
+      if (resolvedUrl) {
+        // Cache verified stream URL for 20 minutes
+        this.streamCache.set(youtubeId, {
+          url: resolvedUrl,
+          expiresAt: Date.now() + 20 * 60 * 1000,
+        });
       }
+      return resolvedUrl;
+    } finally {
+      if (!excludeOrigin) {
+        this.pendingResolutions.delete(youtubeId);
+      }
+    }
+  }
+
+  private async performCompanionStreamRace(
+    youtubeId: string,
+    excludeOrigin?: string
+  ): Promise<string | null> {
+    const allCompanions = [
+      'https://yt-comp5.chocolatemoo53.com',
+      'https://yt-comp4.chocolatemoo53.com',
+      'https://yt-comp3.chocolatemoo53.com',
+      'https://yt-comp2.chocolatemoo53.com',
+      'https://yt-comp1.chocolatemoo53.com',
+      'https://yt-comp6.chocolatemoo53.com',
+    ];
+
+    const companions = excludeOrigin
+      ? allCompanions.filter((c) => c !== excludeOrigin)
+      : allCompanions;
+
+    const controllers: AbortController[] = [];
+
+    try {
+      const winningUrl = await Promise.any(
+        companions.map(async (comp) => {
+          const controller = new AbortController();
+          controllers.push(controller);
+          const timeoutId = setTimeout(() => controller.abort(), 5500);
+
+          try {
+            const endpoint = `${comp}/companion/latest_version?id=${youtubeId}&itag=140&local=true`;
+            // Simple GET without custom headers prevents CORS OPTIONS preflight in Chrome, Safari & iOS
+            const res = await fetch(endpoint, {
+              method: 'GET',
+              redirect: 'follow',
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (
+              res.ok &&
+              res.url &&
+              (contentType.includes('audio') ||
+                contentType.includes('mp4') ||
+                contentType.includes('octet-stream'))
+            ) {
+              const verifiedUrl = res.url;
+              // Cancel probe body download immediately so only headers were transferred
+              if (res.body) {
+                res.body.cancel().catch(() => {});
+              }
+              controller.abort();
+              return verifiedUrl;
+            }
+            throw new Error(`Invalid stream response (${res.status}) from ${comp}`);
+          } catch (err) {
+            clearTimeout(timeoutId);
+            throw err;
+          }
+        })
+      );
+
+      // Abort all remaining slower companion requests immediately
+      for (const c of controllers) {
+        try {
+          c.abort();
+        } catch {
+          // Ignored
+        }
+      }
+
+      return winningUrl;
     } catch {
-      // Ignored
+      for (const c of controllers) {
+        try {
+          c.abort();
+        } catch {
+          // Ignored
+        }
+      }
     }
 
     return null;
