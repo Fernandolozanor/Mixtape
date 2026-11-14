@@ -88,8 +88,8 @@ export const AdminLicenseModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 overflow-y-auto select-none">
-      <div className="retro-tape-chassis w-full max-w-lg rounded-3xl p-5 sm:p-7 border-2 border-amber-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95)] relative my-auto max-h-[92dvh] overflow-y-auto">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-md px-3 pb-6 safe-top overflow-y-auto select-none">
+      <div className="retro-tape-chassis w-full max-w-lg rounded-3xl p-5 sm:p-7 border-2 border-amber-500/40 shadow-[0_25px_70px_rgba(0,0,0,0.95)] relative my-auto max-h-[84dvh] overflow-y-auto">
         <button
           onClick={() => setAdminModalOpen(false)}
           className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-zinc-300 hover:text-white transition"

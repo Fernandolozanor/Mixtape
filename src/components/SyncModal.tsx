@@ -261,8 +261,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   const qrSize = qrMatrix.length;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md select-none animate-in fade-in overflow-y-auto">
-      <div className="retro-tape-chassis w-full max-w-lg rounded-3xl p-5 sm:p-6 border-2 border-[#2a3448] shadow-[0_25px_70px_rgba(0,0,0,0.95)] relative my-auto max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center px-3 pb-6 safe-top bg-black/85 backdrop-blur-md select-none animate-in fade-in overflow-y-auto">
+      <div className="retro-tape-chassis w-full max-w-lg rounded-3xl p-5 sm:p-6 border-2 border-[#2a3448] shadow-[0_25px_70px_rgba(0,0,0,0.95)] relative my-auto max-h-[84dvh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 p-2 rounded-full bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition"

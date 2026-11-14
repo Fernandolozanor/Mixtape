@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Cloud, Shield, Database, Trash2, LogIn, LogOut, Baby, QrCode, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Cloud, Shield, Database, Trash2, LogIn, LogOut, Baby, QrCode, ChevronDown, ChevronUp, KeyRound } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useKidsMode } from '../context/KidsModeContext';
+import { useAuth } from '../context/AuthContext';
 import { firebaseService } from '../services/firebase';
 import { cacheService } from '../services/cacheService';
 import { ThemeSelector } from './ThemeSelector';
@@ -21,6 +22,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const { settings, syncState, updateSettings, saveFirebaseCredentials } = useLibrary();
   const { isKidsMode } = useKidsMode();
+  const { session, setAdminModalOpen } = useAuth();
   const [firebaseJson, setFirebaseJson] = useState('');
   const [firebaseStatusMsg, setFirebaseStatusMsg] = useState<string | null>(null);
   const [cacheClearedMsg, setCacheClearedMsg] = useState(false);
@@ -66,8 +68,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const isConfigured = firebaseService.isConfigured();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md select-none animate-in fade-in">
-      <div className="w-full max-w-lg rounded-3xl glass-panel p-6 shadow-2xl relative border border-white/10 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pb-6 safe-top bg-black/75 backdrop-blur-md select-none animate-in fade-in overflow-y-auto">
+      <div className="w-full max-w-lg rounded-3xl glass-panel p-6 shadow-2xl relative border border-white/10 max-h-[84dvh] overflow-y-auto my-auto">
         <button
           onClick={onClose}
           className="absolute right-5 top-5 p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition"
@@ -76,6 +78,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </button>
 
         <h2 className="text-xl font-bold text-white mb-6">Ajustes de Mixtape</h2>
+
+        {/* Admin Key Generator Shortcut (Only visible to Master Admin) */}
+        {session?.role === 'admin' && (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/25 border border-amber-400/50 flex items-center justify-center text-amber-300 shrink-0">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>Generador de Claves VIP</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-400 text-black font-mono font-black">
+                    ADMIN
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-300">Autoriza nuevos equipos y gestiona licencias</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                onClose();
+                setAdminModalOpen(true);
+              }}
+              className="py-2 px-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs shadow-md transition active:scale-95 shrink-0"
+            >
+              Abrir Panel
+            </button>
+          </div>
+        )}
 
         {/* Section 0: Color Theme Selection */}
         <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
