@@ -53,6 +53,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [selectedFilter, setSelectedFilter] = useState<AudioSourceType | 'all'>('all');
   const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title'>('views');
   const [results, setResults] = useState<Track[]>([]);
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -131,19 +132,30 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     }
   };
 
-  // Sort results
-  const sortedResults = [...results].sort((a, b) => {
-    if (sortBy === 'views') {
-      return (b.views || 0) - (a.views || 0);
-    }
-    if (sortBy === 'duration') {
-      return (b.duration || 0) - (a.duration || 0);
-    }
-    if (sortBy === 'title') {
-      return a.title.localeCompare(b.title);
-    }
-    return 0;
-  });
+  const markTrackBroken = (id: string) => {
+    setBrokenIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
+
+  // Filter out tracks without valid thumbnails or whose thumbnail failed/404'd, then sort
+  const sortedResults = results
+    .filter((t) => Boolean(t.thumbnail && t.thumbnail.trim()) && !brokenIds.has(t.id))
+    .sort((a, b) => {
+      if (sortBy === 'views') {
+        return (b.views || 0) - (a.views || 0);
+      }
+      if (sortBy === 'duration') {
+        return (b.duration || 0) - (a.duration || 0);
+      }
+      if (sortBy === 'title') {
+        return a.title.localeCompare(b.title);
+      }
+      return 0;
+    });
 
   const visibleResults = sortedResults.slice(0, visibleCount);
   const hasMore = visibleCount < sortedResults.length;
@@ -504,6 +516,18 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                         alt={track.title}
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={() => markTrackBroken(track.id)}
+                        onLoad={(e) => {
+                          const img = e.currentTarget;
+                          // YouTube returns a 120x90 gray placeholder on HTTP 404 for hqdefault.jpg (which is 480x360 when valid)
+                          if (
+                            track.thumbnail.includes('hqdefault') &&
+                            img.naturalWidth > 0 &&
+                            img.naturalWidth <= 120
+                          ) {
+                            markTrackBroken(track.id);
+                          }
+                        }}
                       />
                       {!isMultiSelectMode && (
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">

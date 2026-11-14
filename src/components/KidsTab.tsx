@@ -26,8 +26,18 @@ export const KidsTab: React.FC<KidsTabProps> = ({ onOpenExitModal }) => {
   const [selectedStationId, setSelectedStationId] = useState<string>('disney');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Track[] | null>(null);
+  const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
   const [isSearching, setIsSearching] = useState(false);
   const [blockedAlert, setBlockedAlert] = useState(false);
+
+  const markTrackBroken = (id: string) => {
+    setBrokenIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  };
 
   const selectedStation = useMemo<KidsStation>(() => {
     return KIDS_STATIONS.find((s) => s.id === selectedStationId) || KIDS_STATIONS[0];
@@ -84,7 +94,9 @@ export const KidsTab: React.FC<KidsTabProps> = ({ onOpenExitModal }) => {
     setBlockedAlert(false);
   };
 
-  const displayedTracks = searchResults !== null ? searchResults : selectedStation.tracks;
+  const displayedTracks = (searchResults !== null ? searchResults : selectedStation.tracks).filter(
+    (t) => Boolean(t.thumbnail && t.thumbnail.trim()) && !brokenIds.has(t.id)
+  );
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 pb-20 select-none">
@@ -287,6 +299,17 @@ export const KidsTab: React.FC<KidsTabProps> = ({ onOpenExitModal }) => {
                   alt={track.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
+                  onError={() => markTrackBroken(track.id)}
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    if (
+                      track.thumbnail.includes('hqdefault') &&
+                      img.naturalWidth > 0 &&
+                      img.naturalWidth <= 120
+                    ) {
+                      markTrackBroken(track.id);
+                    }
+                  }}
                 />
                 <div
                   className={`absolute inset-0 flex items-center justify-center transition-opacity ${

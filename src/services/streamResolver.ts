@@ -117,11 +117,9 @@ class StreamResolver {
           const data = await res.json();
           if (data && Array.isArray(data.data)) {
             for (const item of data.data) {
-              if (!item.title) continue;
-              const cover =
-                item.artwork?.['480x480'] ||
-                item.artwork?.['150x150'] ||
-                'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80';
+              if (!item.title || item.is_streamable === false || item.is_delete) continue;
+              const cover = item.artwork?.['480x480'] || item.artwork?.['150x150'];
+              if (!cover) continue;
 
               const plays = item.play_count || 10000;
               let viewsFormatted = '';
@@ -151,10 +149,18 @@ class StreamResolver {
       }
     }
 
-    // Sort combined results by views descending
-    tracks.sort((a, b) => (b.views || 0) - (a.views || 0));
+    // Filter out any track without a valid thumbnail or title
+    const validTracks = tracks.filter(
+      (t) =>
+        Boolean(t.thumbnail && t.thumbnail.trim().startsWith('http')) &&
+        Boolean(t.title && t.title.trim()) &&
+        (t.duration === undefined || t.duration > 0)
+    );
 
-    return tracks;
+    // Sort combined results by views descending
+    validTracks.sort((a, b) => (b.views || 0) - (a.views || 0));
+
+    return validTracks;
   }
 
   /**
@@ -166,7 +172,18 @@ class StreamResolver {
       const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) throw new Error('No items');
       return data
-        .filter((item: any) => item.videoId && item.title)
+        .filter(
+          (item: any) =>
+            item.videoId &&
+            typeof item.videoId === 'string' &&
+            item.videoId.length === 11 &&
+            item.title &&
+            !item.liveNow &&
+            !item.isUpcoming &&
+            (item.lengthSeconds === undefined || item.lengthSeconds > 0) &&
+            Array.isArray(item.videoThumbnails) &&
+            item.videoThumbnails.length > 0
+        )
         .map((item: any) => {
           const vidId = item.videoId;
           const dur = item.lengthSeconds || 210;
@@ -180,9 +197,7 @@ class StreamResolver {
             viewsFormatted = Math.round(views / 1_000) + 'K reprod.';
           }
 
-          const thumb =
-            item.videoThumbnails?.find((t: any) => t.quality === 'medium' || t.quality === 'high')?.url ||
-            `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+          const thumb = `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
 
           return {
             id: vidId,
@@ -203,7 +218,14 @@ class StreamResolver {
       if (!res.ok) throw new Error(`Piped HTTP ${res.status}`);
       const data = await res.json();
       const items = data.items || [];
-      const streams = items.filter((i: any) => i.type === 'stream' && i.url);
+      const streams = items.filter(
+        (i: any) =>
+          i.type === 'stream' &&
+          i.url &&
+          i.title &&
+          i.thumbnail &&
+          (i.duration === undefined || i.duration > 0)
+      );
       if (streams.length === 0) throw new Error('No streams');
       return streams.map((i: any) => {
         const vidId = i.url.replace('/watch?v=', '').split('&')[0];
