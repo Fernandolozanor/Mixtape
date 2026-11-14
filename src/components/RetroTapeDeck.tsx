@@ -249,30 +249,46 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   // Format 4-digit mechanical tape counter
   const counterStr = Math.floor(currentTime).toString().padStart(4, '0');
 
-  // VU Meter segment renderer
-  const renderMeterBar = (level: number) => {
-    const totalSegments = 10;
+  // VU Meter segment renderer (High-contrast Hi-Fi LED Peak Program Meter)
+  const renderMeterBar = (level: number, size: 'normal' | 'large' = 'normal') => {
+    const totalSegments = 12; // 12 discrete bar segments for greater dynamic range
+    const isLarge = size === 'large';
+
     return (
-      <div className="flex items-center gap-[1.5px] h-2">
+      <div
+        className={`flex items-center gap-[2px] sm:gap-[2.5px] ${
+          isLarge ? 'h-3.5 sm:h-4 px-2 py-1' : 'h-2.5 px-1.5 py-0.5'
+        } bg-[#07090e] rounded-md border border-zinc-800 shadow-inner`}
+      >
         {Array.from({ length: totalSegments }).map((_, i) => {
           const isActive = i < level;
-          let activeColor = '#22c55e'; // Green
-          let glowColor = 'rgba(34, 197, 94, 0.6)';
-          if (i >= 6 && i <= 7) {
-            activeColor = '#f59e0b'; // Amber
-            glowColor = 'rgba(245, 158, 11, 0.6)';
-          } else if (i >= 8) {
-            activeColor = '#ef4444'; // Red
-            glowColor = 'rgba(239, 68, 68, 0.8)';
+          // Colors: 7 Green (safe -20dB to -4dB), 3 Amber/Orange (-3dB to 0dB), 2 Red Peak (+1dB to +3dB)
+          let activeColor = '#22c55e'; // Bright Green
+          let glowColor = 'rgba(34, 197, 94, 0.75)';
+          let offColor = 'rgba(34, 197, 94, 0.12)';
+
+          if (i >= 7 && i <= 9) {
+            activeColor = '#f59e0b'; // Electric Amber
+            glowColor = 'rgba(245, 158, 11, 0.85)';
+            offColor = 'rgba(245, 158, 11, 0.12)';
+          } else if (i >= 10) {
+            activeColor = '#ef4444'; // Bright Red Peak
+            glowColor = 'rgba(239, 68, 68, 0.95)';
+            offColor = 'rgba(239, 68, 68, 0.15)';
           }
 
           return (
             <div
               key={i}
-              className="w-1.5 h-full rounded-[1px] transition-all duration-75"
+              className={`${
+                isLarge ? 'w-2 sm:w-2.5' : 'w-1.5'
+              } h-full rounded-[1px] transition-all duration-75 relative`}
               style={{
-                backgroundColor: isActive ? activeColor : 'rgba(255, 255, 255, 0.08)',
-                boxShadow: isActive ? `0 0 4px ${glowColor}` : 'none',
+                backgroundColor: isActive ? activeColor : offColor,
+                boxShadow: isActive
+                  ? `0 0 6px ${glowColor}, inset 0 1px 1px rgba(255,255,255,0.4)`
+                  : 'none',
+                border: isActive ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.03)',
               }}
             />
           );
@@ -1003,23 +1019,23 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             {renderNeedleMeter('right', 'RIGHT')}
           </div>
         ) : (
-          <div className="space-y-0.5 py-1">
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <span className="text-[8px] sm:text-[9px] font-mono-retro font-bold text-zinc-400 w-3">
+          <div className="bg-[#0b0e14] border border-slate-700/80 rounded-xl p-1.5 sm:p-2 shadow-inner flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-mono-retro font-bold text-emerald-400 w-3 text-center">
                 L
               </span>
-              {renderMeterBar(vuLeft)}
-              <span className="text-[7.5px] sm:text-[9px] font-mono-retro text-zinc-500">
-                -20 +3dB
+              {renderMeterBar(vuLeft, 'large')}
+              <span className="text-[8px] sm:text-[9px] font-mono-retro font-semibold text-zinc-400 tabular-nums">
+                -20 0 +3dB
               </span>
             </div>
-            <div className="flex items-center gap-1 sm:gap-1.5">
-              <span className="text-[8px] sm:text-[9px] font-mono-retro font-bold text-zinc-400 w-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-mono-retro font-bold text-emerald-400 w-3 text-center">
                 R
               </span>
-              {renderMeterBar(vuRight)}
-              <span className="text-[7.5px] sm:text-[9px] font-mono-retro text-zinc-500">
-                -20 +3dB
+              {renderMeterBar(vuRight, 'large')}
+              <span className="text-[8px] sm:text-[9px] font-mono-retro font-semibold text-zinc-400 tabular-nums">
+                -20 0 +3dB
               </span>
             </div>
           </div>
