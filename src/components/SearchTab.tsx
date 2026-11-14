@@ -16,7 +16,6 @@ import {
   ArrowUpDown,
   Sparkles,
   Layers,
-  Radio,
 } from 'lucide-react';
 import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
@@ -58,7 +57,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [visibleCount, setVisibleCount] = useState<number>(25);
-  const [showRadioDial, setShowRadioDial] = useState(false);
 
   // Multi-selection state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -248,7 +246,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48 relative">
       {/* Header and Direct Search Box */}
-      <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl border-2 border-[#262f40] relative w-full min-w-0 overflow-hidden space-y-3">
+      <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl border-2 border-[#262f40] relative w-full min-w-0 overflow-hidden space-y-2.5">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
@@ -258,21 +256,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Toggle FM Radio Dial */}
-            <button
-              type="button"
-              onClick={() => setShowRadioDial((prev) => !prev)}
-              className={`px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition border flex items-center gap-1.5 ${
-                showRadioDial
-                  ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 font-bold'
-                  : 'bg-[#151a24] hover:bg-[#1e2534] text-zinc-300 border-white/10'
-              }`}
-              title="Mostrar u ocultar el sintonizador analógico FM"
-            >
-              <Radio className="w-3.5 h-3.5 text-amber-400" />
-              <span>Dial FM</span>
-            </button>
-
             {/* Multi-select toggle button */}
             {results.length > 0 && (
               <>
@@ -323,7 +306,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         </div>
 
-        {/* Immediate Top Search Input */}
+        {/* Always-visible Compact Vintage Radio FM/AM Tuner Dial */}
+        <RadioTunerDial
+          isSearching={isSearching}
+          query={query}
+          hasResults={results.length > 0}
+        />
+
+        {/* Immediate Search Input */}
         <div className="relative w-full min-w-0">
           <SearchIcon className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-amber-500 pointer-events-none" />
           <input
@@ -332,7 +322,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Artista, canción, álbum o género..."
-            className="w-full min-w-0 pl-10 sm:pl-12 pr-24 sm:pr-28 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl glass-input font-stereo text-sm sm:text-base placeholder:text-zinc-500 shadow-xl transition"
+            className="w-full min-w-0 pl-10 sm:pl-12 pr-24 sm:pr-28 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl glass-input font-stereo text-sm sm:text-base placeholder:text-zinc-500 shadow-xl transition"
           />
           <button
             onClick={() => handleSearch(query)}
@@ -342,16 +332,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : 'BUSCAR'}
           </button>
         </div>
-
-        {/* Collapsible Vintage Radio FM/AM Tuner Dial */}
-        {showRadioDial && (
-          <RadioTunerDial
-            isSearching={isSearching}
-            query={query}
-            hasResults={results.length > 0}
-            className="pt-1 animate-in fade-in"
-          />
-        )}
 
         {/* Sort By Dropdown (Only shown when there are results) */}
         {results.length > 0 && (

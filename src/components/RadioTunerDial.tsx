@@ -108,10 +108,10 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
 
   return (
     <div
-      className={`rounded-2xl bg-[#090c13] border-2 border-[#1e2736] p-2.5 sm:p-3.5 shadow-2xl relative select-none overflow-hidden ${className}`}
+      className={`rounded-2xl bg-[#090c13] border-2 border-[#1e2736] p-2 sm:p-2.5 shadow-xl relative select-none overflow-hidden ${className}`}
     >
       {/* Top Brushed Steel Tuning Header */}
-      <div className="flex items-center justify-between px-1 pb-2 text-[10px] sm:text-xs font-mono-retro flex-nowrap whitespace-nowrap overflow-hidden h-7 sm:h-8">
+      <div className="flex items-center justify-between px-1 pb-1.5 text-[10px] sm:text-xs font-mono-retro flex-nowrap whitespace-nowrap overflow-hidden h-6 sm:h-7">
         <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0 overflow-hidden">
           <Radio className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span className="font-extrabold tracking-widest text-zinc-300 uppercase truncate">
@@ -163,7 +163,7 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
       {/* Main Glass Scale Window */}
       <div
         onClick={handleDialClick}
-        className="w-full aspect-[4.9/1] max-h-24 sm:max-h-28 rounded-xl relative overflow-hidden border border-black/80 shadow-inner cursor-pointer group"
+        className="w-full aspect-[5.8/1] max-h-14 sm:max-h-20 rounded-xl relative overflow-hidden border border-black/80 shadow-inner cursor-pointer group"
         title="Haz clic en la escala FM para sintonizar manualmente"
       >
         {/* Background Image: Cleaned Vintage Radio Scale */}
