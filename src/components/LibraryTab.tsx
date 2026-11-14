@@ -264,8 +264,6 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         </div>
 
-        {likedTracks.length > 0 && renderRpmFilterBar()}
-
         {likedTracks.length === 0 ? (
           <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
             <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -275,7 +273,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         ) : favoritesViewMode === 'vinyl' ? (
           /* 3D Vinyl Records Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
-            {filterAndSortByRpm(likedTracks).map((track, idx) => (
+            {likedTracks.map((track, idx) => (
               <VinylRecordCard
                 key={track.id}
                 track={track}
@@ -283,7 +281,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 isCurrent={currentTrack?.id === track.id}
                 isPlaying={isPlaying}
                 onPlay={() => {
-                  playTrack(track, filterAndSortByRpm(likedTracks));
+                  playTrack(track, likedTracks);
                 }}
                 onRemove={() => removeLikedTrack(track.id)}
                 isEditingMode={isEditingMode}
@@ -292,13 +290,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {filterAndSortByRpm(likedTracks).map((track, idx) => {
+            {likedTracks.map((track, idx) => {
               const bpm = bpmService.getTrackBpm(track);
               const tier = bpmService.getRpmTier(bpm);
               return (
               <div
                 key={track.id}
-                onClick={() => !isEditingMode && playTrack(track, filterAndSortByRpm(likedTracks))}
+                onClick={() => !isEditingMode && playTrack(track, likedTracks)}
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
                   isEditingMode ? 'cursor-default' : 'cursor-pointer'
                 } ${
