@@ -532,36 +532,6 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </button>
       </div>
 
-      {/* Favorites Banner Card - Styled as Golden Master Cassette */}
-      <div
-        onClick={() => setSelectedPlaylistId('favorites')}
-        className="retro-tape-chassis p-5 sm:p-6 rounded-3xl cursor-pointer hover:border-amber-500/50 transition-all flex items-center justify-between border-2 border-[#2b3548] relative group overflow-hidden"
-      >
-        <div className="flex items-center gap-4">
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shrink-0 border border-white/20"
-            style={{
-              background: 'linear-gradient(135deg, #1d5494 0%, #d97706 100%)',
-            }}
-          >
-            <Heart className="w-8 h-8 fill-amber-300 text-amber-300 group-hover:scale-110 transition" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[9px] font-mono-retro font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                CINTA MASTER ORO
-              </span>
-              <span className="text-xs font-mono text-zinc-400">SIDE A/B</span>
-            </div>
-            <p className="font-rock text-2xl text-white tracking-wider mt-0.5">CANCIONES FAVORITAS</p>
-            <p className="text-xs font-mono text-amber-400/80">{likedTracks.length} pistas guardadas en el cabezal</p>
-          </div>
-        </div>
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-black flex items-center justify-center shadow-lg group-hover:scale-110 transition border-t border-white/40">
-          <Play className="w-5 h-5 fill-black ml-0.5" />
-        </div>
-      </div>
-
       {/* Authentic 80s Wooden Cassette Rack Shelf with Handwritten Spine Labels */}
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1">
