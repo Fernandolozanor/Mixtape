@@ -24,6 +24,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
+import { RadioTunerDial } from './RadioTunerDial';
 
 const GENRE_TAGS = [
   'Éxitos Globales',
@@ -303,6 +304,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             </div>
           )}
         </div>
+
+        {/* Vintage Radio FM/AM Tuner Dial with Moving Physical Needle & Audio Sweep */}
+        <RadioTunerDial
+          isSearching={isSearching}
+          query={query}
+          hasResults={results.length > 0}
+          className="mb-3.5 sm:mb-4"
+        />
 
         <div className="relative w-full min-w-0">
           <SearchIcon className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-amber-500 pointer-events-none" />
