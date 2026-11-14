@@ -114,16 +114,37 @@ class AudioEngine {
   }
 
   private setupAudioListeners() {
-    this.audio.addEventListener('play', () => this.notifyState());
-    this.audio.addEventListener('pause', () => this.notifyState());
-    this.audio.addEventListener('playing', () => this.notifyState());
+    this.audio.addEventListener('play', () => {
+      this.shouldBePlaying = true;
+      this.notifyState();
+    });
+    this.audio.addEventListener('pause', () => {
+      this.shouldBePlaying = false;
+      this.notifyState();
+    });
+    this.audio.addEventListener('playing', () => {
+      this.shouldBePlaying = true;
+      this.notifyState();
+    });
     this.audio.addEventListener('waiting', () => this.notifyState());
+    this.audio.addEventListener('canplay', () => {
+      if (this.shouldBePlaying) this.notifyState();
+    });
+    this.audio.addEventListener('canplaythrough', () => {
+      if (this.shouldBePlaying) this.notifyState();
+    });
     this.audio.addEventListener('ended', () => {
+      this.shouldBePlaying = false;
+      this.stopBackgroundAudioAnchor();
+      this.notifyState();
       this.onTrackEndCallbacks.forEach((cb) => cb());
     });
 
     this.audio.addEventListener('timeupdate', () => {
       if (this.isUsingYouTube) return;
+      if (this.shouldBePlaying && !this.audio.paused) {
+        this.notifyState();
+      }
       const cur = this.audio.currentTime;
       const dur = this.audio.duration || 0;
       this.checkSponsorSkip(cur);
@@ -665,14 +686,14 @@ class AudioEngine {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
       return this.ytPlayer.getPlayerState() === 1; // 1 = playing
     }
-    return !this.audio.paused && !this.audio.ended && this.audio.readyState > 1;
+    return !this.audio.paused && !this.audio.ended && this.shouldBePlaying;
   }
 
   public isBuffering(): boolean {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
       return this.ytPlayer.getPlayerState() === 3; // 3 = buffering
     }
-    return !this.audio.paused && this.audio.readyState < 2;
+    return !this.audio.paused && this.shouldBePlaying && this.audio.readyState < 2;
   }
 
   public getCurrentTime(): number {
