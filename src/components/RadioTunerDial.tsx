@@ -24,9 +24,9 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
 
   // Exact geometric boundaries of the FM scale in SINTONIZADOR.jpg
   const MIN_SCALE_X = 18.0; // Directly at "88 MHz"
-  const MAX_SCALE_X = 57.2; // Directly at "108 MHz"
-  const GLASS_MIN_X = 6.0;  // Left edge of dark glass
-  const GLASS_MAX_X = 64.0; // Right edge of dark glass (before silver switches panel)
+  const MAX_SCALE_X = 58.0; // Directly at "108 MHz"
+  const GLASS_MIN_X = 5.0;  // Left edge of dark glass
+  const GLASS_MAX_X = 68.5; // Right edge of dark glass (before silver switches panel)
 
   // Compute station and needle position based on query string
   const calculateStation = (str: string) => {
@@ -174,14 +174,14 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
 
         {/* Warm Vintage Incandescent Bulb Backlight Glow across the glass */}
         <div
-          className="absolute top-[9%] bottom-[27%] left-[5.5%] w-[58.8%] bg-gradient-to-t from-amber-600/15 via-transparent to-amber-400/10 pointer-events-none"
+          className="absolute top-[7.5%] bottom-[26%] left-[5%] w-[63.5%] bg-gradient-to-t from-amber-600/15 via-transparent to-amber-400/10 pointer-events-none"
         />
 
         {/* Moving Red Analog Tuning Needle: Strictly bounded to the glass FM dial */}
         <div
           className="absolute pointer-events-none z-20 transition-all duration-150 ease-out flex flex-col items-center"
           style={{
-            top: '8.5%',
+            top: '7.5%',
             bottom: '26%',
             left: `${needlePos}%`,
             transform: 'translateX(-50%)',
