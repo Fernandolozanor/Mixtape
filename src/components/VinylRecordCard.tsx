@@ -44,79 +44,97 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
       }`}
     >
       {/* 3D Vinyl Album Jacket & LP Protruding Assembly */}
-      <div className="relative aspect-[1878/1304] w-full select-none overflow-visible">
+      <div className="relative aspect-[1.38/1] w-full select-none overflow-visible">
         {/* Glow halo when actively playing */}
         {isCurrent && isPlaying && (
           <div className="absolute inset-0 -m-1.5 rounded-2xl bg-amber-500/20 blur-xl pointer-events-none animate-pulse" />
         )}
 
-        {/* LAYER 1: Physical Vinyl LP Disc that slides out on hover or when playing */}
+        {/* LAYER 1: Full Circular Vinyl Record that slides out smoothly from inside the sleeve */}
         <div
-          className={`absolute right-0 top-0 bottom-0 w-[33.17%] z-0 transition-transform duration-300 ease-out ${
+          className={`absolute top-[3%] bottom-[3%] right-0 aspect-square z-0 transition-all duration-500 ease-out ${
             isCurrent && isPlaying
-              ? 'translate-x-3 sm:translate-x-4'
-              : 'group-hover:translate-x-3 sm:group-hover:translate-x-4'
+              ? 'translate-x-[26%] sm:translate-x-[30%]'
+              : 'translate-x-[8%] group-hover:translate-x-[26%] sm:group-hover:translate-x-[30%]'
           }`}
           style={{ willChange: 'transform' }}
         >
-          {/* Real Vinyl LP High-Res Texture */}
-          <img
-            src="./assets/disco_vinyl.png"
-            alt="Vinyl Record"
-            className={`w-full h-full object-contain pointer-events-none select-none drop-shadow-[0_4px_12px_rgba(0,0,0,0.8)] ${
-              isCurrent && isPlaying ? 'filter brightness-105' : ''
-            }`}
-          />
-
-          {/* White Center Label on the Vinyl: Exactly aligned with the white paper label */}
+          {/* Full Circular LP Disc with 33⅓ RPM Rotation when playing */}
           <div
-            className="absolute left-0 top-[30.7%] w-[33.2%] h-[38.3%] flex flex-col items-center justify-center text-center px-1 overflow-hidden pointer-events-none select-none z-10"
-            style={{ borderRadius: '0 9999px 9999px 0' }}
+            className="w-full h-full rounded-full relative overflow-hidden shadow-[-6px_0_18px_rgba(0,0,0,0.85)] drop-shadow-[0_10px_20px_rgba(0,0,0,0.9)]"
+            style={{
+              animation: isPlaying && isCurrent ? 'vinyl-spin 1.8s linear infinite' : 'none',
+              transformOrigin: 'center center',
+            }}
           >
-            {/* Top vintage label header */}
-            <span className="text-[6.5px] sm:text-[7.5px] font-mono-retro font-extrabold tracking-widest text-zinc-500 uppercase leading-none truncate max-w-full">
-              STEREO
-            </span>
+            {/* Real Full Vinyl Texture (VINILO.png) */}
+            <img
+              src="./assets/vinilo.png"
+              alt="Vinyl Record"
+              className={`w-full h-full object-cover rounded-full pointer-events-none select-none ${
+                isCurrent && isPlaying ? 'filter brightness-105' : ''
+              }`}
+            />
 
-            {/* Song Title written in vintage ink on the blank circular center label */}
-            <p
-              className="text-[7.5px] sm:text-[9px] font-bold font-serif text-zinc-900 leading-[1.05] line-clamp-3 my-0.5 px-0.5"
-              style={{
-                fontFamily: 'Georgia, "Times New Roman", serif',
-                textShadow: '0 0 1px rgba(0,0,0,0.15)',
-              }}
-              title={track.title}
+            {/* White Circular Center Label with printed song title & artist */}
+            <div
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[34%] h-[34%] rounded-full flex flex-col items-center justify-center text-center px-1.5 overflow-hidden pointer-events-none select-none z-10 bg-[#f4f3ef] shadow-inner border border-zinc-400/40"
             >
-              {track.title}
-            </p>
+              {/* Spindle hole in center */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-zinc-950 border border-zinc-700 shadow-inner z-20" />
 
-            {/* Bottom spindle label footer */}
-            <div className="flex items-center gap-1 text-[6px] sm:text-[7px] font-mono font-semibold text-zinc-600 leading-none">
-              <span>FAV</span>
-              <span>•</span>
-              <span>33⅓</span>
+              {/* Label Top Header */}
+              <span className="text-[6.5px] sm:text-[7.5px] font-mono-retro font-extrabold tracking-widest text-zinc-600 uppercase leading-none truncate max-w-full mb-0.5">
+                STEREO • 33⅓
+              </span>
+
+              {/* Song Title printed on center label */}
+              <p
+                className="text-[7.5px] sm:text-[9px] font-bold font-serif text-zinc-950 leading-[1.05] line-clamp-2 px-1 max-w-full"
+                style={{
+                  fontFamily: 'Georgia, "Times New Roman", serif',
+                  textShadow: '0 0 1px rgba(0,0,0,0.15)',
+                }}
+                title={track.title}
+              >
+                {track.title}
+              </p>
+
+              {/* Artist Name */}
+              <p className="text-[6.5px] sm:text-[7.5px] font-mono font-bold text-zinc-700 truncate max-w-full px-1 mt-0.5">
+                {track.artist}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* LAYER 2: Album Cover Sleeve Jacket (Left ~66.83% of the image) */}
+        {/* LAYER 2: Album Cover Sleeve Jacket (Uses FUNDA.jpg with track artwork pasted on front) */}
         <div
-          className={`absolute left-0 top-0 bottom-0 w-[66.83%] z-10 rounded-l-xl overflow-hidden bg-[#121620] shadow-[0_10px_25px_rgba(0,0,0,0.7)] border-l border-t border-b transition-colors duration-300 ${
+          className={`absolute left-0 top-0 bottom-0 aspect-[1261/1304] z-10 rounded-xl overflow-hidden shadow-[0_12px_30px_rgba(0,0,0,0.85)] border transition-all duration-300 ${
             isCurrent && isPlaying
-              ? 'border-amber-400/60 ring-2 ring-amber-400/40'
+              ? 'border-amber-400/70 ring-2 ring-amber-400/40 shadow-amber-500/10'
               : 'border-white/10 group-hover:border-white/20'
           }`}
         >
-          {/* Album Cover Thumbnail Image */}
+          {/* Cardboard Sleeve Base Texture (FUNDA.jpg) */}
+          <img
+            src="./assets/funda.jpg"
+            alt="Funda"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none z-0"
+          />
+
+          {/* Pasted Album Artwork on the Sleeve Front */}
           {!imageError && track.thumbnail ? (
-            <img
-              src={track.thumbnail}
-              alt={track.title}
-              onError={() => setImageError(true)}
-              className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-500 group-hover:scale-105"
-            />
+            <div className="absolute inset-0 z-1 overflow-hidden">
+              <img
+                src={track.thumbnail}
+                alt={track.title}
+                onError={() => setImageError(true)}
+                className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-500 group-hover:scale-105"
+              />
+            </div>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center p-3 bg-gradient-to-br from-zinc-800 to-zinc-900 text-zinc-400 select-none">
+            <div className="absolute inset-0 z-1 flex flex-col items-center justify-center p-3 bg-gradient-to-br from-zinc-800 to-zinc-900 text-zinc-400 select-none">
               <Disc3 className="w-10 h-10 mb-2 opacity-50 text-amber-400 animate-spin-slow" />
               <p className="text-[10px] font-mono-retro text-center line-clamp-2 px-1 text-zinc-300">
                 {track.title}
@@ -124,18 +142,18 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
             </div>
           )}
 
-          {/* Authentic Vintage Cardboard Ring Wear & Paper Texture Sheen */}
+          {/* Vintage Cardboard Ring Wear Overlay & Grain */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-40 mix-blend-overlay"
+            className="absolute inset-0 pointer-events-none opacity-30 mix-blend-overlay z-2"
             style={{
               background:
-                'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.18) 0%, transparent 58%, rgba(255,255,255,0.08) 64%, transparent 72%)',
+                'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.25) 0%, transparent 60%, rgba(255,255,255,0.12) 68%, transparent 75%)',
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-transparent to-white/10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-black/45 via-transparent to-white/15 pointer-events-none z-2" />
 
-          {/* Right Seam Shadow (Simulates opening slit of the cardboard slipcase) */}
-          <div className="absolute right-0 top-0 bottom-0 w-3 sm:w-4 bg-gradient-to-l from-black/80 via-black/40 to-transparent pointer-events-none" />
+          {/* Right Sleeve Opening Slit Shadow */}
+          <div className="absolute right-0 top-0 bottom-0 w-3 sm:w-4 bg-gradient-to-l from-black/90 via-black/45 to-transparent pointer-events-none z-3" />
 
           {/* Track Number Badge */}
           <div className="absolute top-2 left-2 z-20 px-1.5 py-0.5 rounded-md bg-black/75 backdrop-blur-md border border-white/10 text-[9px] sm:text-[10px] font-mono text-zinc-300 font-bold shadow-md">
