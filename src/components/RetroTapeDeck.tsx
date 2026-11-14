@@ -9,12 +9,14 @@ interface RetroTapeDeckProps {
   variant?: 'sidebar' | 'ambient-lateral' | 'fullscreen' | 'compact';
   onExpand?: () => void;
   className?: string;
+  forceMedia?: 'cassette' | 'vinyl';
 }
 
 export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   variant = 'sidebar',
   onExpand,
   className = '',
+  forceMedia,
 }) => {
   const { currentTrack, isPlaying, togglePlay, currentTime, volume } = usePlayer();
   const { isLiked } = useLibrary();
@@ -22,8 +24,12 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   const isSteel = currentTheme.id === 'retro-rock-80s';
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Playback mode: DISCO.mp4 for Favorites, cassette.mp4 for normal tracks
-  const isFavorite = currentTrack ? isLiked(currentTrack.id) : false;
+  // Playback mode: forceMedia prop overrides, or automatic: DISCO.mp4 for Favorites, cassette.mp4 for normal tracks
+  const isFavorite = forceMedia
+    ? forceMedia === 'vinyl'
+    : currentTrack
+    ? isLiked(currentTrack.id)
+    : false;
   const videoSrc = isFavorite ? './assets/disco.mp4' : './assets/cassette.mp4';
   const videoPoster = isFavorite ? './assets/disco.png' : './assets/cassette-poster.webp';
 
@@ -498,7 +504,18 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             loop
             muted
             playsInline
+            autoPlay={isPlaying}
             preload="auto"
+            onLoadedData={(e) => {
+              if (isPlaying) {
+                (e.target as HTMLVideoElement).play().catch(() => {});
+              }
+            }}
+            onCanPlay={(e) => {
+              if (isPlaying) {
+                (e.target as HTMLVideoElement).play().catch(() => {});
+              }
+            }}
             className="w-full h-full object-cover brightness-95 contrast-105"
           />
 
@@ -614,7 +631,18 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               loop
               muted
               playsInline
+              autoPlay={isPlaying}
               preload="auto"
+              onLoadedData={(e) => {
+                if (isPlaying) {
+                  (e.target as HTMLVideoElement).play().catch(() => {});
+                }
+              }}
+              onCanPlay={(e) => {
+                if (isPlaying) {
+                  (e.target as HTMLVideoElement).play().catch(() => {});
+                }
+              }}
               className="w-full h-full object-cover"
             />
             {renderMediaOverlay('md')}
@@ -731,7 +759,18 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
           loop
           muted
           playsInline
+          autoPlay={isPlaying}
           preload="auto"
+          onLoadedData={(e) => {
+            if (isPlaying) {
+              (e.target as HTMLVideoElement).play().catch(() => {});
+            }
+          }}
+          onCanPlay={(e) => {
+            if (isPlaying) {
+              (e.target as HTMLVideoElement).play().catch(() => {});
+            }
+          }}
           className="w-full h-full object-contain sm:object-cover"
         />
 

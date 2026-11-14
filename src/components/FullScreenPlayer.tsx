@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronDown,
   Play,
@@ -54,13 +54,24 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const { isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
 
-  // Active Center View: 'cassette' | 'artwork' | 'lyrics' | 'queue'
-  const [centerView, setCenterView] = useState<'cassette' | 'artwork' | 'lyrics' | 'queue'>('cassette');
+  // Active Center View: 'cassette' | 'vinyl' | 'artwork' | 'lyrics' | 'queue'
+  const [centerView, setCenterView] = useState<'cassette' | 'vinyl' | 'artwork' | 'lyrics' | 'queue'>('cassette');
+
+  const liked = currentTrack ? isLiked(currentTrack.id) : false;
+  const isSteel = currentTheme.id === 'retro-rock-80s';
+
+  // Automatically adapt default view: 'vinyl' for favorites, 'cassette' for standard tracks
+  useEffect(() => {
+    if (currentTrack) {
+      if (isLiked(currentTrack.id)) {
+        setCenterView('vinyl');
+      } else {
+        setCenterView('cassette');
+      }
+    }
+  }, [currentTrack?.id]);
 
   if (!isFullScreenPlayerOpen || !currentTrack) return null;
-
-  const liked = isLiked(currentTrack.id);
-  const isSteel = currentTheme.id === 'retro-rock-80s';
 
   const formatTime = (seconds: number) => {
     if (isNaN(seconds) || seconds < 0) return '0:00';
@@ -122,7 +133,13 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       <main className="flex-1 flex flex-col items-center justify-center px-2 sm:px-6 min-h-0 overflow-hidden">
         {centerView === 'cassette' && (
           <div className="w-full max-w-xl my-auto px-1 sm:px-2 animate-in fade-in duration-300">
-            <RetroTapeDeck variant="fullscreen" />
+            <RetroTapeDeck variant="fullscreen" forceMedia="cassette" />
+          </div>
+        )}
+
+        {centerView === 'vinyl' && (
+          <div className="w-full max-w-xl my-auto px-1 sm:px-2 animate-in fade-in duration-300">
+            <RetroTapeDeck variant="fullscreen" forceMedia="vinyl" />
           </div>
         )}
 
@@ -390,7 +407,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           </span>
         </div>
 
-        {/* Bottom Switcher: Cassette 80s / Artwork / Lyrics / Queue */}
+        {/* Bottom Switcher: Cassette 80s / Vinilo / Artwork / Lyrics / Queue */}
         <div className="flex items-center justify-around pt-1 border-t border-white/10 flex-wrap gap-1">
           <button
             onClick={() => setCenterView('cassette')}
@@ -402,8 +419,22 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <Disc3 className={`w-3.5 h-3.5 ${isPlaying ? 'animate-spin' : ''}`} />
-            <span>{liked ? 'Vinilo' : 'Cinta 80s'}</span>
+            <Disc3 className={`w-3.5 h-3.5 ${isPlaying && centerView === 'cassette' ? 'animate-spin' : ''}`} />
+            <span>Cinta 80s</span>
+          </button>
+
+          <button
+            onClick={() => setCenterView('vinyl')}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
+              centerView === 'vinyl'
+                ? isSteel
+                  ? 'retro-btn-aluminum text-slate-900 font-bold border-amber-600/60 shadow-md'
+                  : 'bg-amber-400 text-black shadow-md font-bold'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <Disc3 className={`w-3.5 h-3.5 ${isPlaying && centerView === 'vinyl' ? 'animate-spin' : ''}`} />
+            <span>Vinilo</span>
           </button>
 
           <button

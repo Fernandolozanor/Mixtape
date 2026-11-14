@@ -122,6 +122,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const playTrack = async (track: Track, newQueue?: Track[]) => {
     setIsLoading(true);
     setCurrentTrack(track);
+    setFullScreenPlayerOpen(true);
 
     let updatedQueue = newQueue || queueRef.current;
     if (newQueue) {
