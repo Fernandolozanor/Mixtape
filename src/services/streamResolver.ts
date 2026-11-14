@@ -273,14 +273,12 @@ class StreamResolver {
     // 1. Direct Invidious CORS resolution (fast, direct, zero intermediate latency)
     const instances = [
       'https://yt.chocolatemoo53.com',
-      'https://invidious.nerdvpn.de',
-      'https://inv.tux.pizza',
     ];
 
     for (const inst of instances) {
       try {
         const res = await fetch(`${inst}/api/v1/videos/${youtubeId}`, {
-          signal: AbortSignal.timeout(3500),
+          signal: AbortSignal.timeout(2800),
         });
         if (res.ok) {
           const data = await res.json();
@@ -301,7 +299,7 @@ class StreamResolver {
     // 2. Try User's Cloudflare Worker meta endpoint as fallback
     try {
       const res = await fetch(`https://mixtape-stream.fernandolozanor.workers.dev/?id=${youtubeId}&meta=true`, {
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(2500),
       });
       if (res.ok) {
         const data = await res.json();

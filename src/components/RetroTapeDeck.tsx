@@ -46,7 +46,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   const [writtenArtist, setWrittenArtist] = useState<string>('');
   const [isTyping, setIsTyping] = useState<boolean>(false);
 
-  // Synchronize video playback strictly with audio isPlaying state & video source switch
+  // Synchronize video playback strictly with audio isPlaying state & mobile screen lock / backgrounding
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -58,7 +58,18 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     video.setAttribute('webkit-playsinline', '');
     video.setAttribute('muted', '');
 
-    if (isPlaying) {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // Crucial for mobile background audio: pause decorative video so iOS/Android doesn't terminate background audio!
+        video.pause();
+      } else if (isPlaying) {
+        video.play().catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    if (isPlaying && !document.hidden) {
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -68,6 +79,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     } else {
       video.pause();
     }
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [isPlaying, videoSrc]);
 
   // Handwriting simulation on the cassette tape label
