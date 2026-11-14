@@ -12,6 +12,7 @@ import {
   Disc3,
   List,
   QrCode,
+  GripVertical,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -21,7 +22,7 @@ import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
 import { bpmService } from '../services/bpmService';
-import type { Playlist, Track } from '../types/music';
+import type { Playlist } from '../types/music';
 
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
@@ -69,81 +70,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const [isEditingMode, setIsEditingMode] = useState(false);
   const [playlistToEdit, setPlaylistToEdit] = useState<Playlist | null>(null);
 
-  // RPM / BPM filter and sort state
-  const [rpmFilter, setRpmFilter] = useState<'all' | '33' | '45' | '78'>('all');
-  const [rpmSort, setRpmSort] = useState<'default' | 'asc' | 'desc'>('default');
-
-  const filterAndSortByRpm = (tracks: Track[]): Track[] => {
-    let list = tracks.filter((t) => {
-      if (rpmFilter === 'all') return true;
-      const bpm = bpmService.getTrackBpm(t);
-      return bpmService.getRpmTier(bpm).id === rpmFilter;
-    });
-
-    if (rpmSort === 'asc') {
-      list = [...list].sort((a, b) => bpmService.getTrackBpm(a) - bpmService.getTrackBpm(b));
-    } else if (rpmSort === 'desc') {
-      list = [...list].sort((a, b) => bpmService.getTrackBpm(b) - bpmService.getTrackBpm(a));
-    }
-    return list;
-  };
-
-  const renderRpmFilterBar = () => (
-    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-black/40 border border-white/10 text-xs font-mono">
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="text-[10px] font-mono-retro font-bold uppercase tracking-wider text-zinc-400 mr-1">
-          FILTRAR VELOCIDAD:
-        </span>
-        {(
-          [
-            { id: 'all', label: 'Todas' },
-            { id: '33', label: '33⅓ RPM (Lento)' },
-            { id: '45', label: '45 RPM (Medio)' },
-            { id: '78', label: '78 RPM (Rápido)' },
-          ] as const
-        ).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setRpmFilter(item.id)}
-            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition ${
-              rpmFilter === item.id
-                ? 'bg-amber-400 text-black border-amber-300'
-                : 'bg-white/5 text-zinc-400 hover:text-white border-white/10'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span className="text-[10px] font-mono-retro font-bold uppercase tracking-wider text-zinc-400">
-          ORDEN RITMO:
-        </span>
-        {(
-          [
-            { id: 'default', label: 'Original' },
-            { id: 'asc', label: 'BPM ↑' },
-            { id: 'desc', label: 'BPM ↓' },
-          ] as const
-        ).map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setRpmSort(s.id)}
-            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition ${
-              rpmSort === s.id
-                ? 'bg-emerald-400 text-black border-emerald-300'
-                : 'bg-white/5 text-zinc-400 hover:text-white border-white/10'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  // Drag and drop state for reordering
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
 
@@ -459,17 +388,20 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 onClick={() => setIsEditingMode(!isEditingMode)}
                 className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition border ${
                   isEditingMode
-                    ? 'bg-white text-black border-white shadow-md'
+                    ? 'bg-amber-400 text-black border-amber-300 font-bold shadow-md'
                     : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
                 }`}
               >
                 {isEditingMode ? (
                   <>
                     <Check className="w-4 h-4" />
-                    <span>Listo</span>
+                    <span>Guardar Orden</span>
                   </>
                 ) : (
-                  <span>Reordenar</span>
+                  <>
+                    <GripVertical className="w-4 h-4 text-amber-400" />
+                    <span>Reordenar</span>
+                  </>
                 )}
               </button>
             )}
@@ -490,7 +422,17 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         </div>
 
-        {selectedPlaylist.tracks.length > 0 && renderRpmFilterBar()}
+        {selectedPlaylist.tracks.length > 0 && (
+          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono px-1">
+            <span>{selectedPlaylist.tracks.length} canciones</span>
+            {isEditingMode && (
+              <span className="text-amber-300 flex items-center gap-1 font-semibold">
+                <GripVertical className="w-3.5 h-3.5 text-amber-400" />
+                Arrastra las canciones o usa las flechas para colocarlas
+              </span>
+            )}
+          </div>
+        )}
 
         {selectedPlaylist.tracks.length === 0 ? (
           <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
@@ -500,15 +442,49 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {filterAndSortByRpm(selectedPlaylist.tracks).map((track, idx) => {
+            {selectedPlaylist.tracks.map((track, idx) => {
               const bpm = bpmService.getTrackBpm(track);
               const tier = bpmService.getRpmTier(bpm);
+              const isDragging = draggedIndex === idx;
+              const isOver = dragOverIndex === idx;
+
               return (
               <div
                 key={`${track.id}-${idx}`}
-                onClick={() => !isEditingMode && playTrack(track, filterAndSortByRpm(selectedPlaylist.tracks))}
+                draggable={isEditingMode}
+                onDragStart={() => {
+                  if (isEditingMode) setDraggedIndex(idx);
+                }}
+                onDragOver={(e) => {
+                  if (isEditingMode) {
+                    e.preventDefault();
+                    setDragOverIndex(idx);
+                  }
+                }}
+                onDragLeave={() => {
+                  if (dragOverIndex === idx) setDragOverIndex(null);
+                }}
+                onDrop={(e) => {
+                  if (isEditingMode && draggedIndex !== null) {
+                    e.preventDefault();
+                    if (draggedIndex !== idx) {
+                      reorderPlaylistTracks(selectedPlaylist.id, draggedIndex, idx);
+                    }
+                    setDraggedIndex(null);
+                    setDragOverIndex(null);
+                  }
+                }}
+                onDragEnd={() => {
+                  setDraggedIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onClick={() => !isEditingMode && playTrack(track, selectedPlaylist.tracks)}
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
-                  isEditingMode ? 'cursor-default' : 'cursor-pointer'
+                  isEditingMode ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-pointer'
+                } ${
+                  isDragging ? 'opacity-40 scale-[0.98]' : ''
+                } ${
+                  isOver ? 'border-2 border-amber-400 bg-amber-400/10' : ''
                 } ${
                   currentTrack?.id === track.id && !isEditingMode
                     ? 'border shadow-md'
@@ -524,13 +500,23 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 }
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <span className="text-xs text-zinc-500 w-5 text-center font-mono">
-                    {idx + 1}
-                  </span>
+                  {isEditingMode ? (
+                    <div className="flex items-center gap-1 text-amber-400 cursor-grab shrink-0">
+                      <GripVertical className="w-5 h-5 text-amber-400/80" />
+                      <span className="text-xs text-amber-300 font-mono font-bold w-4 text-center">
+                        {idx + 1}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-zinc-500 w-5 text-center font-mono shrink-0">
+                      {idx + 1}
+                    </span>
+                  )}
+
                   <img
                     src={track.thumbnail}
                     alt={track.title}
-                    className="w-11 h-11 rounded-xl object-cover shrink-0"
+                    className="w-11 h-11 rounded-xl object-cover shrink-0 pointer-events-none"
                   />
                   <div className="overflow-hidden">
                     <p
@@ -557,31 +543,34 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   {isEditingMode ? (
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
+                        type="button"
                         disabled={idx === 0}
                         onClick={() => reorderPlaylistTracks(selectedPlaylist.id, idx, idx - 1)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-20 transition"
-                        title="Subir"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-20 transition active:scale-95"
+                        title="Mover arriba"
                       >
                         <ChevronUp className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         disabled={idx === selectedPlaylist.tracks.length - 1}
                         onClick={() => reorderPlaylistTracks(selectedPlaylist.id, idx, idx + 1)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-20 transition"
-                        title="Bajar"
+                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-20 transition active:scale-95"
+                        title="Mover abajo"
                       >
                         <ChevronDown className="w-4 h-4" />
                       </button>
                       <button
+                        type="button"
                         onClick={() => removeTrackFromPlaylist(selectedPlaylist.id, track.id)}
-                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition ml-1"
+                        className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/30 text-red-400 transition ml-1 active:scale-95"
                         title="Quitar de la lista"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <span className="text-xs text-zinc-500 mr-2">
+                    <span className="text-xs text-zinc-500 mr-2 font-mono">
                       {formatDuration(track.duration)}
                     </span>
                   )}
