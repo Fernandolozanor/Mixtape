@@ -466,9 +466,12 @@ class AudioEngine {
   }
 
   public getSourceLabel(source: string): string {
+    if (!this.isUsingYouTube && this.currentTrack?.source === 'youtube') {
+      return 'Audio Directo (Sin Anuncios)';
+    }
     switch (source) {
       case 'youtube':
-        return 'YouTube (Canción Completa)';
+        return 'YouTube';
       case 'audius':
         return 'Audius (Libre Completa)';
       case 'radio':
@@ -494,6 +497,36 @@ class AudioEngine {
     }
   }
 
+  private fallbackToYouTubeIFrame(track: Track): boolean {
+    if (!track.youtubeId || this.currentTrack?.youtubeId !== track.youtubeId) return false;
+    this.isUsingYouTube = true;
+    this.audio.pause();
+
+    if (!this.ytPlayerReady || !this.ytPlayer) {
+      this.pendingTrack = track;
+      return true;
+    }
+
+    try {
+      this.ytPlayer.loadVideoById({
+        videoId: track.youtubeId,
+        startSeconds: 0.1,
+        suggestedQuality: 'small',
+      });
+      this.ytPlayer.unMute();
+      this.ytPlayer.setVolume(Math.round(this.volume * 100));
+      const res = this.ytPlayer.playVideo();
+      if (res && typeof res.catch === 'function') {
+        res.catch((e: any) => console.warn('YouTube playVideo rejected on mobile:', e));
+      }
+      this.notifyState();
+      return true;
+    } catch (err) {
+      console.warn('YouTube loadVideoById error:', err);
+      return false;
+    }
+  }
+
   /**
    * Play a track (Full YouTube song or Full Audius stream)
    */
@@ -506,32 +539,34 @@ class AudioEngine {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    // 1. YouTube playback
+    // 1. YouTube playback: First attempt ad-free direct stream via Cloudflare Worker
     if (track.source === 'youtube' && track.youtubeId) {
-      this.isUsingYouTube = true;
-      this.audio.pause();
-
-      if (!this.ytPlayerReady || !this.ytPlayer) {
-        this.pendingTrack = track;
-        return true;
+      const workerUrl = `https://mixtape-stream.fernandolozanor.workers.dev/?id=${track.youtubeId}`;
+      
+      this.isUsingYouTube = false;
+      this.stopYouTubeSync();
+      if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+        this.ytPlayer.pauseVideo();
       }
 
       try {
-        this.ytPlayer.loadVideoById({
-          videoId: track.youtubeId,
-          startSeconds: 0.1,
-          suggestedQuality: 'small',
-        });
-        this.ytPlayer.unMute();
-        this.ytPlayer.setVolume(Math.round(this.volume * 100));
-        const res = this.ytPlayer.playVideo();
-        if (res && typeof res.catch === 'function') {
-          res.catch((e: any) => console.warn('YouTube playVideo rejected on mobile:', e));
-        }
+        this.audio.src = workerUrl;
+        this.audio.currentTime = 0;
+        this.audio.volume = this.volume;
+
+        const onAudioError = (e: any) => {
+          console.warn('Direct stream error, falling back to YouTube iframe:', e);
+          this.audio.removeEventListener('error', onAudioError);
+          this.fallbackToYouTubeIFrame(track);
+        };
+        this.audio.addEventListener('error', onAudioError, { once: true });
+
+        await this.audio.play();
         this.notifyState();
         return true;
       } catch (err) {
-        console.warn('YouTube loadVideoById error:', err);
+        console.warn('Direct audio play error, falling back to YouTube iframe:', err);
+        return this.fallbackToYouTubeIFrame(track);
       }
     }
 
