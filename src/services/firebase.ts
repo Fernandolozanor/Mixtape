@@ -105,9 +105,8 @@ class FirebaseService {
   // --- Firestore Syncing ---
 
   public async savePlaylists(playlists: Playlist[]): Promise<void> {
+    localStorage.setItem('pulse_local_playlists', JSON.stringify(playlists));
     if (!this.db || !this.currentUser) {
-      // Local fallback
-      localStorage.setItem('pulse_local_playlists', JSON.stringify(playlists));
       return;
     }
 
@@ -130,7 +129,9 @@ class FirebaseService {
       const snapshot = await getDoc(userDocRef);
       if (snapshot.exists()) {
         const data = snapshot.data();
-        return data.playlists || [];
+        const remotePlaylists = data.playlists || [];
+        localStorage.setItem('pulse_local_playlists', JSON.stringify(remotePlaylists));
+        return remotePlaylists;
       }
     } catch (err) {
       console.error('Error loading playlists from Firestore:', err);
@@ -141,8 +142,8 @@ class FirebaseService {
   }
 
   public async saveLikedTracks(tracks: Track[]): Promise<void> {
+    localStorage.setItem('pulse_local_liked', JSON.stringify(tracks));
     if (!this.db || !this.currentUser) {
-      localStorage.setItem('pulse_local_liked', JSON.stringify(tracks));
       return;
     }
 
@@ -165,7 +166,9 @@ class FirebaseService {
       const snapshot = await getDoc(userDocRef);
       if (snapshot.exists()) {
         const data = snapshot.data();
-        return data.likedTracks || [];
+        const remoteLiked = data.likedTracks || [];
+        localStorage.setItem('pulse_local_liked', JSON.stringify(remoteLiked));
+        return remoteLiked;
       }
     } catch (err) {
       console.error('Error loading liked tracks from Firestore:', err);

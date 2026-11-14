@@ -43,27 +43,73 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
   });
 
-  // Load initial data
+  // Load initial data and auto-sync when app opens, gains focus, or reconnects
   useEffect(() => {
-    async function loadData() {
-      const pl = await firebaseService.loadPlaylists();
-      const lk = await firebaseService.loadLikedTracks();
-      setPlaylists(pl);
-      setLikedTracks(lk);
+    let isSyncing = false;
+
+    async function syncLibraryData() {
+      if (isSyncing) return;
+      isSyncing = true;
+      try {
+        const [pl, lk] = await Promise.all([
+          firebaseService.loadPlaylists(),
+          firebaseService.loadLikedTracks(),
+        ]);
+        setPlaylists(pl);
+        setLikedTracks(lk);
+
+        const savedSettings = localStorage.getItem('pulse_settings');
+        if (savedSettings) {
+          setSettings((prev) => ({ ...prev, ...JSON.parse(savedSettings) }));
+        }
+      } catch (e) {
+        console.warn('Auto-sync library error:', e);
+      } finally {
+        isSyncing = false;
+      }
     }
-    loadData();
+
+    syncLibraryData();
 
     // Listen for auth state change
     const unsubscribe = firebaseService.onAuthChange(async (user) => {
       if (user) {
-        const pl = await firebaseService.loadPlaylists();
-        const lk = await firebaseService.loadLikedTracks();
-        if (pl.length > 0) setPlaylists(pl);
-        if (lk.length > 0) setLikedTracks(lk);
+        await syncLibraryData();
       }
     });
 
-    return () => unsubscribe();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncLibraryData();
+      }
+    };
+
+    const handleFocus = () => {
+      syncLibraryData();
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (
+        e.key === 'pulse_local_playlists' ||
+        e.key === 'pulse_local_liked' ||
+        e.key === 'pulse_settings'
+      ) {
+        syncLibraryData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleFocus);
+    window.addEventListener('storage', handleStorage);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleFocus);
+      window.removeEventListener('storage', handleStorage);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const updateSettings = (newSettings: Partial<UserSettings>) => {
