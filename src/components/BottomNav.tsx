@@ -22,7 +22,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   const { isKidsMode } = useKidsMode();
 
   const normalTabs = [
-    { id: 'home', label: 'Escuchar', icon: Compass },
+    { id: 'home', label: 'Para Ti', icon: Compass },
     { id: 'search', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'favorites', label: 'Favoritos', icon: Heart },

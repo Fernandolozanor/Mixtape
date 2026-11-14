@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const navItems = [
-    { id: 'home', label: 'Escuchar', icon: Compass },
+    { id: 'home', label: 'Para Ti', icon: Compass },
     { id: 'search', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'favorites', label: 'Favoritos', icon: Heart },
