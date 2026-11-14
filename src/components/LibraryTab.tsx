@@ -15,6 +15,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { audioEngine } from '../services/audioEngine';
 import { EditPlaylistModal } from './EditPlaylistModal';
+import { CassetteRack } from './CassetteRack';
 import type { Playlist } from '../types/music';
 
 interface LibraryTabProps {
@@ -41,8 +42,17 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     clearLikedTracks,
   } = useLibrary();
 
-  const { playTrack, currentTrack } = usePlayer();
+  const { playTrack, currentTrack, setFullScreenPlayerOpen } = usePlayer();
   const { currentTheme } = useTheme();
+
+  const handlePlayPlaylistFromRack = (playlist: Playlist) => {
+    if (playlist.tracks.length > 0) {
+      playTrack(playlist.tracks[0], playlist.tracks);
+      setFullScreenPlayerOpen(true);
+    } else {
+      setSelectedPlaylistId(playlist.id);
+    }
+  };
 
   // Editing state
   const [isEditingMode, setIsEditingMode] = useState(false);
@@ -492,6 +502,24 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         <div className="w-12 h-12 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 text-black flex items-center justify-center shadow-lg group-hover:scale-110 transition border-t border-white/40">
           <Play className="w-5 h-5 fill-black ml-0.5" />
         </div>
+      </div>
+
+      {/* Authentic 80s Wooden Cassette Rack Shelf with Handwritten Spine Labels */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <p className="font-mono-retro text-[10px] sm:text-xs font-bold uppercase tracking-widest text-zinc-400">
+            ESTANTERÍA DE CINTAS • TUS LISTAS EN EL LOMO ({playlists.length}/48)
+          </p>
+          <span className="text-[9px] font-mono text-amber-400/80 hidden sm:inline">
+            Toca una cinta para reproducirla directamente en la pletina
+          </span>
+        </div>
+        <CassetteRack
+          playlists={playlists}
+          onSelectPlaylist={(id) => setSelectedPlaylistId(id)}
+          onPlayPlaylist={handlePlayPlaylistFromRack}
+          onNewPlaylist={openNewPlaylistModal}
+        />
       </div>
 
       {/* Playlists Grid - Mixtape Rack */}
