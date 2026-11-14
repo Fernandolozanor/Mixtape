@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Clock, KeyRound, LogOut, ShieldCheck } from 'lucide-react';
+import { Clock, KeyRound, LogOut, ShieldCheck, QrCode, CheckCircle2, X } from 'lucide-react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
-import { LibraryProvider } from './context/LibraryContext';
+import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { KidsModeProvider, useKidsMode } from './context/KidsModeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -15,6 +15,7 @@ import { LibraryTab } from './components/LibraryTab';
 import { KidsTab } from './components/KidsTab';
 import { PlaylistModal } from './components/PlaylistModal';
 import { SettingsModal } from './components/SettingsModal';
+import { SyncModal } from './components/SyncModal';
 import { KidsModeModal } from './components/KidsModeModal';
 import { ParentalExitModal } from './components/ParentalExitModal';
 import { AccessGateModal } from './components/AccessGateModal';
@@ -27,6 +28,7 @@ const AppContent: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isKidsModalOpen, setIsKidsModalOpen] = useState(false);
   const [isParentalExitOpen, setIsParentalExitOpen] = useState(false);
   const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
@@ -34,6 +36,7 @@ const AppContent: React.FC = () => {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
   const { currentTrack, isFullScreenPlayerOpen, setFullScreenPlayerOpen } = usePlayer();
+  const { syncState, dismissJustLinkedBanner } = useLibrary();
   const { isKidsMode } = useKidsMode();
   const {
     deviceId,
@@ -88,10 +91,30 @@ const AppContent: React.FC = () => {
         openSettingsModal={() => setIsSettingsModalOpen(true)}
         openKidsModal={() => setIsKidsModalOpen(true)}
         openExitKidsModal={() => setIsParentalExitOpen(true)}
+        openSyncModal={() => setIsSyncModalOpen(true)}
       />
 
       {/* Main View Area - Responsive with min-w-0 to prevent flex horizontal overflow */}
       <main className="flex-1 flex flex-col h-full w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden safe-top relative px-2.5 sm:px-6 md:px-10 pt-3 md:pt-6 pb-44 md:pb-8">
+        {/* Banner shown when user scans a QR code to link this device */}
+        {syncState.justLinkedFromUrl && (
+          <div className="w-full max-w-5xl mx-auto mb-3 px-3.5 py-2.5 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-emerald-300">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>
+                <strong>¡Dispositivo vinculado por QR ({syncState.syncCode})!</strong> Tus listas, favoritos y ajustes ya se sincronizan automáticamente.
+              </span>
+            </div>
+            <button
+              onClick={dismissJustLinkedBanner}
+              className="p-1 rounded-lg text-emerald-300 hover:bg-emerald-500/20 shrink-0"
+              aria-label="Cerrar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Top Trial Countdown / Mobile Session Status Bar */}
         {isTrialActive ? (
           <div className="w-full max-w-5xl mx-auto mb-3 px-3 py-2 rounded-2xl bg-emerald-500/15 border border-emerald-500/40 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -102,12 +125,22 @@ const AppContent: React.FC = () => {
               </span>
               <span className="text-zinc-400 hidden sm:inline">• ID: {deviceId}</span>
             </div>
-            <button
-              onClick={() => setLoginModalOpen(true)}
-              className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-[11px] uppercase tracking-wider transition"
-            >
-              Activar Cuenta
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsSyncModalOpen(true)}
+                className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-[11px] flex items-center gap-1 transition"
+                title="Sincronizar con QR"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>QR</span>
+              </button>
+              <button
+                onClick={() => setLoginModalOpen(true)}
+                className="px-3 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-[11px] uppercase tracking-wider transition"
+              >
+                Activar Cuenta
+              </button>
+            </div>
           </div>
         ) : session ? (
           <div className="w-full max-w-5xl mx-auto mb-3 px-3 py-2 rounded-2xl bg-black/50 border border-white/10 flex md:hidden items-center justify-between gap-2 text-xs font-mono">
@@ -117,6 +150,14 @@ const AppContent: React.FC = () => {
               <span className="text-[10px] text-zinc-500">({deviceId})</span>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => setIsSyncModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/35 font-bold text-[10px] flex items-center gap-1"
+                title="Sincronizar dispositivos por QR"
+              >
+                <QrCode className="w-3 h-3" />
+                QR
+              </button>
               {session.role === 'admin' && (
                 <button
                   onClick={() => setAdminModalOpen(true)}
@@ -149,7 +190,10 @@ const AppContent: React.FC = () => {
         ) : (
           <>
             {activeTab === 'home' && (
-              <HomeTab onSearchGenre={handleSearchGenre} />
+              <HomeTab
+                onSearchGenre={handleSearchGenre}
+                onOpenSyncModal={() => setIsSyncModalOpen(true)}
+              />
             )}
 
             {activeTab === 'search' && (
@@ -166,6 +210,7 @@ const AppContent: React.FC = () => {
                   setTrackToAdd(null);
                   setIsPlaylistModalOpen(true);
                 }}
+                openSyncModal={() => setIsSyncModalOpen(true)}
                 selectedPlaylistId={selectedPlaylistId}
                 setSelectedPlaylistId={setSelectedPlaylistId}
               />
@@ -174,6 +219,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'favorites' && (
               <LibraryTab
                 openNewPlaylistModal={() => {}}
+                openSyncModal={() => setIsSyncModalOpen(true)}
                 selectedPlaylistId="favorites"
                 setSelectedPlaylistId={() => setActiveTab('library')}
                 isFavoritesView={true}
@@ -183,6 +229,7 @@ const AppContent: React.FC = () => {
             {isPlaylistRoute && playlistIdFromRoute && (
               <LibraryTab
                 openNewPlaylistModal={() => {}}
+                openSyncModal={() => setIsSyncModalOpen(true)}
                 selectedPlaylistId={playlistIdFromRoute}
                 setSelectedPlaylistId={() => setActiveTab('library')}
               />
@@ -218,6 +265,10 @@ const AppContent: React.FC = () => {
             setFullScreenPlayerOpen(false);
             setIsParentalExitOpen(true);
           }}
+          openSyncModal={() => {
+            setFullScreenPlayerOpen(false);
+            setIsSyncModalOpen(true);
+          }}
         />
       )}
 
@@ -237,6 +288,12 @@ const AppContent: React.FC = () => {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         onOpenKidsModal={() => setIsKidsModalOpen(true)}
+        onOpenSyncModal={() => setIsSyncModalOpen(true)}
+      />
+
+      <SyncModal
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
       />
 
       <KidsModeModal

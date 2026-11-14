@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { Playlist, Track, UserSettings } from '../types/music';
 import { firebaseService } from '../services/firebase';
+import { syncService, type SyncStateInfo } from '../services/syncService';
 import { audioEngine } from '../services/audioEngine';
 
 interface LibraryContextType {
   playlists: Playlist[];
   likedTracks: Track[];
   settings: UserSettings;
+  syncState: SyncStateInfo;
   createPlaylist: (name: string, description?: string) => Playlist;
   updatePlaylist: (id: string, updates: { name?: string; description?: string; coverUrl?: string }) => void;
   deletePlaylist: (id: string) => void;
@@ -22,6 +24,11 @@ interface LibraryContextType {
   isLiked: (trackId: string) => boolean;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
   saveFirebaseCredentials: (config: any) => Promise<boolean>;
+  linkSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
+  syncNow: () => Promise<void>;
+  exportBackup: () => string;
+  importBackup: (rawJson: string) => { success: boolean; error?: string };
+  dismissJustLinkedBanner: () => void;
 }
 
 const DEFAULT_SETTINGS: UserSettings = {
@@ -36,12 +43,76 @@ const DEFAULT_SETTINGS: UserSettings = {
 const LibraryContext = createContext<LibraryContextType | null>(null);
 
 export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [likedTracks, setLikedTracks] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => {
+    try {
+      const local = localStorage.getItem('pulse_local_playlists');
+      return local ? JSON.parse(local) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [likedTracks, setLikedTracks] = useState<Track[]>(() => {
+    try {
+      const local = localStorage.getItem('pulse_local_liked');
+      return local ? JSON.parse(local) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem('pulse_settings');
     return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
   });
+
+  const [syncState, setSyncState] = useState<SyncStateInfo>(() => syncService.getStateInfo());
+  const playlistsRef = useRef<Playlist[]>(playlists);
+  const likedRef = useRef<Track[]>(likedTracks);
+
+  useEffect(() => {
+    playlistsRef.current = playlists;
+  }, [playlists]);
+
+  useEffect(() => {
+    likedRef.current = likedTracks;
+  }, [likedTracks]);
+
+  // Subscribe to SyncService state & live remote updates
+  useEffect(() => {
+    const unsubState = syncService.onStateChange((info) => {
+      setSyncState(info);
+    });
+
+    const unsubData = syncService.onRemoteDataMerged((merged) => {
+      setPlaylists(merged.playlists);
+      setLikedTracks(merged.likedTracks);
+
+      if (merged.settingsBundle?.userSettings) {
+        setSettings((prev) => {
+          const updated = { ...prev, ...merged.settingsBundle!.userSettings };
+          localStorage.setItem('pulse_settings', JSON.stringify(updated));
+          if (merged.settingsBundle!.userSettings?.skipSponsors !== undefined) {
+            audioEngine.setSkipSponsors(merged.settingsBundle!.userSettings.skipSponsors);
+          }
+          return updated;
+        });
+      }
+
+      if (merged.settingsBundle) {
+        window.dispatchEvent(
+          new CustomEvent('mixtape:remote-settings-sync', {
+            detail: merged.settingsBundle,
+          })
+        );
+      }
+    });
+
+    return () => {
+      unsubState();
+      unsubData();
+    };
+  }, []);
 
   // Load initial data and auto-sync when app opens, gains focus, or reconnects
   useEffect(() => {
@@ -62,6 +133,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (savedSettings) {
           setSettings((prev) => ({ ...prev, ...JSON.parse(savedSettings) }));
         }
+
+        // Pull from QR Cloud Sync room and merge
+        await syncService.pullNow(pl, lk);
       } catch (e) {
         console.warn('Auto-sync library error:', e);
       } finally {
@@ -112,6 +186,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
+  const persistPlaylists = (updated: Playlist[]) => {
+    firebaseService.savePlaylists(updated);
+    syncService.schedulePush(updated, likedRef.current);
+  };
+
+  const persistLikedTracks = (updated: Track[]) => {
+    firebaseService.saveLikedTracks(updated);
+    syncService.schedulePush(playlistsRef.current, updated);
+  };
+
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
@@ -119,6 +203,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (newSettings.skipSponsors !== undefined) {
         audioEngine.setSkipSponsors(newSettings.skipSponsors);
       }
+      syncService.markSettingsUpdated();
+      syncService.schedulePush(playlistsRef.current, likedRef.current);
       return updated;
     });
   };
@@ -137,6 +223,27 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return false;
   };
 
+  const linkSyncCode = async (code: string) => {
+    return syncService.linkSyncCode(code, playlistsRef.current, likedRef.current);
+  };
+
+  const syncNow = async () => {
+    const merged = await syncService.pullNow(playlistsRef.current, likedRef.current);
+    await syncService.pushNow(merged.playlists, merged.likedTracks);
+  };
+
+  const exportBackup = () => {
+    return syncService.exportBackupJson(playlistsRef.current, likedRef.current);
+  };
+
+  const importBackup = (rawJson: string) => {
+    return syncService.importBackupJson(rawJson, playlistsRef.current, likedRef.current);
+  };
+
+  const dismissJustLinkedBanner = () => {
+    syncService.clearJustLinkedFlag();
+  };
+
   const createPlaylist = (name: string, description?: string): Playlist => {
     const newPlaylist: Playlist = {
       id: 'pl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
@@ -149,7 +256,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setPlaylists((prev) => {
       const updated = [newPlaylist, ...prev];
-      firebaseService.savePlaylists(updated);
+      persistPlaylists(updated);
       return updated;
     });
 
@@ -173,15 +280,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         return p;
       });
-      firebaseService.savePlaylists(updated);
+      persistPlaylists(updated);
       return updated;
     });
   };
 
   const deletePlaylist = (id: string) => {
+    syncService.recordPlaylistDeleted(id);
     setPlaylists((prev) => {
       const updated = prev.filter((p) => p.id !== id);
-      firebaseService.savePlaylists(updated);
+      persistPlaylists(updated);
       return updated;
     });
   };
@@ -212,7 +320,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         return p;
       });
-      firebaseService.savePlaylists(updated);
+      persistPlaylists(updated);
       return updated;
     });
   };
@@ -229,7 +337,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         return p;
       });
-      firebaseService.savePlaylists(updated);
+      persistPlaylists(updated);
       return updated;
     });
   };
@@ -252,7 +360,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         return p;
       });
-      firebaseService.savePlaylists(updated);
+      persistPlaylists(updated);
       return updated;
     });
   };
@@ -265,7 +373,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       const [moved] = list.splice(fromIndex, 1);
       list.splice(toIndex, 0, moved);
-      firebaseService.saveLikedTracks(list);
+      persistLikedTracks(list);
       return list;
     });
   };
@@ -275,11 +383,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const exists = prev.some((t) => t.id === track.id);
       let updated: Track[];
       if (exists) {
+        syncService.recordLikedTrackDeleted(track.id);
         updated = prev.filter((t) => t.id !== track.id);
       } else {
+        syncService.recordTrackLiked(track.id);
         updated = [{ ...track, addedAt: Date.now() }, ...prev];
       }
-      firebaseService.saveLikedTracks(updated);
+      persistLikedTracks(updated);
       return updated;
     });
   };
@@ -290,27 +400,32 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const existingIds = new Set(prev.map((t) => t.id));
       const newTracks = tracks
         .filter((t) => !existingIds.has(t.id))
-        .map((t) => ({ ...t, addedAt: Date.now() }));
+        .map((t) => {
+          syncService.recordTrackLiked(t.id);
+          return { ...t, addedAt: Date.now() };
+        });
 
       if (newTracks.length === 0) return prev;
 
       const updated = [...newTracks, ...prev];
-      firebaseService.saveLikedTracks(updated);
+      persistLikedTracks(updated);
       return updated;
     });
   };
 
   const removeLikedTrack = (trackId: string) => {
+    syncService.recordLikedTrackDeleted(trackId);
     setLikedTracks((prev) => {
       const updated = prev.filter((t) => t.id !== trackId);
-      firebaseService.saveLikedTracks(updated);
+      persistLikedTracks(updated);
       return updated;
     });
   };
 
   const clearLikedTracks = () => {
+    likedRef.current.forEach((t) => syncService.recordLikedTrackDeleted(t.id));
     setLikedTracks([]);
-    firebaseService.saveLikedTracks([]);
+    persistLikedTracks([]);
   };
 
   const isLiked = (trackId: string): boolean => {
@@ -323,6 +438,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         playlists,
         likedTracks,
         settings,
+        syncState,
         createPlaylist,
         updatePlaylist,
         deletePlaylist,
@@ -338,6 +454,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isLiked,
         updateSettings,
         saveFirebaseCredentials,
+        linkSyncCode,
+        syncNow,
+        exportBackup,
+        importBackup,
+        dismissJustLinkedBanner,
       }}
     >
       {children}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette, Baby, Shield, KeyRound, LogOut, Clock, UserCheck } from 'lucide-react';
+import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette, Baby, Shield, KeyRound, LogOut, Clock, UserCheck, QrCode } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -14,6 +14,7 @@ interface SidebarProps {
   openSettingsModal: () => void;
   openKidsModal: () => void;
   openExitKidsModal: () => void;
+  openSyncModal: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -23,8 +24,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   openSettingsModal,
   openKidsModal,
   openExitKidsModal,
+  openSyncModal,
 }) => {
-  const { playlists } = useLibrary();
+  const { playlists, syncState } = useLibrary();
   const { currentTheme, setThemeById, themes } = useTheme();
   const { setFullScreenPlayerOpen } = usePlayer();
   const { isKidsMode } = useKidsMode();
@@ -244,11 +246,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : null}
 
         <button
+          onClick={openSyncModal}
+          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono transition"
+          title="Sincronizar listas y favoritos entre dispositivos con QR"
+        >
+          <span className="flex items-center gap-2 font-bold">
+            <QrCode className="w-4 h-4 text-amber-400" />
+            <span>Sincronizar QR</span>
+          </span>
+          <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-black/50 text-emerald-300 border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            {syncState.syncCode.replace('TAPE-', '')}
+          </span>
+        </button>
+
+        <button
           onClick={openSettingsModal}
           className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition"
         >
           <Settings className="w-4 h-4" />
-          <span>Ajustes & Firebase</span>
+          <span>Ajustes & Nube</span>
         </button>
       </div>
     </aside>

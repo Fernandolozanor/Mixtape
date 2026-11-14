@@ -8,6 +8,7 @@ import {
   Wand2,
   Radio,
   Clock,
+  QrCode,
 } from 'lucide-react';
 import type { Track } from '../types/music';
 import { usePlayer } from '../context/PlayerContext';
@@ -22,9 +23,10 @@ import { RpmPlaylistGenerator } from './RpmPlaylistGenerator';
 
 interface HomeTabProps {
   onSearchGenre: (genre: string) => void;
+  onOpenSyncModal?: () => void;
 }
 
-export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
+export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal }) => {
   const { playTrack, currentTrack, isPlaying } = usePlayer();
   const { likedTracks, playlists, isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
@@ -116,6 +118,17 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre }) => {
               <RefreshCw className={`w-4 h-4 text-amber-400 ${isLoadingRecs ? 'animate-spin' : ''}`} />
               <span>Sintonizar Preferencias</span>
             </button>
+
+            {onOpenSyncModal && (
+              <button
+                onClick={onOpenSyncModal}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-stereo text-sm font-bold tracking-wider transition border border-amber-500/40 active:scale-95"
+                title="Sincronizar listas y favoritos entre dispositivos con QR"
+              >
+                <QrCode className="w-4 h-4 text-amber-400" />
+                <span>Sincronizar QR</span>
+              </button>
+            )}
           </div>
         </div>
 

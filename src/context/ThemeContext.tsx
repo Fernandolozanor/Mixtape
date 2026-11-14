@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { THEME_SCHEMES, type ThemeScheme } from '../types/theme';
+import { syncService } from '../services/syncService';
 
 interface ThemeContextType {
   currentTheme: ThemeScheme;
@@ -32,10 +33,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('pulse_theme', currentTheme.id);
   }, [currentTheme]);
 
+  useEffect(() => {
+    const handleRemoteSync = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.themeId) {
+        const found = THEME_SCHEMES.find((t) => t.id === detail.themeId);
+        if (found) {
+          setCurrentTheme(found);
+        }
+      }
+    };
+    window.addEventListener('mixtape:remote-settings-sync', handleRemoteSync);
+    return () => window.removeEventListener('mixtape:remote-settings-sync', handleRemoteSync);
+  }, []);
+
   const setThemeById = (id: string) => {
     const found = THEME_SCHEMES.find((t) => t.id === id);
     if (found) {
       setCurrentTheme(found);
+      localStorage.setItem('pulse_theme', found.id);
+      syncService.markSettingsUpdated();
     }
   };
 

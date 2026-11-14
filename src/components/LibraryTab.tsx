@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Disc3,
   List,
+  QrCode,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -25,6 +26,7 @@ import type { Playlist, Track } from '../types/music';
 
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
+  openSyncModal?: () => void;
   selectedPlaylistId: string | null;
   setSelectedPlaylistId: (id: string | null) => void;
   isFavoritesView?: boolean;
@@ -32,6 +34,7 @@ interface LibraryTabProps {
 
 export const LibraryTab: React.FC<LibraryTabProps> = ({
   openNewPlaylistModal,
+  openSyncModal,
   selectedPlaylistId,
   setSelectedPlaylistId,
   isFavoritesView = false,
@@ -616,13 +619,26 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </h1>
         </div>
 
-        <button
-          onClick={openNewPlaylistModal}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl theme-btn text-base active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>GRABAR CINTA +</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {openSyncModal && (
+            <button
+              onClick={openSyncModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95"
+              title="Sincronizar listas y favoritos entre dispositivos con QR"
+            >
+              <QrCode className="w-4 h-4 text-amber-400" />
+              <span>SINCRONIZAR QR</span>
+            </button>
+          )}
+
+          <button
+            onClick={openNewPlaylistModal}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl theme-btn text-base active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>GRABAR CINTA +</span>
+          </button>
+        </div>
       </div>
 
       {/* Authentic 80s Wooden Cassette Rack Shelf with Handwritten Spine Labels */}

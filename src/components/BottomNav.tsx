@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Search, Library, Heart, Settings, Baby, Shield } from 'lucide-react';
+import { Compass, Search, Library, Heart, Settings, Baby, Shield, QrCode } from 'lucide-react';
 import { useKidsMode } from '../context/KidsModeContext';
 
 interface BottomNavProps {
@@ -8,6 +8,7 @@ interface BottomNavProps {
   openSettingsModal: () => void;
   openKidsModal: () => void;
   openExitKidsModal: () => void;
+  openSyncModal: () => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -16,6 +17,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   openSettingsModal,
   openKidsModal,
   openExitKidsModal,
+  openSyncModal,
 }) => {
   const { isKidsMode } = useKidsMode();
 
@@ -24,6 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { id: 'search', label: 'Buscar', icon: Search },
     { id: 'library', label: 'Biblioteca', icon: Library },
     { id: 'favorites', label: 'Favoritos', icon: Heart },
+    { id: 'sync', label: 'Sincr. QR', icon: QrCode, isSyncAction: true },
     { id: 'kids', label: 'Niños', icon: Baby, isKidsAction: true },
     { id: 'settings', label: 'Ajustes', icon: Settings, isAction: true },
   ];
@@ -48,6 +51,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               onClick={() => {
                 if ('isExitAction' in tab && tab.isExitAction) {
                   openExitKidsModal();
+                } else if ('isSyncAction' in tab && tab.isSyncAction) {
+                  openSyncModal();
                 } else if ('isKidsAction' in tab && tab.isKidsAction) {
                   openKidsModal();
                 } else if ('isAction' in tab && tab.isAction) {
