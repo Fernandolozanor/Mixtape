@@ -111,22 +111,22 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
       className={`rounded-2xl bg-[#090c13] border-2 border-[#1e2736] p-2.5 sm:p-3.5 shadow-2xl relative select-none overflow-hidden ${className}`}
     >
       {/* Top Brushed Steel Tuning Header */}
-      <div className="flex items-center justify-between px-1 pb-2 text-[10px] sm:text-xs font-mono-retro">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <Radio className="w-3.5 h-3.5 text-amber-400" />
-          <span className="font-extrabold tracking-widest text-zinc-300 uppercase">
-            SINTONIZADOR ANALÓGICO HI-FI
+      <div className="flex items-center justify-between px-1 pb-2 text-[10px] sm:text-xs font-mono-retro flex-nowrap whitespace-nowrap overflow-hidden h-7 sm:h-8">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0 overflow-hidden">
+          <Radio className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span className="font-extrabold tracking-widest text-zinc-300 uppercase truncate">
+            <span className="hidden sm:inline">SINTONIZADOR </span>HI-FI TUNER
           </span>
-          <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold text-[9px]">
-            FM/AM STEREO
+          <span className="hidden md:inline-block px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold text-[9px] shrink-0">
+            FM STEREO
           </span>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ml-1">
           {/* Station Locked Indicator */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <span
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              className={`w-2 h-2 rounded-full shrink-0 transition-all duration-300 ${
                 isTuned
                   ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
                   : isSearching
@@ -135,23 +135,24 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
               }`}
             />
             <span
-              className={`text-[8.5px] sm:text-[9.5px] font-bold tracking-wider ${
+              className={`text-[8.5px] sm:text-[9.5px] font-bold tracking-wider shrink-0 w-[50px] sm:w-[70px] text-left truncate ${
                 isTuned ? 'text-rose-400 font-extrabold' : 'text-zinc-500'
               }`}
             >
-              {isSearching ? 'TUNING...' : isTuned ? 'STEREO TUNED' : 'STANDBY'}
+              {isSearching ? 'TUNING' : isTuned ? 'STEREO' : 'READY'}
             </span>
           </div>
 
-          {/* Frequency readout */}
-          <div className="bg-black/80 px-2 py-0.5 rounded border border-white/10 text-amber-400 font-bold font-mono tracking-wider text-[11px] sm:text-xs">
-            {currentFreq} <span className="text-[9px] text-zinc-500">MHz</span>
+          {/* Fixed-width Tabular Frequency readout: guaranteed ZERO layout shift on 2 vs 3 digits */}
+          <div className="bg-black/90 px-1 sm:px-2 py-0.5 rounded border border-white/10 text-amber-400 font-bold font-mono tracking-wider text-[11px] sm:text-xs w-[70px] sm:w-[78px] text-center shrink-0 tabular-nums shadow-inner flex items-center justify-center gap-0.5">
+            <span className="w-9 text-right font-bold">{currentFreq}</span>
+            <span className="text-[8.5px] sm:text-[9px] text-zinc-500 font-normal">MHz</span>
           </div>
 
           {/* Sound mute toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="text-zinc-500 hover:text-amber-400 transition p-0.5"
+            className="text-zinc-500 hover:text-amber-400 transition p-1 shrink-0 active:scale-95"
             title={soundEnabled ? 'Silenciar sonido de sintonizador' : 'Activar sonido de sintonizador'}
           >
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5 text-zinc-600" />}
