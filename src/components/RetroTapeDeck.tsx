@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
-import { Play, Pause, Disc3, Maximize2, Heart } from 'lucide-react';
+import { Play, Pause, Disc3, Maximize2 } from 'lucide-react';
 import { MarqueeTitle } from './MarqueeTitle';
 
 interface RetroTapeDeckProps {
@@ -541,42 +541,12 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
   /**
    * Adaptive Media Overlay:
-   * When playing a Favorite track, renders the Vinyl record 33⅓ RPM spinning center label and hi-fi plaque.
+   * When playing a Favorite track, renders the Vinyl record 33⅓ RPM spinning center label.
    * When playing standard tracks, renders the handwritten cassette tape label.
    */
   const renderMediaOverlay = (size: 'sm' | 'md' | 'lg') => {
     if (isFavorite) {
-      return (
-        <>
-          {/* 1. Real Spinning Vinyl Record Center Label (Rotating at exact 33⅓ RPM turntable speed) */}
-          {renderSpinningVinylLabel(size)}
-
-          {/* 2. Top Badges & Bottom Plaque */}
-          <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-2 sm:p-3 z-20 select-none">
-            {/* Top Badges */}
-            <div className="flex items-center justify-between">
-              <span className="px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md border border-amber-400/40 text-[7.5px] sm:text-[9px] font-mono-retro font-bold text-amber-400 shadow-md flex items-center gap-1">
-                <Disc3 className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${isPlaying ? 'animate-spin' : ''}`} />
-                <span>33⅓ RPM • HI-FI VINILO</span>
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-rose-500/90 backdrop-blur-md text-white text-[7.5px] sm:text-[9px] font-mono-retro font-extrabold shadow-md flex items-center gap-1 animate-pulse">
-                <Heart className="w-2.5 h-2.5 fill-white" />
-                <span>FAVORITOS</span>
-              </span>
-            </div>
-
-            {/* Track title plaque on vinyl */}
-            <div className="bg-black/75 backdrop-blur-md px-3 py-1 sm:py-1.5 rounded-xl border border-amber-400/30 text-center mx-auto max-w-[92%] shadow-2xl">
-              <p className="font-rock text-xs sm:text-sm text-white tracking-wider truncate">
-                {writtenTitle || currentTrack?.title || 'VINILO MASTER'}
-              </p>
-              <p className="text-[9px] sm:text-[10.5px] text-amber-400 font-mono truncate mt-0.5">
-                {writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA'}
-              </p>
-            </div>
-          </div>
-        </>
-      );
+      return renderSpinningVinylLabel(size);
     }
     return renderHandwrittenTapeLabel(size);
   };
