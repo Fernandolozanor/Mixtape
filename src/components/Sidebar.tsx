@@ -1,9 +1,10 @@
 import React from 'react';
-import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette, Baby, Shield } from 'lucide-react';
+import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Palette, Baby, Shield, KeyRound, LogOut, Clock, UserCheck } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useKidsMode } from '../context/KidsModeContext';
+import { useAuth } from '../context/AuthContext';
 import { RetroTapeDeck } from './RetroTapeDeck';
 
 interface SidebarProps {
@@ -27,6 +28,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { currentTheme, setThemeById, themes } = useTheme();
   const { setFullScreenPlayerOpen } = usePlayer();
   const { isKidsMode } = useKidsMode();
+  const {
+    session,
+    deviceId,
+    isTrialActive,
+    trialRemainingSeconds,
+    setLoginModalOpen,
+    setAdminModalOpen,
+    logout,
+  } = useAuth();
+
+  const formatTrialTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const navItems = [
     { id: 'home', label: 'Escuchar', icon: Compass },
@@ -180,13 +196,58 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Settings Footer */}
-      <div className="pt-2 border-t border-white/5">
+      {/* Settings & Auth Footer */}
+      <div className="pt-2 border-t border-white/5 space-y-1.5">
+        {session?.role === 'admin' && (
+          <button
+            onClick={() => setAdminModalOpen(true)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-mono-retro font-bold uppercase tracking-wider transition"
+          >
+            <span className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-amber-400" />
+              Generar Claves VIP
+            </span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400 text-black font-black">
+              ADMIN
+            </span>
+          </button>
+        )}
+
+        {session ? (
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs font-mono">
+            <div className="flex items-center gap-2 min-w-0">
+              <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <div className="truncate">
+                <p className="text-white font-bold truncate leading-tight">{session.username}</p>
+                <p className="text-[9px] text-zinc-500">{deviceId}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition shrink-0"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : isTrialActive ? (
+          <button
+            onClick={() => setLoginModalOpen(true)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-mono transition"
+          >
+            <span className="flex items-center gap-1.5 font-bold">
+              <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+              Prueba: {formatTrialTime(trialRemainingSeconds)}
+            </span>
+            <span className="text-[10px] underline text-amber-300 font-bold">Activar</span>
+          </button>
+        ) : null}
+
         <button
           onClick={openSettingsModal}
-          className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition"
+          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-4 h-4" />
           <span>Ajustes & Firebase</span>
         </button>
       </div>
