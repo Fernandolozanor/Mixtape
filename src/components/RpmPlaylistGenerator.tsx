@@ -16,7 +16,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 
 export const RpmPlaylistGenerator: React.FC = () => {
-  const { playTrack, currentTrack, isPlaying } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, setFullScreenPlayerOpen } = usePlayer();
   const { likedTracks, playlists, createPlaylist, addTracksToPlaylist } = useLibrary();
 
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
@@ -58,6 +58,7 @@ export const RpmPlaylistGenerator: React.FC = () => {
   const handlePlaySession = () => {
     if (sessionTracks.length === 0) return;
     playTrack(sessionTracks[0], sessionTracks);
+    setFullScreenPlayerOpen(true);
   };
 
   const handleSaveAsPlaylist = () => {
@@ -289,7 +290,10 @@ export const RpmPlaylistGenerator: React.FC = () => {
               return (
                 <div
                   key={track.id}
-                  onClick={() => playTrack(track, sessionTracks)}
+                  onClick={() => {
+                    playTrack(track, sessionTracks);
+                    setFullScreenPlayerOpen(true);
+                  }}
                   className={`flex items-center justify-between gap-2.5 p-2 rounded-xl cursor-pointer border transition ${
                     isCurrent
                       ? 'bg-amber-500/20 border-amber-400/50'

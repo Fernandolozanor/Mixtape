@@ -429,6 +429,7 @@ class AudioEngine {
     this.syncTimer = setInterval(() => {
       if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
         this.checkAndSkipYouTubeAds();
+        this.notifyState();
 
         const cur = this.ytPlayer.getCurrentTime() || 0;
         const dur = this.ytPlayer.getDuration() || 0;
@@ -785,7 +786,8 @@ class AudioEngine {
 
   public isPlaying(): boolean {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
-      return this.ytPlayer.getPlayerState() === 1; // 1 = playing
+      const st = this.ytPlayer.getPlayerState();
+      return st === 1 || (this.shouldBePlaying && (st === 3 || st === -1));
     }
     return !this.audio.paused && !this.audio.ended && this.shouldBePlaying;
   }

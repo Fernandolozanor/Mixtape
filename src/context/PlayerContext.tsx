@@ -60,6 +60,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // UI Modals / Sheets
   const [isFullScreenPlayerOpen, setFullScreenPlayerOpen] = useState<boolean>(false);
   const [deckActivationTrigger, setDeckActivationTrigger] = useState<number>(0);
+  const [playTriggerCount, setPlayTriggerCount] = useState<number>(0);
   const [isQueueOpen, setQueueOpen] = useState<boolean>(false);
   const [isLyricsOpen, setLyricsOpen] = useState<boolean>(false);
 
@@ -126,7 +127,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Auto-activate cassette or vinyl (FullScreenPlayer in 'deck' view) after 3 seconds of active playback
   useEffect(() => {
-    if (!isPlaying || isLoading || !currentTrack) return;
+    if (!isPlaying || !currentTrack) return;
 
     const timer = setTimeout(() => {
       setFullScreenPlayerOpen(true);
@@ -134,11 +135,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [isPlaying, isLoading, currentTrack?.id]);
+  }, [isPlaying, currentTrack?.id, playTriggerCount]);
 
   const playTrack = async (track: Track, newQueue?: Track[]) => {
     setIsLoading(true);
     setCurrentTrack(track);
+    setPlayTriggerCount((c) => c + 1);
 
     let updatedQueue = newQueue || queueRef.current;
     if (newQueue) {
