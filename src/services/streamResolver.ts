@@ -209,6 +209,57 @@ class StreamResolver {
   }
 
   /**
+   * Resolves direct, ad-free audio stream URL for a YouTube ID.
+   * Extracts clean AAC/MP4 stream via CORS-enabled Invidious backend with Cloudflare Worker support.
+   */
+  async resolveDirectAudioStream(youtubeId: string): Promise<string | null> {
+    if (!youtubeId) return null;
+
+    // 1. Direct Invidious CORS resolution (fast, direct, zero intermediate latency)
+    const instances = [
+      'https://yt.chocolatemoo53.com',
+      'https://invidious.nerdvpn.de',
+      'https://inv.tux.pizza',
+    ];
+
+    for (const inst of instances) {
+      try {
+        const res = await fetch(`${inst}/api/v1/videos/${youtubeId}`, {
+          signal: AbortSignal.timeout(3500),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const audios = (data.adaptiveFormats || []).filter((f: any) => f.type && f.type.includes('audio'));
+          if (audios.length > 0) {
+            const format140 = audios.find((f: any) => f.itag === 140 || f.itag === '140');
+            const best = format140 || audios.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+            if (best && best.url) {
+              return best.url.replace(/^https:\/\/[^\/]+/, inst);
+            }
+          }
+        }
+      } catch {
+        // Try next instance
+      }
+    }
+
+    // 2. Try User's Cloudflare Worker meta endpoint as fallback
+    try {
+      const res = await fetch(`https://mixtape-stream.fernandolozanor.workers.dev/?id=${youtubeId}&meta=true`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.streamUrl) return data.streamUrl;
+      }
+    } catch {
+      // Ignored
+    }
+
+    return null;
+  }
+
+  /**
    * Fetch SponsorBlock segments
    */
   async getSponsorSegments(videoId: string): Promise<SponsorSegment[]> {

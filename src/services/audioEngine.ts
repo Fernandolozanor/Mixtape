@@ -1,4 +1,5 @@
 import type { Track, SponsorSegment } from '../types/music';
+import { streamResolver } from './streamResolver';
 
 type PlaybackCallback = () => void;
 type TimeUpdateCallback = (currentTime: number, duration: number, buffered: number) => void;
@@ -539,35 +540,43 @@ class AudioEngine {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    // 1. YouTube playback: First attempt ad-free direct stream via Cloudflare Worker
+    // 1. YouTube playback: First attempt ad-free direct stream via Invidious / Worker
     if (track.source === 'youtube' && track.youtubeId) {
-      const workerUrl = `https://mixtape-stream.fernandolozanor.workers.dev/?id=${track.youtubeId}`;
-      
-      this.isUsingYouTube = false;
-      this.stopYouTubeSync();
-      if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
-        this.ytPlayer.pauseVideo();
-      }
+      const ytId = track.youtubeId;
 
       try {
-        this.audio.src = workerUrl;
-        this.audio.currentTime = 0;
-        this.audio.volume = this.volume;
+        const directAudioUrl = await streamResolver.resolveDirectAudioStream(ytId);
 
-        const onAudioError = (e: any) => {
-          console.warn('Direct stream error, falling back to YouTube iframe:', e);
-          this.audio.removeEventListener('error', onAudioError);
-          this.fallbackToYouTubeIFrame(track);
-        };
-        this.audio.addEventListener('error', onAudioError, { once: true });
+        // Guard against race conditions if user changed track while resolving
+        if (this.currentTrack?.youtubeId !== ytId) return true;
 
-        await this.audio.play();
-        this.notifyState();
-        return true;
+        if (directAudioUrl) {
+          this.isUsingYouTube = false;
+          this.stopYouTubeSync();
+          if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+            this.ytPlayer.pauseVideo();
+          }
+
+          this.audio.src = directAudioUrl;
+          this.audio.currentTime = 0;
+          this.audio.volume = this.volume;
+
+          const onAudioError = (e: any) => {
+            console.warn('Direct stream error, falling back to YouTube iframe:', e);
+            this.audio.removeEventListener('error', onAudioError);
+            this.fallbackToYouTubeIFrame(track);
+          };
+          this.audio.addEventListener('error', onAudioError, { once: true });
+
+          await this.audio.play();
+          this.notifyState();
+          return true;
+        }
       } catch (err) {
-        console.warn('Direct audio play error, falling back to YouTube iframe:', err);
-        return this.fallbackToYouTubeIFrame(track);
+        console.warn('Direct audio resolution error, falling back to YouTube iframe:', err);
       }
+
+      return this.fallbackToYouTubeIFrame(track);
     }
 
     // 2. Direct Audius or custom audio stream
