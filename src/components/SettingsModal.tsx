@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound, Gauge, Activity } from 'lucide-react';
+import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound, Gauge, Activity, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useKidsMode } from '../context/KidsModeContext';
 import { useAuth } from '../context/AuthContext';
 import { cacheService } from '../services/cacheService';
 import { ThemeSelector } from './ThemeSelector';
+import { APP_VERSION, APP_BUILD, checkAppUpdate } from '../version';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const { isKidsMode } = useKidsMode();
   const { session, setAdminModalOpen } = useAuth();
   const [cacheClearedMsg, setCacheClearedMsg] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateStatusMsg, setUpdateStatusMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -30,6 +33,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     await cacheService.clearAllCache();
     setCacheClearedMsg(true);
     setTimeout(() => setCacheClearedMsg(false), 2000);
+  };
+
+  const handleCheckUpdate = async () => {
+    setIsCheckingUpdate(true);
+    setUpdateStatusMsg(null);
+    try {
+      const res = await checkAppUpdate();
+      setUpdateStatusMsg(res.message);
+    } catch {
+      setUpdateStatusMsg('Error al verificar actualización');
+    } finally {
+      setIsCheckingUpdate(false);
+      setTimeout(() => {
+        setUpdateStatusMsg(null);
+      }, 5000);
+    }
   };
 
   return (
@@ -251,10 +270,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
         </div>
 
-        {/* Info */}
-        <div className="text-center text-xs text-zinc-500">
-          <p>Mixtape • Hi-Fi Cassette Deck PWA</p>
-          <p>Compatible con iPhone, Android, Windows y macOS</p>
+        {/* Version & System Information */}
+        <div className="pt-4 border-t border-white/10 space-y-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/5">
+            <div className="text-center sm:text-left">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="font-mono-retro font-bold text-sm text-white">
+                  Versión {APP_VERSION}
+                </span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono font-bold">
+                  {APP_BUILD}
+                </span>
+              </div>
+              <p className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                Mixtape • Hi-Fi Cassette Deck PWA
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCheckUpdate}
+              disabled={isCheckingUpdate}
+              className="py-2 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 hover:text-white text-xs font-semibold flex items-center gap-2 transition active:scale-95 disabled:opacity-50 shrink-0"
+              title="Comprobar si hay una versión más reciente"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isCheckingUpdate ? 'animate-spin text-amber-400' : 'text-zinc-400'}`} />
+              <span>{isCheckingUpdate ? 'Comprobando...' : 'Buscar actualización'}</span>
+            </button>
+          </div>
+
+          {updateStatusMsg && (
+            <div className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono text-amber-300 animate-in fade-in">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>{updateStatusMsg}</span>
+            </div>
+          )}
+
+          <div className="text-center text-xs text-zinc-500">
+            <p>Compatible con iPhone, Android, Windows y macOS</p>
+          </div>
         </div>
       </div>
     </div>
