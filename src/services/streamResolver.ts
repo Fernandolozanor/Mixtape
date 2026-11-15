@@ -399,31 +399,26 @@ class StreamResolver {
     youtubeId: string,
     excludeOrigin?: string
   ): Promise<string | null> {
-    const allCompanions = [
-      'https://yt-comp5.chocolatemoo53.com',
-      'https://yt-comp4.chocolatemoo53.com',
-      'https://yt-comp3.chocolatemoo53.com',
-      'https://yt-comp2.chocolatemoo53.com',
-      'https://yt-comp1.chocolatemoo53.com',
-      'https://yt-comp6.chocolatemoo53.com',
+    const endpoints = [
+      `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=140&local=true`,
+      `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=251&local=true`,
     ];
-
-    const companions = excludeOrigin
-      ? allCompanions.filter((c) => c !== excludeOrigin)
-      : allCompanions;
 
     const controllers: AbortController[] = [];
 
     try {
       const winningUrl = await Promise.any(
-        companions.map(async (comp) => {
+        endpoints.map(async (endpoint) => {
+          if (excludeOrigin && endpoint.includes(excludeOrigin)) {
+            throw new Error('Excluded endpoint');
+          }
+
           const controller = new AbortController();
           controllers.push(controller);
-          const timeoutId = setTimeout(() => controller.abort(), 5500);
+          const timeoutId = setTimeout(() => controller.abort(), 4500);
 
           try {
-            const endpoint = `${comp}/companion/latest_version?id=${youtubeId}&itag=140&local=true`;
-            // Simple GET without custom headers prevents CORS OPTIONS preflight in Chrome, Safari & iOS
+            // Dispatcher probe follows 302 to active companion node and gets verified videoplayback URL
             const res = await fetch(endpoint, {
               method: 'GET',
               redirect: 'follow',
@@ -437,17 +432,17 @@ class StreamResolver {
               res.url &&
               (contentType.includes('audio') ||
                 contentType.includes('mp4') ||
+                contentType.includes('webm') ||
                 contentType.includes('octet-stream'))
             ) {
               const verifiedUrl = res.url;
-              // Cancel probe body download immediately so only headers were transferred
               if (res.body) {
                 res.body.cancel().catch(() => {});
               }
               controller.abort();
               return verifiedUrl;
             }
-            throw new Error(`Invalid stream response (${res.status}) from ${comp}`);
+            throw new Error(`Invalid stream response (${res.status}) from ${endpoint}`);
           } catch (err) {
             clearTimeout(timeoutId);
             throw err;
@@ -455,7 +450,6 @@ class StreamResolver {
         })
       );
 
-      // Abort all remaining slower companion requests immediately
       for (const c of controllers) {
         try {
           c.abort();
@@ -475,7 +469,8 @@ class StreamResolver {
       }
     }
 
-    return null;
+    // Default to direct dispatcher URL for native audio loading
+    return `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=140&local=true`;
   }
 
   /**

@@ -87,7 +87,6 @@ class AudioEngine {
   constructor() {
     this.audio = new Audio();
     this.audio.preload = 'auto';
-    this.audio.crossOrigin = 'anonymous';
     this.audio.setAttribute('playsinline', 'true');
     this.audio.setAttribute('webkit-playsinline', 'true');
 
@@ -139,11 +138,6 @@ class AudioEngine {
   public getRealAudioLevels(): { left: number; right: number; bass: number; mid: number; treble: number } {
     if (!this.isPlaying()) {
       return { left: 0, right: 0, bass: 0, mid: 0, treble: 0 };
-    }
-
-    // Try to ensure AudioContext is active upon playback
-    if (!this.analyserNode && !this.isUsingYouTube) {
-      this.initWebAudioAnalyser();
     }
 
     if (this.audioContext && this.audioContext.state === 'suspended') {
@@ -898,22 +892,15 @@ class AudioEngine {
               hasRetriedCompanion = true;
               try {
                 streamResolver.invalidateStreamCache(ytId);
-                const failedOrigin = new URL(directAudioUrl).origin;
-                const backupUrl = await streamResolver.resolveDirectAudioStream(
-                  ytId,
-                  failedOrigin,
-                  track.title,
-                  track.artist
-                );
-                if (backupUrl && this.currentTrack?.youtubeId === ytId) {
-                  this.audio.src = backupUrl;
-                  this.audio.currentTime = 0;
-                  this.audio.volume = this.volume;
-                  this.audio.playbackRate = this.playbackRate;
-                  await this.audio.play();
-                  this.notifyState();
-                  return;
-                }
+                // Try backup itag 251 (Opus audio stream)
+                const backupUrl = `https://yt.chocolatemoo53.com/latest_version?id=${ytId}&itag=251&local=true`;
+                this.audio.src = backupUrl;
+                this.audio.currentTime = 0;
+                this.audio.volume = this.volume;
+                this.audio.playbackRate = this.playbackRate;
+                await this.audio.play();
+                this.notifyState();
+                return;
               } catch {
                 // Proceed to fallback
               }
