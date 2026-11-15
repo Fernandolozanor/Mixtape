@@ -10,6 +10,7 @@ import {
   Clock,
   QrCode,
   Sparkles,
+  Settings,
 } from 'lucide-react';
 import type { Track } from '../types/music';
 import { usePlayer } from '../context/PlayerContext';
@@ -37,9 +38,14 @@ const RECOMMENDED_TAGS = [
 interface HomeTabProps {
   onSearchGenre: (genre: string) => void;
   onOpenSyncModal?: () => void;
+  onOpenSettingsModal?: () => void;
 }
 
-export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal }) => {
+export const HomeTab: React.FC<HomeTabProps> = ({
+  onSearchGenre,
+  onOpenSyncModal,
+  onOpenSettingsModal,
+}) => {
   const { playTrack, currentTrack, isPlaying } = usePlayer();
   const { likedTracks, playlists, isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
@@ -123,7 +129,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal
           {onOpenSyncModal && (
             <button
               onClick={onOpenSyncModal}
-              className="px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95"
+              className="px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
               title="Sincronizar con otros dispositivos mediante código QR"
             >
               <QrCode className="w-3.5 h-3.5 text-amber-400" />
@@ -133,12 +139,22 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal
           <button
             onClick={() => loadRecommendations(true)}
             disabled={isLoadingRecs}
-            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+            className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 cursor-pointer"
             title="Actualizar recomendaciones"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isLoadingRecs ? 'animate-spin' : ''}`} />
             <span>Actualizar</span>
           </button>
+          {onOpenSettingsModal && (
+            <button
+              onClick={onOpenSettingsModal}
+              className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              title="Abrir Ajustes y Configuración"
+            >
+              <Settings className="w-3.5 h-3.5 text-amber-400" />
+              <span>Ajustes</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -16,6 +16,7 @@ import {
   ArrowUpDown,
   Sparkles,
   Layers,
+  Settings,
 } from 'lucide-react';
 import type { Track, AudioSourceType } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
@@ -43,12 +44,14 @@ const GENRE_TAGS = [
 interface SearchTabProps {
   onSelectTrackForPlaylist: (track: Track) => void;
   onSelectMultipleForPlaylist?: (tracks: Track[]) => void;
+  onOpenSettingsModal?: () => void;
   initialQuery?: string;
 }
 
 export const SearchTab: React.FC<SearchTabProps> = ({
   onSelectTrackForPlaylist,
   onSelectMultipleForPlaylist,
+  onOpenSettingsModal,
   initialQuery = '',
 }) => {
   const [query, setQuery] = useState(initialQuery);
@@ -293,6 +296,17 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   )}
                 </button>
               </>
+            )}
+
+            {onOpenSettingsModal && (
+              <button
+                onClick={onOpenSettingsModal}
+                className="px-2.5 sm:px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition flex items-center gap-1.5 cursor-pointer"
+                title="Abrir Ajustes"
+              >
+                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <span>Ajustes</span>
+              </button>
             )}
           </div>
         </div>

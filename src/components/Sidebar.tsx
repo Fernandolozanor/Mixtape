@@ -54,9 +54,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 h-screen bg-[#0e121a] border-r-2 border-[#1f2636] p-3.5 select-none shrink-0 shadow-2xl relative">
-      {/* 80s Rock Audio Receiver Header */}
-      <div className="px-2 pt-2 pb-3 mb-3 border-b border-white/10 relative">
+    <aside className="hidden md:flex flex-col w-64 h-screen max-h-screen bg-[#0e121a] border-r-2 border-[#1f2636] p-3 select-none shrink-0 shadow-2xl relative overflow-hidden">
+      {/* 80s Rock Audio Receiver Header (Pinned at top) */}
+      <div className="shrink-0 px-2 pt-1 pb-2.5 mb-2 border-b border-white/10 relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Radio className="w-5 h-5 text-amber-500 animate-pulse" />
@@ -74,114 +74,117 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </p>
       </div>
 
-      {/* Main Navigation - 80s Push Buttons */}
-      <nav className="space-y-1.5 mb-4">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
+      {/* Middle Scrollable Section (Nav, Playlists, Tape Deck) */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-3">
+        {/* Main Navigation - 80s Push Buttons */}
+        <nav className="space-y-1.5 mb-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all duration-100 cursor-pointer ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[#20293a] to-[#141a26] text-amber-400 border border-amber-500/40 shadow-inner'
+                    : 'bg-[#121620] text-zinc-400 hover:text-white hover:bg-[#181e2b] border border-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon
+                    className="w-4 h-4"
+                    style={{ color: isActive ? currentTheme.accent : undefined }}
+                  />
+                  <span>{item.label}</span>
+                </div>
+                {isActive && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
+                )}
+              </button>
+            );
+          })}
+          {/* Kids Mode Toggle Button */}
+          {isKidsMode ? (
             <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all duration-100 ${
-                isActive
-                  ? 'bg-gradient-to-r from-[#20293a] to-[#141a26] text-amber-400 border border-amber-500/40 shadow-inner'
-                  : 'bg-[#121620] text-zinc-400 hover:text-white hover:bg-[#181e2b] border border-white/5'
-              }`}
+              onClick={openExitKidsModal}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl font-stereo text-sm font-bold tracking-wider uppercase transition-all bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-300 border border-emerald-500/50 shadow-lg shadow-emerald-500/10 active:scale-95 cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Icon
-                  className="w-4 h-4"
-                  style={{ color: isActive ? currentTheme.accent : undefined }}
-                />
-                <span>{item.label}</span>
+                <Baby className="w-4 h-4 text-emerald-400" />
+                <span>🧸 Modo Niños</span>
               </div>
-              {isActive && (
-                <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#fbbf24]" />
-              )}
+              <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-black/50 text-amber-300 border border-amber-400/40 font-mono">
+                <Shield className="w-2.5 h-2.5" /> Salir
+              </span>
             </button>
-          );
-        })}
-        {/* Kids Mode Toggle Button */}
-        {isKidsMode ? (
-          <button
-            onClick={openExitKidsModal}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-stereo text-sm font-bold tracking-wider uppercase transition-all bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-300 border border-emerald-500/50 shadow-lg shadow-emerald-500/10 active:scale-95"
-          >
-            <div className="flex items-center gap-3">
-              <Baby className="w-4 h-4 text-emerald-400" />
-              <span>🧸 Modo Niños</span>
-            </div>
-            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-black/50 text-amber-300 border border-amber-400/40 font-mono">
-              <Shield className="w-2.5 h-2.5" /> Salir
-            </span>
-          </button>
-        ) : (
-          <button
-            onClick={openKidsModal}
-            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 active:scale-95 group"
-          >
-            <div className="flex items-center gap-3">
-              <Baby className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span>🧸 Modo Niños</span>
-            </div>
-            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
-              SAFE
-            </span>
-          </button>
-        )}
-      </nav>
-
-      {/* Playlists Section - Mixtape Rack */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3 min-h-0">
-        <div className="flex items-center justify-between px-2 pt-1 border-b border-white/5 pb-1">
-          <span className="text-[10px] font-mono-retro font-bold uppercase tracking-widest text-zinc-400">
-            CINTAS & MIXTAPES
-          </span>
-          <button
-            onClick={openNewPlaylistModal}
-            className="p-1 rounded bg-white/5 hover:bg-white/10 text-amber-400 hover:text-white border border-white/5 transition"
-            title="Grabar nueva cinta / lista"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="space-y-1">
-          {playlists.map((playlist) => (
+          ) : (
             <button
-              key={playlist.id}
-              onClick={() => setActiveTab(`playlist:${playlist.id}`)}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-mono truncate transition border ${
-                activeTab === `playlist:${playlist.id}`
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'
-                  : 'text-zinc-400 hover:text-white bg-black/20 hover:bg-white/5 border-transparent'
-              }`}
+              onClick={openKidsModal}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:border-emerald-500/50 active:scale-95 group cursor-pointer"
             >
-              <ListMusic className="w-3.5 h-3.5 shrink-0 text-amber-500/70" />
-              <span className="truncate">{playlist.name}</span>
+              <div className="flex items-center gap-3">
+                <Baby className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span>🧸 Modo Niños</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                SAFE
+              </span>
             </button>
-          ))}
-          {playlists.length === 0 && (
-            <p className="text-[11px] text-zinc-500 px-2 italic font-mono">Sin cintas grabadas</p>
           )}
+        </nav>
+
+        {/* Playlists Section - Mixtape Rack */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-2 pt-1 border-b border-white/5 pb-1">
+            <span className="text-[10px] font-mono-retro font-bold uppercase tracking-widest text-zinc-400">
+              CINTAS & MIXTAPES
+            </span>
+            <button
+              onClick={openNewPlaylistModal}
+              className="p-1 rounded bg-white/5 hover:bg-white/10 text-amber-400 hover:text-white border border-white/5 transition cursor-pointer"
+              title="Grabar nueva cinta / lista"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {playlists.map((playlist) => (
+              <button
+                key={playlist.id}
+                onClick={() => setActiveTab(`playlist:${playlist.id}`)}
+                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-mono truncate transition border cursor-pointer ${
+                  activeTab === `playlist:${playlist.id}`
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-bold'
+                    : 'text-zinc-400 hover:text-white bg-black/20 hover:bg-white/5 border-transparent'
+                }`}
+              >
+                <ListMusic className="w-3.5 h-3.5 shrink-0 text-amber-500/70" />
+                <span className="truncate">{playlist.name}</span>
+              </button>
+            ))}
+            {playlists.length === 0 && (
+              <p className="text-[11px] text-zinc-500 px-2 italic font-mono">Sin cintas grabadas</p>
+            )}
+          </div>
+        </div>
+
+        {/* 80s Rock Cassette Deck in Lateral Sidebar */}
+        <div className="py-2">
+          <RetroTapeDeck
+            variant="sidebar"
+            onExpand={() => setFullScreenPlayerOpen(true)}
+          />
         </div>
       </div>
 
-      {/* 80s Rock Cassette Deck in Lateral Sidebar */}
-      <div className="py-2.5">
-        <RetroTapeDeck
-          variant="sidebar"
-          onExpand={() => setFullScreenPlayerOpen(true)}
-        />
-      </div>
-
-      {/* Settings & Auth Footer */}
-      <div className="pt-2 border-t border-white/5 space-y-1.5">
+      {/* Settings & Auth Footer - Permanently Anchored at Bottom */}
+      <div className="shrink-0 mt-auto pt-2 border-t border-white/10 space-y-1.5">
         {session?.role === 'admin' && (
           <button
             onClick={() => setAdminModalOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-mono-retro font-bold uppercase tracking-wider transition"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 text-xs font-mono-retro font-bold uppercase tracking-wider transition cursor-pointer"
           >
             <span className="flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-amber-400" />
@@ -194,7 +197,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {session ? (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-black/40 border border-white/10 text-xs font-mono">
+          <div className="flex items-center justify-between px-3 py-1 rounded-xl bg-black/40 border border-white/10 text-xs font-mono">
             <div className="flex items-center gap-2 min-w-0">
               <UserCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <div className="truncate">
@@ -204,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <button
               onClick={logout}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition shrink-0"
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition shrink-0 cursor-pointer"
               title="Cerrar sesión"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -213,7 +216,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : isTrialActive ? (
           <button
             onClick={() => setLoginModalOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-mono transition"
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-mono transition cursor-pointer"
           >
             <span className="flex items-center gap-1.5 font-bold">
               <Clock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
@@ -225,7 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <button
           onClick={openSyncModal}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono transition"
+          className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-mono transition cursor-pointer"
           title="Sincronizar listas y favoritos entre dispositivos con QR"
         >
           <span className="flex items-center gap-2 font-bold">
@@ -240,10 +243,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <button
           onClick={openSettingsModal}
-          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition"
+          className="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm font-semibold text-zinc-200 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 transition shadow-sm active:scale-98 cursor-pointer"
         >
-          <Settings className="w-4 h-4" />
-          <span>Ajustes & Nube</span>
+          <Settings className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>Ajustes & Configurar</span>
         </button>
       </div>
     </aside>

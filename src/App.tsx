@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, KeyRound, LogOut, ShieldCheck, QrCode, CheckCircle2, X } from 'lucide-react';
+import { Clock, KeyRound, LogOut, ShieldCheck, QrCode, CheckCircle2, X, Settings } from 'lucide-react';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -140,7 +140,7 @@ const AppContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsSyncModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/20 active:bg-amber-500/35 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5 transition"
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 active:bg-amber-500/35 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
                 title="Sincronizar con QR"
               >
                 <QrCode className="w-3.5 h-3.5" />
@@ -148,8 +148,17 @@ const AppContent: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                title="Abrir Ajustes"
+              >
+                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <span>Ajustes</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setLoginModalOpen(true)}
-                className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase tracking-wider transition"
+                className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase tracking-wider transition cursor-pointer"
               >
                 Activar Cuenta
               </button>
@@ -166,11 +175,20 @@ const AppContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsSyncModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/15 active:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
+                className="px-3 py-1.5 rounded-xl bg-amber-500/15 active:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
                 title="Sincronizar dispositivos por QR"
               >
                 <QrCode className="w-3.5 h-3.5" />
                 <span>QR</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                title="Abrir Ajustes"
+              >
+                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <span>Ajustes</span>
               </button>
               {session.role === 'admin' && (
                 <button
@@ -209,6 +227,7 @@ const AppContent: React.FC = () => {
               <HomeTab
                 onSearchGenre={handleSearchGenre}
                 onOpenSyncModal={() => setIsSyncModalOpen(true)}
+                onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
               />
             )}
 
@@ -216,6 +235,7 @@ const AppContent: React.FC = () => {
               <SearchTab
                 onSelectTrackForPlaylist={handleOpenAddToPlaylist}
                 onSelectMultipleForPlaylist={handleOpenAddMultipleToPlaylist}
+                onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
                 initialQuery={searchQuery}
               />
             )}
@@ -227,6 +247,7 @@ const AppContent: React.FC = () => {
                   setIsPlaylistModalOpen(true);
                 }}
                 openSyncModal={() => setIsSyncModalOpen(true)}
+                openSettingsModal={() => setIsSettingsModalOpen(true)}
                 selectedPlaylistId={selectedPlaylistId}
                 setSelectedPlaylistId={setSelectedPlaylistId}
               />
@@ -236,6 +257,7 @@ const AppContent: React.FC = () => {
               <LibraryTab
                 openNewPlaylistModal={() => {}}
                 openSyncModal={() => setIsSyncModalOpen(true)}
+                openSettingsModal={() => setIsSettingsModalOpen(true)}
                 selectedPlaylistId="favorites"
                 setSelectedPlaylistId={() => setActiveTab('library')}
                 isFavoritesView={true}
@@ -246,6 +268,7 @@ const AppContent: React.FC = () => {
               <LibraryTab
                 openNewPlaylistModal={() => {}}
                 openSyncModal={() => setIsSyncModalOpen(true)}
+                openSettingsModal={() => setIsSettingsModalOpen(true)}
                 selectedPlaylistId={playlistIdFromRoute}
                 setSelectedPlaylistId={() => setActiveTab('library')}
               />

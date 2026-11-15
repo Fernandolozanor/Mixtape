@@ -13,6 +13,7 @@ import {
   List,
   QrCode,
   GripVertical,
+  Settings,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -27,6 +28,7 @@ import type { Playlist } from '../types/music';
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
   openSyncModal?: () => void;
+  openSettingsModal?: () => void;
   selectedPlaylistId: string | null;
   setSelectedPlaylistId: (id: string | null) => void;
   isFavoritesView?: boolean;
@@ -35,6 +37,7 @@ interface LibraryTabProps {
 export const LibraryTab: React.FC<LibraryTabProps> = ({
   openNewPlaylistModal,
   openSyncModal,
+  openSettingsModal,
   selectedPlaylistId,
   setSelectedPlaylistId,
   isFavoritesView = false,
@@ -173,6 +176,17 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     <span>Editar / Borrar</span>
                   </>
                 )}
+              </button>
+            )}
+
+            {openSettingsModal && (
+              <button
+                onClick={openSettingsModal}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition cursor-pointer"
+                title="Abrir Ajustes"
+              >
+                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <span>Ajustes</span>
               </button>
             )}
 
@@ -643,11 +657,22 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           {openSyncModal && (
             <button
               onClick={openSyncModal}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
               title="Sincronizar listas y favoritos entre dispositivos con QR"
             >
               <QrCode className="w-4 h-4 text-amber-400" />
               <span>QR</span>
+            </button>
+          )}
+
+          {openSettingsModal && (
+            <button
+              onClick={openSettingsModal}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
+              title="Abrir Ajustes y Configuración"
+            >
+              <Settings className="w-4 h-4 text-amber-400" />
+              <span>Ajustes</span>
             </button>
           )}
 

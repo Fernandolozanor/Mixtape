@@ -96,6 +96,63 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         <h2 className="text-xl font-bold text-white mb-6">Ajustes de Mixtape</h2>
 
+        {/* Section 0: Text Size Selection (4 Tamaños con Auto-Organización) */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-white/5 to-transparent border border-amber-500/30 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <Type className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-white">Tamaño del Texto</h3>
+                <p className="text-xs text-zinc-400">Escala de lectura con auto-organización de interfaz</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+                {TEXT_SIZES.find((s) => s.id === (settings.textSize || 'medium'))?.name || 'Normal'}
+              </span>
+              {(settings.textSize && settings.textSize !== 'medium') && (
+                <button
+                  type="button"
+                  onClick={() => updateSettings({ textSize: 'medium' })}
+                  className="text-[10px] font-mono text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                >
+                  Restablecer
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            {TEXT_SIZES.map((opt) => {
+              const isSelected = (settings.textSize || 'medium') === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => updateSettings({ textSize: opt.id })}
+                  className={`p-3 rounded-xl border flex flex-col items-center justify-between gap-1.5 transition active:scale-95 text-center cursor-pointer ${
+                    isSelected
+                      ? 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
+                      : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <span className={`font-black font-stereo tracking-tight text-amber-400 ${opt.previewClass}`}>
+                    A
+                  </span>
+                  <div>
+                    <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-zinc-200'}`}>
+                      {opt.name}
+                    </p>
+                    <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                      {opt.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Admin Key Generator Shortcut (Only visible to Master Admin) */}
         {session?.role === 'admin' && (
           <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 flex items-center justify-between gap-3">
@@ -128,52 +185,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Section 0: Color Theme Selection */}
         <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
           <ThemeSelector />
-        </div>
-
-        {/* Section 0.1: Text Size Selection (4 Tamaños con Auto-Organización) */}
-        <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Type className="w-5 h-5 text-amber-400" />
-              <div>
-                <h3 className="text-sm font-semibold text-white">Tamaño del Texto</h3>
-                <p className="text-xs text-zinc-400">Escala visual con auto-organización de interfaz</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
-              {TEXT_SIZES.find((s) => s.id === (settings.textSize || 'medium'))?.name || 'Normal'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-            {TEXT_SIZES.map((opt) => {
-              const isSelected = (settings.textSize || 'medium') === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => updateSettings({ textSize: opt.id })}
-                  className={`p-3 rounded-xl border flex flex-col items-center justify-between gap-1.5 transition active:scale-95 text-center cursor-pointer ${
-                    isSelected
-                      ? 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
-                      : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <span className={`font-black font-stereo tracking-tight text-amber-400 ${opt.previewClass}`}>
-                    A
-                  </span>
-                  <div>
-                    <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-zinc-200'}`}>
-                      {opt.name}
-                    </p>
-                    <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
-                      {opt.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* Section 0.2: VU Meter Style Selection (Agujas Analógicas vs Luces Digitales) */}
