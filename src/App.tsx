@@ -22,6 +22,7 @@ import { AccessGateModal } from './components/AccessGateModal';
 import { AdminLicenseModal } from './components/AdminLicenseModal';
 import { RetroTapeDeck } from './components/RetroTapeDeck';
 import { ReggaetonPrankModal } from './components/ReggaetonPrankModal';
+import { SpotifyCsvTapeModal } from './components/SpotifyCsvTapeModal';
 import { isReggaetonTag, shouldTriggerReggaetonJoke } from './services/prankService';
 import type { Track } from './types/music';
 
@@ -29,6 +30,7 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('home');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [isSpotifyCsvModalOpen, setIsSpotifyCsvModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isKidsModalOpen, setIsKidsModalOpen] = useState(false);
@@ -99,6 +101,7 @@ const AppContent: React.FC = () => {
           setTrackToAdd(null);
           setIsPlaylistModalOpen(true);
         }}
+        openSpotifyCsvModal={() => setIsSpotifyCsvModalOpen(true)}
         openSettingsModal={() => setIsSettingsModalOpen(true)}
         openKidsModal={() => setIsKidsModalOpen(true)}
         openExitKidsModal={() => setIsParentalExitOpen(true)}
@@ -246,6 +249,7 @@ const AppContent: React.FC = () => {
                   setTrackToAdd(null);
                   setIsPlaylistModalOpen(true);
                 }}
+                openSpotifyCsvModal={() => setIsSpotifyCsvModalOpen(true)}
                 openSyncModal={() => setIsSyncModalOpen(true)}
                 openSettingsModal={() => setIsSettingsModalOpen(true)}
                 selectedPlaylistId={selectedPlaylistId}
@@ -256,6 +260,7 @@ const AppContent: React.FC = () => {
             {activeTab === 'favorites' && (
               <LibraryTab
                 openNewPlaylistModal={() => {}}
+                openSpotifyCsvModal={() => setIsSpotifyCsvModalOpen(true)}
                 openSyncModal={() => setIsSyncModalOpen(true)}
                 openSettingsModal={() => setIsSettingsModalOpen(true)}
                 selectedPlaylistId="favorites"
@@ -267,6 +272,7 @@ const AppContent: React.FC = () => {
             {isPlaylistRoute && playlistIdFromRoute && (
               <LibraryTab
                 openNewPlaylistModal={() => {}}
+                openSpotifyCsvModal={() => setIsSpotifyCsvModalOpen(true)}
                 openSyncModal={() => setIsSyncModalOpen(true)}
                 openSettingsModal={() => setIsSettingsModalOpen(true)}
                 selectedPlaylistId={playlistIdFromRoute}
@@ -321,6 +327,15 @@ const AppContent: React.FC = () => {
         }}
         trackToAdd={trackToAdd}
         tracksToAdd={tracksToAdd}
+      />
+
+      <SpotifyCsvTapeModal
+        isOpen={isSpotifyCsvModalOpen}
+        onClose={() => setIsSpotifyCsvModalOpen(false)}
+        onOpenPlaylist={(id) => {
+          setSelectedPlaylistId(id);
+          setActiveTab('library');
+        }}
       />
 
       <SettingsModal

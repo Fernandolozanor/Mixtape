@@ -14,6 +14,7 @@ import {
   QrCode,
   GripVertical,
   Settings,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -27,6 +28,7 @@ import type { Playlist } from '../types/music';
 
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
+  openSpotifyCsvModal?: () => void;
   openSyncModal?: () => void;
   openSettingsModal?: () => void;
   selectedPlaylistId: string | null;
@@ -36,6 +38,7 @@ interface LibraryTabProps {
 
 export const LibraryTab: React.FC<LibraryTabProps> = ({
   openNewPlaylistModal,
+  openSpotifyCsvModal,
   openSyncModal,
   openSettingsModal,
   selectedPlaylistId,
@@ -676,9 +679,20 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             </button>
           )}
 
+          {openSpotifyCsvModal && (
+            <button
+              onClick={openSpotifyCsvModal}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-stereo font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer shadow-md shadow-emerald-500/10"
+              title="Importar y grabar canciones desde un CSV de Spotify"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Spotify CSV</span>
+            </button>
+          )}
+
           <button
             onClick={openNewPlaylistModal}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl theme-btn text-sm active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl theme-btn text-sm active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>GRABAR CINTA +</span>
@@ -717,12 +731,23 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             <div className="p-10 text-center retro-tape-chassis rounded-3xl border border-white/10 text-zinc-400">
               <p className="font-rock text-xl text-white tracking-wider mb-1">LA PLETINA ESTÁ VACÍA</p>
               <p className="text-xs font-mono text-zinc-400">No has grabado ninguna cinta de casette todavía.</p>
-              <button
-                onClick={openNewPlaylistModal}
-                className="mt-4 px-5 py-2 rounded-xl theme-btn text-sm"
-              >
-                Grabar mi primera cinta
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+                <button
+                  onClick={openNewPlaylistModal}
+                  className="px-5 py-2 rounded-xl theme-btn text-sm cursor-pointer"
+                >
+                  Grabar cinta manual
+                </button>
+                {openSpotifyCsvModal && (
+                  <button
+                    onClick={openSpotifyCsvModal}
+                    className="px-5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold text-sm cursor-pointer flex items-center gap-2 transition active:scale-95 shadow-md shadow-emerald-500/10"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                    <span>Importar de Spotify (CSV)</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

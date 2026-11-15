@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Baby, Shield, KeyRound, LogOut, Clock, UserCheck, QrCode } from 'lucide-react';
+import { Compass, Search, Library, Heart, ListMusic, Settings, Plus, Radio, Baby, Shield, KeyRound, LogOut, Clock, UserCheck, QrCode, FileSpreadsheet } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -11,6 +11,7 @@ interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   openNewPlaylistModal: () => void;
+  openSpotifyCsvModal?: () => void;
   openSettingsModal: () => void;
   openKidsModal: () => void;
   openExitKidsModal: () => void;
@@ -21,6 +22,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
   openNewPlaylistModal,
+  openSpotifyCsvModal,
   openSettingsModal,
   openKidsModal,
   openExitKidsModal,
@@ -140,13 +142,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-[10px] font-mono-retro font-bold uppercase tracking-widest text-zinc-400">
               CINTAS & MIXTAPES
             </span>
-            <button
-              onClick={openNewPlaylistModal}
-              className="p-1 rounded bg-white/5 hover:bg-white/10 text-amber-400 hover:text-white border border-white/5 transition cursor-pointer"
-              title="Grabar nueva cinta / lista"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1">
+              {openSpotifyCsvModal && (
+                <button
+                  onClick={openSpotifyCsvModal}
+                  className="p-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 transition cursor-pointer"
+                  title="Importar y grabar desde Spotify CSV"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={openNewPlaylistModal}
+                className="p-1 rounded bg-white/5 hover:bg-white/10 text-amber-400 hover:text-white border border-white/5 transition cursor-pointer"
+                title="Grabar nueva cinta / lista"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1 max-h-40 overflow-y-auto">
