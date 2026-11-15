@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound, Gauge, Activity, RefreshCw, CheckCircle2, Type } from 'lucide-react';
+import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound, Gauge, Activity, RefreshCw, CheckCircle2, Type, Disc3 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useKidsMode } from '../context/KidsModeContext';
 import { useAuth } from '../context/AuthContext';
@@ -301,6 +301,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Abrir QR
             </button>
           </div>
+        </div>
+
+        {/* Section 1.5: Continuous Playback & Crossfade (Sin silencios) */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-transparent border border-pink-500/25 space-y-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Disc3
+                className={`w-5 h-5 text-pink-400 shrink-0 ${settings.crossfadeEnabled ? 'animate-spin' : ''}`}
+                style={{ animationDuration: '6s' }}
+              />
+              <div>
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  <span>Fundido Cruzado (Crossfade)</span>
+                  {settings.crossfadeEnabled ? (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/40 font-mono font-bold">
+                      {settings.crossfadeDuration || 5}s ON
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/10 text-zinc-400 font-mono">
+                      OFF
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Reproducción continua sin pausas solapando el final y el principio de las canciones
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle Switch */}
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={Boolean(settings.crossfadeEnabled)}
+                onChange={(e) => updateSettings({ crossfadeEnabled: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500 shadow-inner"></div>
+            </label>
+          </div>
+
+          {settings.crossfadeEnabled && (
+            <div className="pt-2 border-t border-white/10 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-300 font-medium">Tiempo de solape:</span>
+                <span className="font-mono font-bold text-pink-400 bg-pink-500/15 px-2.5 py-0.5 rounded-lg border border-pink-500/30">
+                  {settings.crossfadeDuration || 5} segundos
+                </span>
+              </div>
+
+              {/* Range slider */}
+              <input
+                type="range"
+                min="2"
+                max="12"
+                step="1"
+                value={settings.crossfadeDuration || 5}
+                onChange={(e) => updateSettings({ crossfadeDuration: parseInt(e.target.value, 10) })}
+                className="w-full h-2 bg-black/40 rounded-lg appearance-none cursor-pointer accent-pink-500"
+              />
+
+              {/* Quick Presets */}
+              <div className="grid grid-cols-4 gap-2 pt-1">
+                {[3, 5, 8, 10].map((sec) => (
+                  <button
+                    key={sec}
+                    type="button"
+                    onClick={() => updateSettings({ crossfadeDuration: sec })}
+                    className={`py-1.5 px-2 rounded-xl text-xs font-mono font-bold transition active:scale-95 border cursor-pointer ${
+                      (settings.crossfadeDuration || 5) === sec
+                        ? 'bg-pink-500/25 text-pink-300 border-pink-400 shadow-md ring-1 ring-pink-400/40'
+                        : 'bg-black/25 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {sec}s
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-[11px] text-zinc-400 italic">
+                💡 Al faltar {settings.crossfadeDuration || 5} segundos para acabar la canción, la siguiente entrará suavemente enlazada sin cortes ni silencios.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Section 2: Audio & Ads Controls */}

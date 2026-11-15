@@ -40,6 +40,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   activeInstanceIndex: 0,
   vuMeterStyle: 'analog',
   textSize: 'medium',
+  crossfadeEnabled: false,
+  crossfadeDuration: 5,
 };
 
 const LibraryContext = createContext<LibraryContextType | null>(null);
@@ -87,6 +89,17 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem('pulse_text_size', size);
   }, [settings.textSize]);
 
+  // Synchronize initial audio settings on startup
+  useEffect(() => {
+    if (settings.skipSponsors !== undefined) {
+      audioEngine.setSkipSponsors(settings.skipSponsors);
+    }
+    audioEngine.setCrossfade(
+      settings.crossfadeEnabled ?? false,
+      settings.crossfadeDuration ?? 5
+    );
+  }, []);
+
   // Subscribe to SyncService state & live remote updates
   useEffect(() => {
     const unsubState = syncService.onStateChange((info) => {
@@ -103,6 +116,15 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
           localStorage.setItem('pulse_settings', JSON.stringify(updated));
           if (merged.settingsBundle!.userSettings?.skipSponsors !== undefined) {
             audioEngine.setSkipSponsors(merged.settingsBundle!.userSettings.skipSponsors);
+          }
+          if (
+            merged.settingsBundle!.userSettings?.crossfadeEnabled !== undefined ||
+            merged.settingsBundle!.userSettings?.crossfadeDuration !== undefined
+          ) {
+            audioEngine.setCrossfade(
+              updated.crossfadeEnabled ?? false,
+              updated.crossfadeDuration ?? 5
+            );
           }
           return updated;
         });
@@ -211,6 +233,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.setItem('pulse_settings', JSON.stringify(updated));
       if (newSettings.skipSponsors !== undefined) {
         audioEngine.setSkipSponsors(newSettings.skipSponsors);
+      }
+      if (newSettings.crossfadeEnabled !== undefined || newSettings.crossfadeDuration !== undefined) {
+        audioEngine.setCrossfade(
+          newSettings.crossfadeEnabled ?? updated.crossfadeEnabled ?? false,
+          newSettings.crossfadeDuration ?? updated.crossfadeDuration ?? 5
+        );
       }
       syncService.markSettingsUpdated();
       syncService.schedulePush(playlistsRef.current, likedRef.current);

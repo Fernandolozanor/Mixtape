@@ -22,7 +22,7 @@ interface PlayerContextType {
   deckActivationTrigger: number;
   isQueueOpen: boolean;
   isLyricsOpen: boolean;
-  playTrack: (track: Track, newQueue?: Track[]) => Promise<void>;
+  playTrack: (track: Track, newQueue?: Track[], isCrossfade?: boolean) => Promise<void>;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -88,7 +88,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     audioEngine.onTrackEnd(() => {
-      handleNextTrack();
+      handleNextTrack(false);
+    });
+
+    audioEngine.onCrossfade(() => {
+      handleNextTrack(true);
     });
 
     audioEngine.onError((msg) => {
@@ -137,8 +141,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearTimeout(timer);
   }, [isPlaying, currentTrack?.id, playTriggerCount]);
 
-  const playTrack = async (track: Track, newQueue?: Track[]) => {
-    setIsLoading(true);
+  const playTrack = async (track: Track, newQueue?: Track[], isCrossfade: boolean = false) => {
+    if (!isCrossfade) {
+      setIsLoading(true);
+    }
     setCurrentTrack(track);
     setPlayTriggerCount((c) => c + 1);
 
@@ -165,7 +171,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setLyrics(lrc);
     });
 
-    const success = await audioEngine.playTrack(track);
+    const success = await audioEngine.playTrack(track, isCrossfade);
     setIsLoading(false);
     setIsPlaying(success);
 
@@ -185,14 +191,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const handleNextTrack = () => {
+  const handleNextTrack = (isCrossfade: boolean = false) => {
     const q = queueRef.current;
     const curIdx = queueIndexRef.current;
     const rMode = repeatModeRef.current;
 
     if (rMode === 'one' && currentTrack) {
-      audioEngine.seek(0);
-      audioEngine.play();
+      if (isCrossfade) {
+        playTrack(currentTrack, undefined, true);
+      } else {
+        audioEngine.seek(0);
+        audioEngine.play();
+      }
       return;
     }
 
@@ -204,11 +214,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     if (nextIdx < q.length) {
-      playTrack(q[nextIdx]);
+      playTrack(q[nextIdx], undefined, isCrossfade);
     } else if (rMode === 'all' || q.length > 1) {
-      playTrack(q[0]);
+      playTrack(q[0], undefined, isCrossfade);
     } else {
-      setIsPlaying(false);
+      if (!isCrossfade) {
+        setIsPlaying(false);
+      }
     }
   };
 

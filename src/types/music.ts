@@ -51,6 +51,8 @@ export interface UserSettings {
   activeInstanceIndex: number;
   vuMeterStyle?: 'analog' | 'led';
   textSize?: TextSizeType;
+  crossfadeEnabled?: boolean;
+  crossfadeDuration?: number; // in seconds (e.g. 2 - 12)
   firebaseConfig?: {
     apiKey: string;
     authDomain: string;
