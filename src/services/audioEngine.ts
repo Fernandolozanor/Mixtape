@@ -70,6 +70,7 @@ class AudioEngine {
   private silentBlobUrl: string | null = null;
   private preloadAudio: HTMLAudioElement | null = null;
   private preloadedTrackId: string | null = null;
+  private wakeLock: any = null;
 
   // Real Web Audio API Analyser for stereo peak metering
   private audioContext: AudioContext | null = null;
@@ -246,6 +247,7 @@ class AudioEngine {
           this.audioContext.resume().catch(() => {});
         }
         if (this.shouldBePlaying) {
+          this.requestWakeLock();
           if (!this.isUsingYouTube && this.audio.paused) {
             this.audio.play().catch(() => {});
           } else if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
@@ -256,6 +258,35 @@ class AudioEngine {
         }
       }
     });
+  }
+
+  /**
+   * Screen Wake Lock API: Prevents mobile & desktop displays from going to sleep or locking automatically
+   * while audio playback is active.
+   */
+  private async requestWakeLock() {
+    if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
+    try {
+      if (!this.wakeLock) {
+        this.wakeLock = await (navigator as any).wakeLock.request('screen');
+        this.wakeLock.addEventListener('release', () => {
+          this.wakeLock = null;
+        });
+      }
+    } catch {
+      // Ignored (e.g. battery saver mode)
+    }
+  }
+
+  private releaseWakeLock() {
+    if (this.wakeLock) {
+      try {
+        this.wakeLock.release();
+      } catch {
+        // Ignored
+      }
+      this.wakeLock = null;
+    }
   }
 
   private keepBackgroundAudioAlive() {
@@ -375,6 +406,7 @@ class AudioEngine {
     });
     this.audio.addEventListener('ended', () => {
       this.shouldBePlaying = false;
+      this.releaseWakeLock();
       this.stopBackgroundAudioAnchor();
       this.notifyState();
       this.onTrackEndCallbacks.forEach((cb) => cb());
@@ -473,6 +505,17 @@ class AudioEngine {
           events: {
             onReady: () => {
               this.ytPlayerReady = true;
+              try {
+                const iframe = document.querySelector('#pulse-yt-container iframe') as HTMLIFrameElement;
+                if (iframe) {
+                  iframe.setAttribute(
+                    'allow',
+                    'autoplay; encrypted-media; picture-in-picture; media-playback-while-not-visible'
+                  );
+                }
+              } catch {
+                // Ignored
+              }
               if (this.pendingTrack) {
                 const track = this.pendingTrack;
                 this.pendingTrack = null;
@@ -611,6 +654,7 @@ class AudioEngine {
 
     if (state === 0) {
       this.shouldBePlaying = false;
+      this.releaseWakeLock();
       this.stopBackgroundAudioAnchor();
       if ('mediaSession' in navigator) {
         navigator.mediaSession.playbackState = 'none';
@@ -811,6 +855,7 @@ class AudioEngine {
   public async playTrack(track: Track): Promise<boolean> {
     this.currentTrack = track;
     this.shouldBePlaying = true;
+    this.requestWakeLock();
     this.keepBackgroundAudioAlive();
     this.updateMediaSessionMetadata(track);
     if ('mediaSession' in navigator) {
@@ -943,6 +988,7 @@ class AudioEngine {
 
   public play(): Promise<void> {
     this.shouldBePlaying = true;
+    this.requestWakeLock();
     this.keepBackgroundAudioAlive();
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume().catch(() => {});
@@ -961,6 +1007,7 @@ class AudioEngine {
 
   public pause(): void {
     this.shouldBePlaying = false;
+    this.releaseWakeLock();
     this.stopBackgroundAudioAnchor();
     if ('mediaSession' in navigator) {
       navigator.mediaSession.playbackState = 'paused';
