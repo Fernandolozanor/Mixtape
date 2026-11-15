@@ -23,7 +23,7 @@ import { recommendationService } from '../services/recommendationService';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
-import { audioEngine } from '../services/audioEngine';
+import { SourceBadge } from './SourceBadge';
 import { RadioTunerDial } from './RadioTunerDial';
 
 const GENRE_TAGS = [
@@ -215,33 +215,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   const getSourceBadge = (source: AudioSourceType) => {
-    switch (source) {
-      case 'youtube':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-            <span>📺 YouTube</span>
-          </span>
-        );
-      case 'audius':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-[0_0_6px_rgba(6,182,212,0.3)]">
-            <span>🎧 Audio Nativo (Pantalla Apagada)</span>
-          </span>
-        );
-      default:
-        return (
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border"
-            style={{
-              backgroundColor: currentTheme.badgeBg,
-              color: currentTheme.badgeText,
-              borderColor: currentTheme.badgeBorder,
-            }}
-          >
-            {audioEngine.getSourceLabel(source)}
-          </span>
-        );
-    }
+    return <SourceBadge source={source} size="sm" />;
   };
 
   return (

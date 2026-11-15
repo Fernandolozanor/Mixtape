@@ -19,11 +19,11 @@ import {
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
-import { audioEngine } from '../services/audioEngine';
 import { LyricsView } from './LyricsView';
 import { QueueSheet } from './QueueSheet';
 import { RetroTapeDeck } from './RetroTapeDeck';
 import { MarqueeTitle } from './MarqueeTitle';
+import { SourceBadge } from './SourceBadge';
 import { Disc3, Gauge } from 'lucide-react';
 import { bpmService } from '../services/bpmService';
 
@@ -107,19 +107,10 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         </button>
 
         <div className="flex flex-col items-center">
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-            FUENTE DE REPRODUCCIÓN
+          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+            FUENTE DE AUDIO
           </span>
-          <span
-            className="text-[11px] sm:text-xs font-bold px-2.5 sm:px-3 py-0.5 rounded-full mt-0.5 border"
-            style={{
-              backgroundColor: currentTheme.badgeBg,
-              color: currentTheme.badgeText,
-              borderColor: currentTheme.badgeBorder,
-            }}
-          >
-            {audioEngine.getSourceLabel(currentTrack.source)}
-          </span>
+          <SourceBadge source={currentTrack.source} size="md" />
         </div>
 
         <button

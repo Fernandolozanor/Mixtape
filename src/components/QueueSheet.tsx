@@ -1,6 +1,7 @@
 import React from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { Trash2, Music2 } from 'lucide-react';
+import { SourceBadge } from './SourceBadge';
 
 export const QueueSheet: React.FC = () => {
   const { queue, queueIndex, playTrack, removeFromQueue } = usePlayer();
@@ -47,7 +48,11 @@ export const QueueSheet: React.FC = () => {
                 >
                   {track.title}
                 </p>
-                <p className="text-xs text-zinc-400 truncate">{track.artist}</p>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                  <span className="truncate">{track.artist}</span>
+                  <span className="text-zinc-600">•</span>
+                  <SourceBadge source={track.source} size="xs" />
+                </div>
               </div>
             </div>
 

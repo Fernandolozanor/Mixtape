@@ -20,6 +20,7 @@ import {
   type FeaturedCollection,
 } from '../services/recommendationService';
 import { RpmPlaylistGenerator } from './RpmPlaylistGenerator';
+import { SourceBadge } from './SourceBadge';
 
 interface HomeTabProps {
   onSearchGenre: (genre: string) => void;
@@ -209,9 +210,11 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal
                             >
                               {track.title}
                             </p>
-                            <p className="text-xs text-zinc-400 truncate">
-                              {track.artist}
-                            </p>
+                            <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                              <span className="truncate">{track.artist}</span>
+                              <span className="text-zinc-600">•</span>
+                              <SourceBadge source={track.source} size="xs" />
+                            </div>
                           </div>
                         </div>
 

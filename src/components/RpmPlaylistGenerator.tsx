@@ -14,6 +14,7 @@ import type { Track } from '../types/music';
 import { bpmService, RPM_ZONES, type RpmPreset } from '../services/bpmService';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
+import { SourceBadge } from './SourceBadge';
 
 export const RpmPlaylistGenerator: React.FC = () => {
   const { playTrack, currentTrack, isPlaying, setFullScreenPlayerOpen } = usePlayer();
@@ -316,7 +317,11 @@ export const RpmPlaylistGenerator: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-white truncate">{track.title}</p>
-                      <p className="text-[10px] text-zinc-400 truncate">{track.artist}</p>
+                      <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 truncate">
+                        <span className="truncate">{track.artist}</span>
+                        <span className="text-zinc-600">•</span>
+                        <SourceBadge source={track.source} size="xs" />
+                      </div>
                     </div>
                   </div>
 

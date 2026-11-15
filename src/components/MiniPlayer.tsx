@@ -3,8 +3,8 @@ import { Play, Pause, SkipBack, SkipForward, Heart, Loader2, Disc3 } from 'lucid
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
-import { audioEngine } from '../services/audioEngine';
 import { MarqueeTitle } from './MarqueeTitle';
+import { SourceBadge } from './SourceBadge';
 
 export const MiniPlayer: React.FC = () => {
   const {
@@ -27,7 +27,6 @@ export const MiniPlayer: React.FC = () => {
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const liked = isLiked(currentTrack.id);
-  const sourceLabel = audioEngine.getSourceLabel(currentTrack.source);
 
   return (
     <div
@@ -77,15 +76,7 @@ export const MiniPlayer: React.FC = () => {
                 {currentTrack.artist}
               </span>
               <span className={isSteel ? 'text-slate-700 font-bold' : 'text-zinc-600'}>•</span>
-              <span
-                className={`text-[10px] font-mono-retro font-bold px-1.5 py-0.2 rounded border ${
-                  isSteel
-                    ? 'bg-emerald-950/20 text-emerald-900 border-emerald-700/40'
-                    : 'bg-black/50 text-emerald-400 border-emerald-500/30'
-                }`}
-              >
-                {sourceLabel}
-              </span>
+              <SourceBadge source={currentTrack.source} size="xs" />
             </div>
           </div>
         </div>

@@ -616,7 +616,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               fill="#52525b"
               letterSpacing="1.5"
             >
-              STEREO
+              STEREO • {(currentTrack?.source || 'YOUTUBE').toUpperCase()}
             </text>
 
             {/* Spindle hole grommet in the exact center */}
@@ -814,7 +814,9 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
 
           {/* Dolby NR & Tape Type Silkscreen Label */}
           <div className="text-right">
-            <p className="text-[8px] font-bold text-zinc-400 tracking-wider">DOLBY B-C NR</p>
+            <p className="text-[8px] font-bold text-zinc-400 tracking-wider">
+              DOLBY B-C NR • {(currentTrack?.source || 'YOUTUBE').toUpperCase()}
+            </p>
             <p className="text-[9px] font-mono text-amber-400/90 font-semibold truncate max-w-[90px]">
               {currentTrack ? currentTrack.title : 'NO TAPE'}
             </p>

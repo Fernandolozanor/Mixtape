@@ -780,19 +780,20 @@ class AudioEngine {
     });
   }
 
-  public getSourceLabel(source: string): string {
-    if (!this.isUsingYouTube && this.currentTrack?.source === 'youtube') {
-      return 'Audio Directo (Sin Anuncios)';
-    }
-    switch (source) {
+  public getSourceLabel(source?: string): string {
+    const norm = (source || 'youtube').toLowerCase();
+    switch (norm) {
       case 'youtube':
         return 'YouTube';
       case 'audius':
-        return 'Audius (Libre Completa)';
+        return 'Audius';
       case 'radio':
-        return 'Radio en Vivo';
+        return 'Radio';
+      case 'custom':
+      case 'local':
+        return 'Archivo Local';
       default:
-        return 'Audio Directo';
+        return 'YouTube';
     }
   }
 

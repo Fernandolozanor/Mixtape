@@ -17,11 +17,11 @@ import {
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
-import { audioEngine } from '../services/audioEngine';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
 import { bpmService } from '../services/bpmService';
+import { SourceBadge } from './SourceBadge';
 import type { Playlist } from '../types/music';
 
 interface LibraryTabProps {
@@ -263,9 +263,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     >
                       {track.title}
                     </p>
-                    <p className="text-xs text-zinc-400 truncate">
-                      {track.artist} • {audioEngine.getSourceLabel(track.source)}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                      <span className="truncate">{track.artist}</span>
+                      <span className="text-zinc-600">•</span>
+                      <SourceBadge source={track.source} size="xs" />
+                    </div>
                   </div>
                 </div>
 
@@ -530,9 +532,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     >
                       {track.title}
                     </p>
-                    <p className="text-xs text-zinc-400 truncate">
-                      {track.artist} • {audioEngine.getSourceLabel(track.source)}
-                    </p>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                      <span className="truncate">{track.artist}</span>
+                      <span className="text-zinc-600">•</span>
+                      <SourceBadge source={track.source} size="xs" />
+                    </div>
                   </div>
                 </div>
 

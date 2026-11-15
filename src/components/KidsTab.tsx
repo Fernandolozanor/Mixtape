@@ -5,6 +5,7 @@ import { useKidsMode } from '../context/KidsModeContext';
 import { KIDS_STATIONS, ALL_KIDS_TRACKS, type KidsStation } from '../data/kidsAnthology';
 import type { Track } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
+import { SourceBadge } from './SourceBadge';
 
 interface KidsTabProps {
   onOpenExitModal: () => void;
@@ -342,9 +343,11 @@ export const KidsTab: React.FC<KidsTabProps> = ({ onOpenExitModal }) => {
                 >
                   {track.title}
                 </h3>
-                <p className="text-xs text-zinc-400 truncate mt-0.5 font-medium">
-                  {track.artist}
-                </p>
+                <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate mt-0.5 font-medium">
+                  <span className="truncate">{track.artist}</span>
+                  <span className="text-zinc-600">•</span>
+                  <SourceBadge source={track.source} size="xs" />
+                </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[10px] font-mono font-bold text-zinc-500">
                     {Math.floor(track.duration / 60)}:

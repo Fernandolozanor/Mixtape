@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Play, Disc3, Trash2 } from 'lucide-react';
 import type { Track } from '../types/music';
+import { SourceBadge } from './SourceBadge';
 
 interface VinylRecordCardProps {
   track: Track;
@@ -100,10 +101,13 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
                 {track.title}
               </p>
 
-              {/* Artist Name */}
+              {/* Artist Name & Source Stamp */}
               <p className="text-[6.5px] sm:text-[7.5px] font-mono font-bold text-zinc-700 truncate max-w-full px-1 mt-0.5">
                 {track.artist}
               </p>
+              <span className="text-[5.5px] sm:text-[6px] font-mono uppercase font-black tracking-widest text-red-700/80 mt-0.5">
+                {(track.source || 'YouTube')}
+              </span>
             </div>
           </div>
         </div>
@@ -212,7 +216,11 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
           {track.title}
         </h4>
         <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-0.5">
-          <p className="truncate mr-2 font-medium">{track.artist || 'Artista Desconocido'}</p>
+          <div className="flex items-center gap-1.5 truncate mr-2">
+            <span className="truncate font-medium">{track.artist || 'Artista Desconocido'}</span>
+            <span className="text-zinc-600">•</span>
+            <SourceBadge source={track.source} size="xs" />
+          </div>
           <span className="shrink-0 font-mono text-[10px] text-zinc-500">
             {formatDuration(track.duration)}
           </span>
