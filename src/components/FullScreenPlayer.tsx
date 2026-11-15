@@ -97,7 +97,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       </div>
 
       {/* Top Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-1.5 sm:py-2.5 shrink-0">
         <button
           onClick={() => setFullScreenPlayerOpen(false)}
           className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition active:scale-95"
@@ -123,7 +123,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       </header>
 
       {/* Middle Interactive Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-2 sm:px-6 min-h-0 overflow-hidden">
+      <main className="flex-1 flex flex-col items-center justify-center px-2 sm:px-6 min-h-0 overflow-hidden pb-1 sm:pb-3">
         {centerView === 'deck' && (
           <div className="w-full max-w-xl my-auto px-1 sm:px-2 animate-in fade-in duration-300">
             <RetroTapeDeck variant="fullscreen" />
@@ -144,9 +144,9 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
       </main>
 
       {/* Bottom Controls Area */}
-      <footer className="w-full max-w-xl mx-auto px-3.5 sm:px-6 pb-2.5 sm:pb-5 pt-1 space-y-1.5 sm:space-y-2.5 shrink-0">
+      <footer className="w-full max-w-xl mx-auto px-3.5 sm:px-6 pb-3 sm:pb-6 pt-0 space-y-2 sm:space-y-3 shrink-0">
         {/* Title, Artist and Heart */}
-        <div className="flex items-center justify-between gap-3 px-0.5">
+        <div className="flex items-center justify-between gap-3 px-0.5 mb-0.5">
           <div className="overflow-hidden flex-1 min-w-0">
             <MarqueeTitle
               text={currentTrack.title}
@@ -176,8 +176,8 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         </div>
 
         {/* Scrubber Progress Bar */}
-        <div className="space-y-0.5">
-          <div className="relative group flex items-center">
+        <div className="w-full py-0.5">
+          <div className="relative group flex items-center h-6 sm:h-7 px-0.5">
             <input
               type="range"
               min={0}
@@ -187,7 +187,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               className="retro-slider"
             />
           </div>
-          <div className="flex justify-between text-[11px] sm:text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider px-0.5">
+          <div className="flex justify-between text-[11px] sm:text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider px-1 mt-2.5">
             <span>{formatTime(currentTime)}</span>
             <span className="text-zinc-500 font-mono text-[9px] sm:text-[10px] hidden xs:inline">HI-FI STEREO</span>
             <span>-{formatTime(remainingTime)}</span>
@@ -195,7 +195,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         </div>
 
         {/* Playback Controls - Vintage 80s Hi-Fi Mechanical Key Deck */}
-        <div className="flex items-center justify-between py-0.5 px-1">
+        <div className="flex items-center justify-between py-1 px-1">
           {/* Shuffle Button - Mechanical Toggle */}
           <button
             onClick={toggleShuffle}
@@ -358,7 +358,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             VOL
           </span>
 
-          <div className="relative flex-1 flex items-center py-1">
+          <div className="relative flex-1 flex items-center h-6 sm:h-7 py-0.5">
             <input
               type="range"
               min={0}
@@ -405,7 +405,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               PITCH
             </span>
 
-            <div className="relative flex-1 flex items-center py-1">
+            <div className="relative flex-1 flex items-center h-6 sm:h-7 py-0.5">
               <input
                 type="range"
                 min={0.85}
