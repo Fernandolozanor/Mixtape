@@ -40,6 +40,8 @@ export interface SponsorSegment {
   category: string;
 }
 
+export type TextSizeType = 'small' | 'medium' | 'large' | 'xlarge';
+
 export interface UserSettings {
   skipSponsors: boolean;
   audioQuality: 'auto' | 'high' | 'medium' | 'low';
@@ -48,6 +50,7 @@ export interface UserSettings {
   cacheSongsOffline: boolean;
   activeInstanceIndex: number;
   vuMeterStyle?: 'analog' | 'led';
+  textSize?: TextSizeType;
   firebaseConfig?: {
     apiKey: string;
     authDomain: string;

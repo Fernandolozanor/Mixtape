@@ -39,6 +39,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   cacheSongsOffline: true,
   activeInstanceIndex: 0,
   vuMeterStyle: 'analog',
+  textSize: 'medium',
 };
 
 const LibraryContext = createContext<LibraryContextType | null>(null);
@@ -78,6 +79,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     likedRef.current = likedTracks;
   }, [likedTracks]);
+
+  // Synchronize Text Size to document root attribute and localStorage
+  useEffect(() => {
+    const size = settings.textSize || 'medium';
+    document.documentElement.setAttribute('data-text-size', size);
+    localStorage.setItem('pulse_text_size', size);
+  }, [settings.textSize]);
 
   // Subscribe to SyncService state & live remote updates
   useEffect(() => {

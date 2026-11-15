@@ -85,6 +85,10 @@ function setupPWAUpdateSync() {
   });
 }
 
+// Inicializar escala de tamaño de texto antes de pintar
+const initialTextSize = localStorage.getItem('pulse_text_size') || 'medium';
+document.documentElement.setAttribute('data-text-size', initialTextSize);
+
 setupPWAUpdateSync();
 
 createRoot(document.getElementById('root')!).render(

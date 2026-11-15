@@ -38,6 +38,32 @@
   }
 }
 
+/* 4 Responsive & Accessible Text Size Modes */
+html[data-text-size="small"] {
+  font-size: 87.5%; /* ~14px base - Compacto */
+}
+
+html[data-text-size="medium"],
+html:not([data-text-size]) {
+  font-size: 100%; /* 16px base - Estándar / Normal */
+}
+
+html[data-text-size="large"] {
+  font-size: 112.5%; /* ~18px base - Grande */
+}
+
+html[data-text-size="xlarge"] {
+  font-size: 125%; /* 20px base - Muy Grande / Accesible */
+}
+
+/* Fluid auto-reorganization for arbitrary micro-labels */
+html[data-text-size="large"] [class*="text-["] {
+  font-size: 1.08em;
+}
+html[data-text-size="xlarge"] [class*="text-["] {
+  font-size: 1.18em;
+}
+
 /* Safe area utilities outside @layer base so Tailwind pt-* utilities don't override them on mobile */
 .safe-top {
   padding-top: max(3.25rem, calc(env(safe-area-inset-top, 0px) + 0.85rem)) !important;
