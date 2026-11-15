@@ -25,6 +25,8 @@ import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { SourceBadge } from './SourceBadge';
 import { RadioTunerDial } from './RadioTunerDial';
+import { ReggaetonPrankModal } from './ReggaetonPrankModal';
+import { isReggaetonTag, shouldTriggerReggaetonJoke } from '../services/prankService';
 
 const GENRE_TAGS = [
   'Éxitos Globales',
@@ -63,10 +65,24 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchLikedSuccess, setBatchLikedSuccess] = useState(false);
+  const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
   const { playTrack, currentTrack } = usePlayer();
   const { isLiked, toggleLike, addMultipleToLiked } = useLibrary();
   const { currentTheme } = useTheme();
+
+  const handleSelectGenreTag = (tag: string) => {
+    const continueAction = () => {
+      setQuery(tag);
+      handleSearch(tag);
+    };
+
+    if (isReggaetonTag(tag) && shouldTriggerReggaetonJoke()) {
+      setPrankPendingAction(() => continueAction);
+    } else {
+      continueAction();
+    }
+  };
 
   const handleSearch = async (
     searchTerm: string,
@@ -386,11 +402,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             {GENRE_TAGS.map((tag) => (
               <button
                 key={tag}
-                onClick={() => {
-                  setQuery(tag);
-                  handleSearch(tag);
-                }}
-                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium text-zinc-300 hover:text-white transition"
+                onClick={() => handleSelectGenreTag(tag)}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium text-zinc-300 hover:text-white transition cursor-pointer"
               >
                 {tag}
               </button>
@@ -705,6 +718,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         </div>
       )}
+      {/* Reggaeton Prank Modal */}
+      <ReggaetonPrankModal
+        isOpen={!!prankPendingAction}
+        onAccept={() => {
+          const action = prankPendingAction;
+          setPrankPendingAction(null);
+          if (action) action();
+        }}
+      />
     </div>
   );
 };

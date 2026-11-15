@@ -21,6 +21,8 @@ import { ParentalExitModal } from './components/ParentalExitModal';
 import { AccessGateModal } from './components/AccessGateModal';
 import { AdminLicenseModal } from './components/AdminLicenseModal';
 import { RetroTapeDeck } from './components/RetroTapeDeck';
+import { ReggaetonPrankModal } from './components/ReggaetonPrankModal';
+import { isReggaetonTag, shouldTriggerReggaetonJoke } from './services/prankService';
 import type { Track } from './types/music';
 
 const AppContent: React.FC = () => {
@@ -34,6 +36,7 @@ const AppContent: React.FC = () => {
   const [trackToAdd, setTrackToAdd] = useState<Track | null>(null);
   const [tracksToAdd, setTracksToAdd] = useState<Track[] | null>(null);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
   const { currentTrack, isFullScreenPlayerOpen, setFullScreenPlayerOpen } = usePlayer();
   const { syncState, dismissJustLinkedBanner } = useLibrary();
@@ -67,8 +70,16 @@ const AppContent: React.FC = () => {
   };
 
   const handleSearchGenre = (genre: string) => {
-    setSearchQuery(genre);
-    setActiveTab('search');
+    const continueAction = () => {
+      setSearchQuery(genre);
+      setActiveTab('search');
+    };
+
+    if (isReggaetonTag(genre) && shouldTriggerReggaetonJoke()) {
+      setPrankPendingAction(() => continueAction);
+    } else {
+      continueAction();
+    }
   };
 
   // Check if activeTab points to a playlist
@@ -314,6 +325,16 @@ const AppContent: React.FC = () => {
       {/* Access Control & Admin License Generator Modals */}
       <AccessGateModal />
       <AdminLicenseModal />
+
+      {/* Reggaeton Joke / Prank Modal */}
+      <ReggaetonPrankModal
+        isOpen={!!prankPendingAction}
+        onAccept={() => {
+          const action = prankPendingAction;
+          setPrankPendingAction(null);
+          if (action) action();
+        }}
+      />
     </div>
   );
 };

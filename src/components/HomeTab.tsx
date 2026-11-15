@@ -9,6 +9,7 @@ import {
   Radio,
   Clock,
   QrCode,
+  Sparkles,
 } from 'lucide-react';
 import type { Track } from '../types/music';
 import { usePlayer } from '../context/PlayerContext';
@@ -21,6 +22,17 @@ import {
 } from '../services/recommendationService';
 import { RpmPlaylistGenerator } from './RpmPlaylistGenerator';
 import { SourceBadge } from './SourceBadge';
+
+const RECOMMENDED_TAGS = [
+  'Rock Clásico',
+  'Reggaeton & Urbano',
+  'Éxitos Globales',
+  'Pop en Español',
+  'Hard Rock 80s',
+  'Lo-Fi Chill',
+  'Baladas Legendarias',
+  'Chill & Relax',
+];
 
 interface HomeTabProps {
   onSearchGenre: (genre: string) => void;
@@ -244,6 +256,27 @@ export const HomeTab: React.FC<HomeTabProps> = ({ onSearchGenre, onOpenSyncModal
             ))}
           </div>
         )}
+      </div>
+
+      {/* Recommended Tags Bar */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+            Etiquetas recomendadas
+          </h3>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {RECOMMENDED_TAGS.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => onSearchGenre(tag)}
+              className="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-300 hover:text-white transition active:scale-95 cursor-pointer"
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Featured Collection Cards (Personalized based on tastes & searches) */}
