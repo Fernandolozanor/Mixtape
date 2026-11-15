@@ -50,6 +50,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   initialQuery = '',
 }) => {
   const [query, setQuery] = useState(initialQuery);
+  const [filterSource, setFilterSource] = useState<AudioSourceType | 'all'>('all');
   const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title'>('views');
   const [results, setResults] = useState<Track[]>([]);
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
@@ -69,7 +70,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   const handleSearch = async (
     searchTerm: string,
-    filter: AudioSourceType | 'all' = 'all'
+    filter: AudioSourceType | 'all' = filterSource
   ) => {
     const term = searchTerm.trim();
     if (!term) return;
@@ -94,7 +95,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
-      const additionalTracks = await streamResolver.search(query, 'all', nextPage);
+      const additionalTracks = await streamResolver.search(query, filterSource, nextPage);
       if (additionalTracks.length > 0) {
         setResults((prev) => {
           const existingIds = new Set(prev.map((t) => t.id));
@@ -218,13 +219,13 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       case 'youtube':
         return (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-            YouTube
+            <span>📺 YouTube</span>
           </span>
         );
       case 'audius':
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-            Audius (Libre)
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 shadow-[0_0_6px_rgba(6,182,212,0.3)]">
+            <span>🎧 Audio Nativo (Pantalla Apagada)</span>
           </span>
         );
       default:
@@ -330,6 +331,50 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             className="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 px-3 sm:px-5 py-1.5 rounded-lg sm:rounded-xl text-amber-300 hover:text-white font-rock text-xs sm:text-base tracking-wider transition disabled:opacity-50 theme-btn active:scale-95"
           >
             {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : 'BUSCAR'}
+          </button>
+        </div>
+
+        {/* Source Filter Switcher: All vs Audio de Fondo (Pantalla Apagada) vs YouTube */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs">
+          <span className="font-mono-retro text-[9px] text-zinc-400 uppercase font-bold mr-1">Fuente:</span>
+          <button
+            onClick={() => {
+              setFilterSource('all');
+              if (query.trim()) handleSearch(query, 'all');
+            }}
+            className={`px-2.5 py-1 rounded-lg font-mono-retro text-[10px] font-semibold transition border ${
+              filterSource === 'all'
+                ? 'bg-amber-400 text-black border-amber-400 shadow-sm font-bold'
+                : 'bg-black/40 text-zinc-400 hover:text-white border-white/10'
+            }`}
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => {
+              setFilterSource('audius');
+              if (query.trim()) handleSearch(query, 'audius');
+            }}
+            className={`px-2.5 py-1 rounded-lg font-mono-retro text-[10px] font-semibold transition border flex items-center gap-1 ${
+              filterSource === 'audius'
+                ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.5)] font-bold'
+                : 'bg-black/40 text-cyan-400 hover:text-cyan-300 border-cyan-500/30'
+            }`}
+          >
+            <span>🎧 Audio de Fondo (Pantalla Bloqueada)</span>
+          </button>
+          <button
+            onClick={() => {
+              setFilterSource('youtube');
+              if (query.trim()) handleSearch(query, 'youtube');
+            }}
+            className={`px-2.5 py-1 rounded-lg font-mono-retro text-[10px] font-semibold transition border ${
+              filterSource === 'youtube'
+                ? 'bg-red-500 text-white border-red-500 shadow-sm font-bold'
+                : 'bg-black/40 text-red-400 hover:text-red-300 border-red-500/30'
+            }`}
+          >
+            <span>📺 Vídeos YouTube</span>
           </button>
         </div>
 

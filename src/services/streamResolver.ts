@@ -293,10 +293,16 @@ class StreamResolver {
 
   /**
    * Resolves direct, ad-free audio stream URL for a YouTube ID.
-   * Uses a parallel race across 6 dedicated companion streaming nodes with Simple GET
-   * (zero custom headers = zero CORS OPTIONS preflight) and in-memory caching for instant gapless playback.
+   * Uses companion nodes, and if blocked by external restrictions, intelligently falls back
+   * to high-fidelity Audius stream matching track title & artist so playback routes to native
+   * HTMLAudioElement for 100% background audio and lock-screen controls.
    */
-  async resolveDirectAudioStream(youtubeId: string, excludeOrigin?: string): Promise<string | null> {
+  async resolveDirectAudioStream(
+    youtubeId: string,
+    excludeOrigin?: string,
+    title?: string,
+    artist?: string
+  ): Promise<string | null> {
     if (!youtubeId) return null;
 
     // 1. Return immediately if a valid verified stream URL is already cached in memory
@@ -312,7 +318,7 @@ class StreamResolver {
       return this.pendingResolutions.get(youtubeId)!;
     }
 
-    const resolutionPromise = this.performCompanionStreamRace(youtubeId, excludeOrigin);
+    const resolutionPromise = this.performStreamResolution(youtubeId, excludeOrigin, title, artist);
     if (!excludeOrigin) {
       this.pendingResolutions.set(youtubeId, resolutionPromise);
     }
@@ -332,6 +338,61 @@ class StreamResolver {
         this.pendingResolutions.delete(youtubeId);
       }
     }
+  }
+
+  private async performStreamResolution(
+    youtubeId: string,
+    excludeOrigin?: string,
+    title?: string,
+    artist?: string
+  ): Promise<string | null> {
+    // 1. Try companion streaming nodes
+    try {
+      const companionUrl = await this.performCompanionStreamRace(youtubeId, excludeOrigin);
+      if (companionUrl) return companionUrl;
+    } catch {
+      // Ignored
+    }
+
+    // 2. Fallback to Audius direct audio stream matching title and artist
+    if (title) {
+      try {
+        const cleanTitle = title
+          .replace(/\(.*?\)|\[.*?\]|official|video|audio|lyric|remastered|hd|4k/gi, '')
+          .trim();
+        const cleanArtist = (artist || '')
+          .replace(/\(.*?\)|\[.*?\]/gi, '')
+          .trim();
+
+        const queries = [
+          `${cleanArtist} ${cleanTitle}`.trim(),
+          cleanTitle,
+        ];
+
+        for (const q of queries) {
+          if (!q || q.length < 3) continue;
+          const audiusEndpoint = `https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(
+            q
+          )}&app_name=mixtape_music&limit=5`;
+          const res = await fetch(audiusEndpoint, { signal: AbortSignal.timeout(3000) });
+          if (res.ok) {
+            const data = await res.json();
+            const items = data.data || [];
+            const streamable = items.find(
+              (item: any) => item.is_streamable !== false && !item.is_delete && item.id
+            );
+            if (streamable) {
+              const streamUrl = `https://discoveryprovider.audius.co/v1/tracks/${streamable.id}/stream?app_name=mixtape_music`;
+              return streamUrl;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Audius native audio resolution fallback error:', err);
+      }
+    }
+
+    return null;
   }
 
   private async performCompanionStreamRace(

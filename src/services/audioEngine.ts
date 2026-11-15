@@ -670,24 +670,24 @@ class AudioEngine {
       }
       this.startYouTubeSync();
     } else {
-      if (state === 2 && typeof document !== 'undefined' && document.hidden && this.shouldBePlaying) {
-        // YouTube was automatically paused by the mobile OS when the screen locked or tab was minimized!
-        // Immediately re-engage keepalive and resume playback so audio continues uninterrupted with screen off
-        this.keepBackgroundAudioAlive();
-        setTimeout(() => {
-          if (this.shouldBePlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
-            try {
-              this.ytPlayer.playVideo();
-            } catch {}
-          }
-        }, 100);
-        return;
+      if (state === 2) {
+        if (typeof document !== 'undefined' && document.hidden && this.shouldBePlaying) {
+          // YouTube was automatically paused by the mobile OS when the screen locked or tab was minimized!
+          // Re-engage keepalive and attempt to resume
+          this.keepBackgroundAudioAlive();
+          setTimeout(() => {
+            if (this.shouldBePlaying && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
+              try {
+                this.ytPlayer.playVideo();
+              } catch {}
+            }
+          }, 100);
+        }
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
+        this.stopYouTubeSync();
       }
-
-      if ('mediaSession' in navigator && !this.shouldBePlaying) {
-        navigator.mediaSession.playbackState = 'paused';
-      }
-      this.stopYouTubeSync();
     }
   }
 
@@ -867,7 +867,12 @@ class AudioEngine {
       const ytId = track.youtubeId;
 
       try {
-        const directAudioUrl = await streamResolver.resolveDirectAudioStream(ytId);
+        const directAudioUrl = await streamResolver.resolveDirectAudioStream(
+          ytId,
+          undefined,
+          track.title,
+          track.artist
+        );
 
         // Guard against race conditions if user changed track while resolving
         if (this.currentTrack?.youtubeId !== ytId) return true;
@@ -894,7 +899,12 @@ class AudioEngine {
               try {
                 streamResolver.invalidateStreamCache(ytId);
                 const failedOrigin = new URL(directAudioUrl).origin;
-                const backupUrl = await streamResolver.resolveDirectAudioStream(ytId, failedOrigin);
+                const backupUrl = await streamResolver.resolveDirectAudioStream(
+                  ytId,
+                  failedOrigin,
+                  track.title,
+                  track.artist
+                );
                 if (backupUrl && this.currentTrack?.youtubeId === ytId) {
                   this.audio.src = backupUrl;
                   this.audio.currentTime = 0;
@@ -974,7 +984,7 @@ class AudioEngine {
 
     if (track.source === 'youtube' && track.youtubeId) {
       streamResolver
-        .resolveDirectAudioStream(track.youtubeId)
+        .resolveDirectAudioStream(track.youtubeId, undefined, track.title, track.artist)
         .then((directUrl) => {
           if (directUrl && this.preloadedTrackId === track.id) {
             bufferUrlInMemory(directUrl);
