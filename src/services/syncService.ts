@@ -64,7 +64,8 @@ interface CompactPlaylist {
 }
 
 interface CompactWirePacket {
-  v: 1;
+  v: 1 | 2;
+  type?: string;
   rev: string;
   chunkIdx: number;
   totalChunks: number;
@@ -92,8 +93,8 @@ export interface SyncStateInfo {
 }
 
 // Primary and fallback cloud relays for real-time peer device synchronization
-const PRIMARY_RELAY = 'https://ntfy.envs.net';
-const FALLBACK_RELAY = 'https://ntfy.sh';
+const PRIMARY_RELAY = 'https://ntfy.tedomum.fr';
+const FALLBACK_RELAY = 'https://ntfy.envs.net';
 
 // Deterministic hash helper for deriving private topic names
 function quickHash(input: string): string {
@@ -118,31 +119,75 @@ function getTopicForSyncCode(syncCode: string): string {
   return `mixtape_sync_v1_${hA}${hB.slice(0, 8)}`;
 }
 
-// Symmetric XOR + UTF-8 Base64 encoding keyed by syncCode so cloud payloads are not plain text
-function encodePayload(jsonStr: string, syncCode: string): string {
-  const key = `MIXTAPE_KEY_${normalizeSyncCode(syncCode)}_HI_FI`;
-  const bytes = new TextEncoder().encode(jsonStr);
-  const keyBytes = new TextEncoder().encode(key);
-  const out = new Uint8Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) {
-    out[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
-  }
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = '';
-  for (let i = 0; i < out.length; i++) {
-    binary += String.fromCharCode(out[i]);
+  const bytes = new Uint8Array(buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
 }
 
-function decodePayload(b64: string, syncCode: string): string {
-  const key = `MIXTAPE_KEY_${normalizeSyncCode(syncCode)}_HI_FI`;
-  const binary = atob(b64);
-  const keyBytes = new TextEncoder().encode(key);
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    out[i] = binary.charCodeAt(i) ^ keyBytes[i % keyBytes.length];
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
   }
-  return new TextDecoder().decode(out);
+  return bytes.buffer;
+}
+
+// High-efficiency Gzip compression + Symmetric XOR Base64 encoding
+async function encodePayload(jsonStr: string, syncCode: string): Promise<string> {
+  let dataBytes: Uint8Array;
+  if (typeof CompressionStream !== 'undefined') {
+    try {
+      const stream = new Blob([new TextEncoder().encode(jsonStr)])
+        .stream()
+        .pipeThrough(new CompressionStream('gzip'));
+      const buf = await new Response(stream).arrayBuffer();
+      dataBytes = new Uint8Array(buf);
+    } catch {
+      dataBytes = new TextEncoder().encode(jsonStr);
+    }
+  } else {
+    dataBytes = new TextEncoder().encode(jsonStr);
+  }
+
+  const key = `MIXTAPE_KEY_${normalizeSyncCode(syncCode)}_HI_FI`;
+  const keyBytes = new TextEncoder().encode(key);
+  const out = new Uint8Array(dataBytes.length);
+  for (let i = 0; i < dataBytes.length; i++) {
+    out[i] = dataBytes[i] ^ keyBytes[i % keyBytes.length];
+  }
+  return arrayBufferToBase64(out.buffer);
+}
+
+async function decodePayload(b64: string, syncCode: string): Promise<string> {
+  const buf = base64ToArrayBuffer(b64);
+  const key = `MIXTAPE_KEY_${normalizeSyncCode(syncCode)}_HI_FI`;
+  const keyBytes = new TextEncoder().encode(key);
+  const rawBytes = new Uint8Array(buf);
+  const decoded = new Uint8Array(rawBytes.length);
+  for (let i = 0; i < rawBytes.length; i++) {
+    decoded[i] = rawBytes[i] ^ keyBytes[i % keyBytes.length];
+  }
+
+  // Check for gzip magic header (0x1f 0x8b)
+  if (
+    decoded.length >= 2 &&
+    decoded[0] === 0x1f &&
+    decoded[1] === 0x8b &&
+    typeof DecompressionStream !== 'undefined'
+  ) {
+    try {
+      const stream = new Blob([decoded]).stream().pipeThrough(new DecompressionStream('gzip'));
+      return await new Response(stream).text();
+    } catch (e) {
+      console.warn('Decompress error:', e);
+    }
+  }
+  return new TextDecoder().decode(decoded);
 }
 
 export function normalizeSyncCode(raw: string): string {
@@ -214,8 +259,8 @@ function fromCompactTrack(c: CompactTrack): Track {
     artist: c.a,
     album: c.al,
     duration: c.d,
-    thumbnail: c.th,
-    source: c.s,
+    thumbnail: c.th || (c.y ? `https://i.ytimg.com/vi/${c.y}/hqdefault.jpg` : ''),
+    source: c.s || 'youtube',
     audioUrl: c.u,
     youtubeId: c.y,
     viewsFormatted: c.vf,
@@ -514,6 +559,25 @@ class SyncService {
 
   // --- Live EventSource (SSE) Listener ---
 
+  public async broadcastPing(): Promise<void> {
+    const topic = getTopicForSyncCode(this.syncCode);
+    const packet = {
+      v: 2,
+      type: 'PING',
+      senderId: this.senderId,
+      senderLabel: this.senderLabel,
+      ts: Date.now(),
+    };
+    try {
+      await fetch(`${PRIMARY_RELAY}/${topic}`, {
+        method: 'POST',
+        body: JSON.stringify(packet),
+        headers: { Title: 'SyncPing' },
+        signal: AbortSignal.timeout(3000),
+      });
+    } catch {}
+  }
+
   private connectLiveStream(): void {
     if (this.eventSource) {
       try {
@@ -528,6 +592,10 @@ class SyncService {
     try {
       const es = new EventSource(`${PRIMARY_RELAY}/${topic}/sse`);
       this.eventSource = es;
+
+      es.onopen = () => {
+        setTimeout(() => this.broadcastPing(), 300);
+      };
 
       es.onmessage = (event) => {
         try {
@@ -544,15 +612,28 @@ class SyncService {
     } catch {}
   }
 
-  private handleIncomingWireString(rawMessage: string): void {
+  private async handleIncomingWireString(rawMessage: string): Promise<void> {
     try {
-      const packet: CompactWirePacket = JSON.parse(rawMessage);
-      if (!packet || packet.v !== 1 || packet.senderId === this.senderId) {
+      const packet: (CompactWirePacket & { type?: string }) = JSON.parse(rawMessage);
+      if (!packet || (packet.v !== 1 && packet.v !== 2) || packet.senderId === this.senderId) {
         return; // Ignore our own echoes
       }
 
+      if (packet.type === 'PING') {
+        const localPlaylists: Playlist[] = JSON.parse(
+          localStorage.getItem('pulse_local_playlists') || '[]'
+        );
+        const localLiked: Track[] = JSON.parse(
+          localStorage.getItem('pulse_local_liked') || '[]'
+        );
+        if (localPlaylists.length > 0 || localLiked.length > 0) {
+          this.pushNow(localPlaylists, localLiked);
+        }
+        return;
+      }
+
       if (packet.totalChunks === 1) {
-        this.applyDecodedChunkData(packet.data, packet.senderLabel);
+        await this.applyDecodedChunkData(packet.data, packet.senderLabel);
       } else {
         let entry = this.chunkBuffer.get(packet.rev);
         if (!entry) {
@@ -567,15 +648,15 @@ class SyncService {
             combined += entry.chunks.get(i) || '';
           }
           this.chunkBuffer.delete(packet.rev);
-          this.applyDecodedChunkData(combined, packet.senderLabel);
+          await this.applyDecodedChunkData(combined, packet.senderLabel);
         }
       }
     } catch {}
   }
 
-  private applyDecodedChunkData(encodedData: string, senderLabel: string): void {
+  private async applyDecodedChunkData(encodedData: string, senderLabel: string): Promise<void> {
     try {
-      const jsonStr = decodePayload(encodedData, this.syncCode);
+      const jsonStr = await decodePayload(encodedData, this.syncCode);
       const body: CompactPayloadBody = JSON.parse(jsonStr);
 
       const remotePlaylists: Playlist[] = (body.p || []).map(fromCompactPlaylist);
@@ -794,7 +875,7 @@ class SyncService {
         sb: this.getLocalSettingsBundle(),
       };
 
-      const encoded = encodePayload(JSON.stringify(body), this.syncCode);
+      const encoded = await encodePayload(JSON.stringify(body), this.syncCode);
       const CHUNK_SIZE = 3500; // Optimal chunk size under 4KB
       const totalChunks = Math.max(1, Math.ceil(encoded.length / CHUNK_SIZE));
       const rev = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
@@ -803,7 +884,7 @@ class SyncService {
       for (let idx = 0; idx < totalChunks; idx++) {
         const slice = encoded.slice(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
         const packet: CompactWirePacket = {
-          v: 1,
+          v: 2,
           rev,
           chunkIdx: idx,
           totalChunks,
@@ -920,7 +1001,7 @@ class SyncService {
           const env = JSON.parse(line);
           if (env.event !== 'message' || typeof env.message !== 'string') continue;
           const pkt: CompactWirePacket = JSON.parse(env.message);
-          if (!pkt || pkt.v !== 1) continue;
+          if (!pkt || (pkt.v !== 1 && pkt.v !== 2)) continue;
 
           let revEntry = revisions.get(pkt.rev);
           if (!revEntry) {
@@ -957,7 +1038,7 @@ class SyncService {
         for (let i = 0; i < newestRev.total; i++) {
           combined += newestRev.chunks.get(i) || '';
         }
-        const jsonStr = decodePayload(combined, this.syncCode);
+        const jsonStr = await decodePayload(combined, this.syncCode);
         const body: CompactPayloadBody = JSON.parse(jsonStr);
 
         const remotePlaylists: Playlist[] = (body.p || []).map(fromCompactPlaylist);

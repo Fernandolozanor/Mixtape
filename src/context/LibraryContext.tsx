@@ -185,7 +185,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
 
         // Pull from QR Cloud Sync room and merge
-        await syncService.pullNow(pl, lk);
+        const merged = await syncService.pullNow(pl, lk);
+        if (merged) {
+          setPlaylists(merged.playlists);
+          setLikedTracks(merged.likedTracks);
+          if (merged.playlists.length > 0 || merged.likedTracks.length > 0) {
+            syncService.schedulePush(merged.playlists, merged.likedTracks);
+          }
+        }
       } catch (e) {
         console.warn('Auto-sync library error:', e);
       } finally {
@@ -285,7 +292,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const syncNow = async () => {
     const merged = await syncService.pullNow(playlistsRef.current, likedRef.current);
-    await syncService.pushNow(merged.playlists, merged.likedTracks);
+    if (merged) {
+      setPlaylists(merged.playlists);
+      setLikedTracks(merged.likedTracks);
+      await syncService.pushNow(merged.playlists, merged.likedTracks);
+    }
   };
 
   const exportBackup = () => {

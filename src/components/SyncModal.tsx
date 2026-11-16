@@ -78,7 +78,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   }, [isOpen, shareUrl, syncState.syncCode]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Push latest library state whenever sync modal opens so room is ready immediately
+      syncNow();
+    } else {
       stopCamera();
       setFeedback(null);
     }
