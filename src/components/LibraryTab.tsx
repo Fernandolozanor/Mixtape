@@ -19,6 +19,7 @@ import {
   X,
   Mic2,
   Music2,
+  Sparkles,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -27,6 +28,7 @@ import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
 import { VinylCoverFlow } from './VinylCoverFlow';
+import { JukeboxView } from './JukeboxView';
 import { bpmService } from '../services/bpmService';
 import { SourceBadge } from './SourceBadge';
 import type { Playlist, Track } from '../types/music';
@@ -174,8 +176,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const [selectedArtist, setSelectedArtist] = useState<string>('all');
   const [showMatchingTracks, setShowMatchingTracks] = useState(true);
 
-  // Favorites view mode: 'vinyl' (default 3D vinyl records) or 'list'
-  const [favoritesViewMode, setFavoritesViewMode] = useState<'vinyl' | 'list'>('vinyl');
+  // Favorites view mode: 'jukebox' (Gramola Jukebox interactiva con neones y burbujas), 'vinyl' o 'list'
+  const [favoritesViewMode, setFavoritesViewMode] = useState<'jukebox' | 'vinyl' | 'list'>('jukebox');
   // Library view mode: 'shelves' (Estanterías 3D de Cintas arriba y Vinilos Cover Flow abajo) vs 'lists'
   const [libraryViewMode, setLibraryViewMode] = useState<'shelves' | 'lists'>('shelves');
   const [listFilter, setListFilter] = useState<'all' | 'tapes' | 'vinyls'>('all');
@@ -412,10 +414,10 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 className="text-xs uppercase font-bold tracking-wider"
                 style={{ color: currentTheme.accent }}
               >
-                Lista Automática
+                Gramola Clásica • Hit Parade
               </p>
-              <h1 className="text-3xl font-extrabold text-white">Canciones Favoritas</h1>
-              <p className="text-sm text-zinc-400">{likedTracks.length} canciones guardadas</p>
+              <h1 className="text-3xl font-extrabold text-white">Jukebox de Favoritos</h1>
+              <p className="text-sm text-zinc-400">{likedTracks.length} canciones en la máquina</p>
             </div>
           </div>
 
@@ -432,12 +434,24 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               </button>
             )}
 
-            {/* View switcher: Vinilos vs Lista */}
+            {/* View switcher: Jukebox vs Vinilos vs Lista */}
             {likedTracks.length > 0 && (
               <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/10 shadow-inner">
                 <button
+                  onClick={() => setFavoritesViewMode('jukebox')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                    favoritesViewMode === 'jukebox'
+                      ? 'bg-amber-400 text-black shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                  title="Vista Gramola Jukebox 80s"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Jukebox</span>
+                </button>
+                <button
                   onClick={() => setFavoritesViewMode('vinyl')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     favoritesViewMode === 'vinyl'
                       ? 'bg-amber-400 text-black shadow-md font-bold'
                       : 'text-zinc-400 hover:text-white'
@@ -449,7 +463,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 </button>
                 <button
                   onClick={() => setFavoritesViewMode('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     favoritesViewMode === 'list'
                       ? 'bg-amber-400 text-black shadow-md font-bold'
                       : 'text-zinc-400 hover:text-white'
@@ -543,10 +557,21 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         )}
 
         {likedTracks.length === 0 ? (
-          <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
-            <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-lg font-medium text-white">No tienes canciones favoritas aún</p>
-            <p className="text-sm">Toca el icono de corazón en cualquier canción para guardarla aquí.</p>
+          <div className="space-y-6">
+            <JukeboxView
+              tracks={[]}
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              onPlayTrack={(track, queue) => playTrack(track, queue)}
+              onNavigateToSearch={onNavigateToSearch}
+            />
+            <div className="p-8 text-center text-zinc-500 glass-card rounded-3xl">
+              <Heart className="w-10 h-10 mx-auto mb-2 opacity-30 text-amber-400" />
+              <p className="text-base font-bold text-white">Tu Jukebox está esperando canciones</p>
+              <p className="text-xs text-zinc-400 mt-1">
+                Toca el icono de corazón en cualquier canción para colocar su etiqueta en la gramola.
+              </p>
+            </div>
           </div>
         ) : filteredLikedTracks.length === 0 ? (
           <div className="p-8 text-center text-zinc-400 glass-card rounded-3xl space-y-2">
@@ -555,11 +580,22 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="mt-2 px-4 py-1.5 rounded-xl bg-amber-400 text-black font-bold text-xs"
+              className="mt-2 px-4 py-1.5 rounded-xl bg-amber-400 text-black font-bold text-xs cursor-pointer"
             >
               Borrar filtro
             </button>
           </div>
+        ) : favoritesViewMode === 'jukebox' ? (
+          /* Jukebox Gramola View with animated neon bubble tubes and title strips */
+          <JukeboxView
+            tracks={filteredLikedTracks}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            onPlayTrack={(track, queue) => playTrack(track, queue)}
+            onRemoveTrack={(id) => removeLikedTrack(id)}
+            isEditingMode={isEditingMode}
+            onNavigateToSearch={onNavigateToSearch}
+          />
         ) : favoritesViewMode === 'vinyl' ? (
           /* 3D Vinyl Records Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
