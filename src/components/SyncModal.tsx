@@ -48,23 +48,57 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   const [isLinking, setIsLinking] = useState(false);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [scannedSuccess, setScannedSuccess] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const scanIntervalRef = useRef<number | null>(null);
+  const isProcessingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const qrImageInputRef = useRef<HTMLInputElement | null>(null);
 
+  const playSuccessChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1760, now + 0.12);
+
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } catch {}
+  };
+
   const stopCamera = () => {
-    if (scanIntervalRef.current) {
-      window.clearInterval(scanIntervalRef.current);
-      scanIntervalRef.current = null;
-    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     setIsCameraOpen(false);
+    setScannedSuccess(false);
+    isProcessingRef.current = false;
+  };
+
+  const setVideoElement = (el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && streamRef.current) {
+      el.srcObject = streamRef.current;
+      el.setAttribute('playsinline', 'true');
+      el.setAttribute('webkit-playsinline', 'true');
+      el.muted = true;
+      el.play().catch(() => {});
+    }
   };
 
   const shareUrl = useMemo(() => syncService.getShareUrl(), [syncState.syncCode]);
@@ -90,21 +124,144 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
-  // Ensure active camera stream binds to video element when camera is open
+  // Real-time automatic QR scanner loop (Native BarcodeDetector + high-speed downscaled jsQR)
   useEffect(() => {
-    if (isCameraOpen && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.setAttribute('playsinline', 'true');
-      videoRef.current.setAttribute('webkit-playsinline', 'true');
-      videoRef.current.play().catch(() => {});
+    if (!isCameraOpen) {
+      setScannedSuccess(false);
+      return;
     }
+
+    let isMounted = true;
+    let animId: number | null = null;
+    let lastScanTime = 0;
+    let scanCanvas: HTMLCanvasElement | null = document.createElement('canvas');
+    let ctx = scanCanvas.getContext('2d', { willReadFrequently: true });
+    let cropCanvas: HTMLCanvasElement | null = document.createElement('canvas');
+    let cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
+
+    const BarcodeDetectorClass = (window as any).BarcodeDetector;
+    let nativeDetector: any = null;
+    if (BarcodeDetectorClass) {
+      try {
+        nativeDetector = new BarcodeDetectorClass({ formats: ['qr_code'] });
+      } catch {}
+    }
+
+    const scanTick = async () => {
+      if (!isMounted) return;
+
+      const video = videoRef.current;
+      const now = performance.now();
+
+      // Scan every ~90ms to keep 11fps scanning speed while keeping main thread free
+      if (video && video.readyState >= 2 && video.videoWidth > 0 && now - lastScanTime >= 90) {
+        lastScanTime = now;
+
+        // 1. Try Native BarcodeDetector (instant GPU-accelerated scanning on supported browsers)
+        if (nativeDetector) {
+          try {
+            const barcodes = await nativeDetector.detect(video);
+            if (barcodes && barcodes.length > 0) {
+              const rawVal: string = barcodes[0].rawValue || '';
+              if (rawVal) {
+                onQrDetected(rawVal);
+                return;
+              }
+            }
+          } catch {}
+        }
+
+        // 2. High-speed jsQR fallback on downscaled frame (max 480px)
+        if (ctx && scanCanvas) {
+          try {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const maxDim = 480;
+            const scale = Math.min(1, maxDim / Math.max(vw, vh));
+            const sw = Math.round(vw * scale);
+            const sh = Math.round(vh * scale);
+
+            if (scanCanvas.width !== sw || scanCanvas.height !== sh) {
+              scanCanvas.width = sw;
+              scanCanvas.height = sh;
+            }
+
+            ctx.drawImage(video, 0, 0, sw, sh);
+            const fullImgData = ctx.getImageData(0, 0, sw, sh);
+            let qr = jsQR(fullImgData.data, sw, sh, { inversionAttempts: 'attemptBoth' });
+
+            // 3. Viewfinder center-crop fallback (focused 65% square region)
+            if (!qr && cropCtx && cropCanvas) {
+              const cropSize = Math.round(Math.min(vw, vh) * 0.65);
+              const cropX = Math.round((vw - cropSize) / 2);
+              const cropY = Math.round((vh - cropSize) / 2);
+              const cropCanvasSize = Math.min(cropSize, 360);
+
+              if (cropCanvas.width !== cropCanvasSize || cropCanvas.height !== cropCanvasSize) {
+                cropCanvas.width = cropCanvasSize;
+                cropCanvas.height = cropCanvasSize;
+              }
+
+              cropCtx.drawImage(video, cropX, cropY, cropSize, cropSize, 0, 0, cropCanvasSize, cropCanvasSize);
+              const cropImgData = cropCtx.getImageData(0, 0, cropCanvasSize, cropCanvasSize);
+              qr = jsQR(cropImgData.data, cropCanvasSize, cropCanvasSize, { inversionAttempts: 'attemptBoth' });
+            }
+
+            if (qr && qr.data) {
+              onQrDetected(qr.data);
+              return;
+            }
+          } catch {}
+        }
+      }
+
+      if (isMounted) {
+        animId = requestAnimationFrame(scanTick);
+      }
+    };
+
+    animId = requestAnimationFrame(scanTick);
+
+    return () => {
+      isMounted = false;
+      if (animId) cancelAnimationFrame(animId);
+      scanCanvas = null;
+      ctx = null;
+      cropCanvas = null;
+      cropCtx = null;
+    };
   }, [isCameraOpen]);
 
   if (!isOpen) return null;
 
+  const onQrDetected = (rawCode: string) => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    // Haptic feedback (vibration on iPhone / Android)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate([60, 40, 60]);
+      } catch {}
+    }
+
+    // High quality chime sound
+    playSuccessChime();
+
+    // Visual emerald pulse & checkmark
+    setScannedSuccess(true);
+
+    // Brief 350ms delay so the user perceives the green scan confirmation before modal links
+    setTimeout(() => {
+      handleScannedValue(rawCode);
+    }, 350);
+  };
+
   const startCameraScanner = async () => {
     setCameraError(null);
     setFeedback(null);
+    setScannedSuccess(false);
+    isProcessingRef.current = false;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setCameraError(
@@ -153,59 +310,6 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
 
     streamRef.current = stream;
     setIsCameraOpen(true);
-
-    // Setup canvas for universal jsQR decoding (works on iOS Safari, Android, Chrome PC, Firefox, Edge)
-    const scanCanvas = document.createElement('canvas');
-    const ctx = scanCanvas.getContext('2d', { willReadFrequently: true });
-
-    // Setup native detector if supported
-    const BarcodeDetectorClass = (window as any).BarcodeDetector;
-    let nativeDetector: any = null;
-    if (BarcodeDetectorClass) {
-      try {
-        nativeDetector = new BarcodeDetectorClass({ formats: ['qr_code'] });
-      } catch {}
-    }
-
-    scanIntervalRef.current = window.setInterval(async () => {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2 || video.videoWidth === 0) return;
-
-      // 1. Try native detector if available
-      if (nativeDetector) {
-        try {
-          const barcodes = await nativeDetector.detect(video);
-          if (barcodes && barcodes.length > 0) {
-            const rawVal: string = barcodes[0].rawValue || '';
-            if (rawVal) {
-              handleScannedValue(rawVal);
-              return;
-            }
-          }
-        } catch {}
-      }
-
-      // 2. Universal jsQR fallback analysis (100% reliable everywhere)
-      if (ctx) {
-        try {
-          const w = video.videoWidth;
-          const h = video.videoHeight;
-          if (scanCanvas.width !== w || scanCanvas.height !== h) {
-            scanCanvas.width = w;
-            scanCanvas.height = h;
-          }
-          ctx.drawImage(video, 0, 0, w, h);
-          const imgData = ctx.getImageData(0, 0, w, h);
-          const qrCode = jsQR(imgData.data, imgData.width, imgData.height, {
-            inversionAttempts: 'dontInvert',
-          });
-          if (qrCode && qrCode.data) {
-            handleScannedValue(qrCode.data);
-            return;
-          }
-        } catch {}
-      }
-    }, 250);
   };
 
   const handleDecodeQrFromImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -219,16 +323,22 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
+        // Scale down if image is too large to prevent mobile browser memory spikes
+        const maxDim = 1200;
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+
         const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        ctx.drawImage(img, 0, 0, img.width, img.height);
-        const imageData = ctx.getImageData(0, 0, img.width, img.height);
-        const qr = jsQR(imageData.data, imageData.width, imageData.height);
+        ctx.drawImage(img, 0, 0, w, h);
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const qr = jsQR(imageData.data, w, h, { inversionAttempts: 'attemptBoth' });
         if (qr && qr.data) {
-          handleScannedValue(qr.data);
+          onQrDetected(qr.data);
         } else {
           setCameraError(
             'No se detectó ningún código QR en la imagen seleccionada. Asegúrate de que el código QR sea legible.'
@@ -244,13 +354,20 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   const handleScannedValue = async (raw: string) => {
     stopCamera();
     let extractedCode = raw.trim();
-    try {
-      if (raw.includes('sync=')) {
-        const url = new URL(raw);
-        const param = url.searchParams.get('sync');
-        if (param) extractedCode = param;
-      }
-    } catch {}
+
+    // Universal token matcher: extract TAPE-XXXX-XXXX directly even if inside full URL or query params
+    const tokenMatch = raw.match(/TAPE-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}/i);
+    if (tokenMatch) {
+      extractedCode = tokenMatch[0].toUpperCase();
+    } else {
+      try {
+        if (raw.includes('sync=')) {
+          const url = new URL(raw);
+          const param = url.searchParams.get('sync');
+          if (param) extractedCode = param.trim();
+        }
+      } catch {}
+    }
 
     setInputCode(extractedCode);
     setIsLinking(true);
@@ -260,7 +377,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     if (res.success) {
       setFeedback({
         type: 'success',
-        text: '¡Código QR escaneado y dispositivos vinculados! Tus listas y favoritos ya están sincronizados.',
+        text: '¡Código QR detectado y dispositivos vinculados! Tus listas y favoritos ya están sincronizados.',
       });
       setActiveTab('my-qr');
     } else {
@@ -600,9 +717,9 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <div className="relative rounded-2xl overflow-hidden border-2 border-amber-400 bg-black aspect-video flex items-center justify-center">
+                  <div className="relative rounded-2xl overflow-hidden border-2 border-amber-400/80 bg-black aspect-video flex items-center justify-center shadow-[0_0_20px_rgba(245,158,11,0.2)]">
                     <video
-                      ref={videoRef}
+                      ref={setVideoElement}
                       className="w-full h-full object-cover"
                       playsInline
                       muted
@@ -611,16 +728,62 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                         (e.target as HTMLVideoElement).play().catch(() => {});
                       }}
                     />
+
+                    {/* Viewfinder Overlay */}
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                      <div className="w-40 h-40 border-2 border-amber-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] relative">
-                        <div className="absolute inset-x-0 top-1/2 h-0.5 bg-amber-400 animate-pulse shadow-[0_0_8px_#fbbf24]" />
+                      <div
+                        className={`w-44 h-44 sm:w-48 sm:h-48 rounded-2xl relative transition-all duration-300 flex items-center justify-center ${
+                          scannedSuccess
+                            ? 'border-4 border-emerald-400 bg-emerald-500/25 shadow-[0_0_35px_rgba(52,211,153,0.9)] scale-105'
+                            : 'border-2 border-amber-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]'
+                        }`}
+                      >
+                        {scannedSuccess ? (
+                          <div className="flex flex-col items-center justify-center gap-1.5 animate-in zoom-in-75 duration-200">
+                            <div className="w-14 h-14 rounded-full bg-emerald-400 text-black flex items-center justify-center shadow-lg">
+                              <Check className="w-8 h-8 stroke-[3]" />
+                            </div>
+                            <span className="text-[11px] font-mono-retro font-bold text-white bg-black/80 px-2.5 py-1 rounded-full uppercase tracking-wider border border-emerald-400/50">
+                              ¡QR Reconocido!
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Reticle Target Corners */}
+                            <div className="absolute -top-0.5 -left-0.5 w-4 h-4 border-t-2 border-l-2 border-amber-300" />
+                            <div className="absolute -top-0.5 -right-0.5 w-4 h-4 border-t-2 border-r-2 border-amber-300" />
+                            <div className="absolute -bottom-0.5 -left-0.5 w-4 h-4 border-b-2 border-l-2 border-amber-300" />
+                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 border-b-2 border-r-2 border-amber-300" />
+
+                            {/* Laser Scanning Line */}
+                            <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 h-0.5 bg-gradient-to-r from-transparent via-amber-400 to-transparent animate-pulse shadow-[0_0_10px_#fbbf24]" />
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scanning Status Badge */}
+                    <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none">
+                      <div className="bg-black/75 backdrop-blur-sm px-3 py-1 rounded-full border border-white/15 text-[11px] font-mono text-zinc-300 flex items-center gap-2">
+                        {scannedSuccess ? (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                            <span className="text-emerald-300 font-bold">¡Vinculando biblioteca...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                            <span>Enfoca el código QR de la otra pantalla</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
+
                   <button
                     type="button"
                     onClick={stopCamera}
-                    className="w-full py-2 rounded-xl bg-white/10 text-zinc-300 text-xs font-mono"
+                    className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-300 text-xs font-mono transition"
                   >
                     Cerrar cámara
                   </button>
