@@ -82,7 +82,8 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
     const albumName = fullRelease?.title || release.title;
     const playlist = createPlaylist(
       `${albumName} [Tape]`,
-      `Lanzamiento oficial de ${fullRelease?.artist || release.artist} grabado en cinta ${tapeBias.toUpperCase()}`
+      `Lanzamiento oficial de ${fullRelease?.artist || release.artist} grabado en cinta ${tapeBias.toUpperCase()}`,
+      fullRelease?.thumbnail || release.thumbnail
     );
     addTracksToPlaylist(playlist.id, tracks);
     setRecordedSuccess(true);

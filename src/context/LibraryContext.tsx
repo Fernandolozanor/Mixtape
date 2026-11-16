@@ -9,7 +9,7 @@ interface LibraryContextType {
   likedTracks: Track[];
   settings: UserSettings;
   syncState: SyncStateInfo;
-  createPlaylist: (name: string, description?: string) => Playlist;
+  createPlaylist: (name: string, description?: string, coverUrl?: string) => Playlist;
   updatePlaylist: (id: string, updates: { name?: string; description?: string; coverUrl?: string }) => void;
   deletePlaylist: (id: string) => void;
   addTrackToPlaylist: (playlistId: string, track: Track) => void;
@@ -281,11 +281,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     syncService.clearJustLinkedFlag();
   };
 
-  const createPlaylist = (name: string, description?: string): Playlist => {
+  const createPlaylist = (name: string, description?: string, coverUrl?: string): Playlist => {
     const newPlaylist: Playlist = {
       id: 'pl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
       name: name.trim() || 'Nueva Lista',
       description,
+      coverUrl,
       tracks: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),

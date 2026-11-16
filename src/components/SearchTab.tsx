@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search as SearchIcon,
   Loader2,
@@ -19,6 +19,7 @@ import {
   Settings,
   Music2,
   Disc3,
+  CheckCircle2,
 } from 'lucide-react';
 import type { Track, AudioSourceType, YouTubeRelease } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
@@ -31,6 +32,7 @@ import { SourceBadge } from './SourceBadge';
 import { RadioTunerDial } from './RadioTunerDial';
 import { ReggaetonPrankModal } from './ReggaetonPrankModal';
 import { AlbumDetailModal } from './AlbumDetailModal';
+import { MultiAlbumRecordModal } from './MultiAlbumRecordModal';
 import { isReggaetonTag, shouldTriggerReggaetonJoke } from '../services/prankService';
 
 const GENRE_TAGS = [
@@ -49,6 +51,7 @@ interface SearchTabProps {
   onSelectTrackForPlaylist: (track: Track) => void;
   onSelectMultipleForPlaylist?: (tracks: Track[]) => void;
   onOpenSettingsModal?: () => void;
+  onNavigateToPlaylist?: (playlistId: string) => void;
   initialQuery?: string;
 }
 
@@ -56,6 +59,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   onSelectTrackForPlaylist,
   onSelectMultipleForPlaylist,
   onOpenSettingsModal,
+  onNavigateToPlaylist,
   initialQuery = '',
 }) => {
   const [query, setQuery] = useState(initialQuery);
@@ -73,6 +77,19 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [isSearchingReleases, setIsSearchingReleases] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<YouTubeRelease | null>(null);
 
+  // Multi-album tape recording states
+  const [isMultiAlbumMode, setIsMultiAlbumMode] = useState(false);
+  const [selectedAlbumIds, setSelectedAlbumIds] = useState<Set<string>>(new Set());
+  const [recordingAlbumId, setRecordingAlbumId] = useState<string | null>(null);
+  const [recordedSuccessAlbumId, setRecordedSuccessAlbumId] = useState<string | null>(null);
+  const [isMultiAlbumModalOpen, setIsMultiAlbumModalOpen] = useState(false);
+  const [albumToast, setAlbumToast] = useState<{
+    title: string;
+    message: string;
+    playlistId: string;
+    tracks: Track[];
+  } | null>(null);
+
   // Multi-selection state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -80,8 +97,99 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
   const { playTrack, currentTrack } = usePlayer();
-  const { isLiked, toggleLike, addMultipleToLiked } = useLibrary();
+  const { isLiked, toggleLike, addMultipleToLiked, createPlaylist, addTracksToPlaylist } = useLibrary();
   const { currentTheme } = useTheme();
+
+  // Auto-dismiss album toast after 6 seconds
+  useEffect(() => {
+    if (albumToast) {
+      const timer = setTimeout(() => {
+        setAlbumToast(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [albumToast]);
+
+  const handleQuickRecordAlbum = async (album: YouTubeRelease, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (recordingAlbumId) return;
+
+    setRecordingAlbumId(album.id);
+    try {
+      const details = await youtubeReleaseService.getReleaseDetails(album.id, album);
+      const tracks = details?.tracks || [];
+
+      if (tracks.length === 0) {
+        throw new Error('No se pudieron obtener las pistas del álbum.');
+      }
+
+      const tapeTitle = `${album.title} [Tape]`;
+      const tapeDesc = `Lanzamiento oficial de ${album.artist} (${album.year || 'Álbum'}) grabado en cinta`;
+      const createdTape = createPlaylist(tapeTitle, tapeDesc, album.thumbnail);
+      addTracksToPlaylist(createdTape.id, tracks);
+
+      setRecordedSuccessAlbumId(album.id);
+      setAlbumToast({
+        title: '¡Disco grabado en cinta!',
+        message: `"${album.title}" (${tracks.length} canciones añadidas a tu estantería)`,
+        playlistId: createdTape.id,
+        tracks,
+      });
+
+      setTimeout(() => {
+        setRecordedSuccessAlbumId(null);
+      }, 3500);
+    } catch (err: any) {
+      console.error('Quick record album error:', err);
+      setAlbumToast({
+        title: 'Error de grabación',
+        message: 'No se pudieron extraer las pistas del álbum. Inténtalo de nuevo.',
+        playlistId: '',
+        tracks: [],
+      });
+    } finally {
+      setRecordingAlbumId(null);
+    }
+  };
+
+  const toggleAlbumSelection = (albumId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedAlbumIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(albumId)) {
+        next.delete(albumId);
+      } else {
+        next.add(albumId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllAlbums = () => {
+    setSelectedAlbumIds(new Set(releases.map((r) => r.id)));
+  };
+
+  const deselectAllAlbums = () => {
+    setSelectedAlbumIds(new Set());
+  };
+
+  const selectedAlbumsList = releases.filter((r) => selectedAlbumIds.has(r.id));
+
+  const handleBatchRecordComplete = (tape: {
+    id: string;
+    name: string;
+    trackCount: number;
+    tracks: Track[];
+  }) => {
+    setSelectedAlbumIds(new Set());
+    setIsMultiAlbumMode(false);
+    setAlbumToast({
+      title: '¡Cinta grabada con éxito!',
+      message: `"${tape.name}" (${tape.trackCount} canciones añadidas)`,
+      playlistId: tape.id,
+      tracks: tape.tracks,
+    });
+  };
 
   const handleSelectGenreTag = (tag: string) => {
     const continueAction = () => {
@@ -472,10 +580,59 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 Lanzamientos y Álbumes Oficiales ({releases.length})
               </h2>
             </div>
-            <span className="text-[11px] font-mono text-zinc-400">
-              Contenido oficial catalogado de YouTube Music (Releases)
-            </span>
+            
+            {releases.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextMode = !isMultiAlbumMode;
+                    setIsMultiAlbumMode(nextMode);
+                    if (!nextMode) setSelectedAlbumIds(new Set());
+                  }}
+                  className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+                    isMultiAlbumMode
+                      ? 'bg-amber-400 text-black border-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                      : 'bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10 border-white/10'
+                  }`}
+                  title="Seleccionar múltiples discos y grabarlos juntos en un solo cassette"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>{isMultiAlbumMode ? 'Salir de selección' : '📼 Grabar varios discos en 1 cinta'}</span>
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Multi-album selection helper bar */}
+          {isMultiAlbumMode && releases.length > 0 && (
+            <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 px-3.5 py-2.5 rounded-2xl text-xs font-mono animate-in fade-in">
+              <div className="flex items-center gap-2 text-amber-300">
+                <CheckSquare className="w-4 h-4 text-amber-400" />
+                <span>
+                  <strong>{selectedAlbumIds.size}</strong> de {releases.length} discos seleccionados para la cinta
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={selectAllAlbums}
+                  className="text-amber-400 hover:text-amber-300 underline font-bold cursor-pointer"
+                >
+                  Seleccionar todos
+                </button>
+                {selectedAlbumIds.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={deselectAllAlbums}
+                    className="text-zinc-400 hover:text-white underline cursor-pointer"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {isSearchingReleases ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3 text-zinc-400 font-mono text-xs">
@@ -490,42 +647,111 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-              {releases.map((album) => (
-                <div
-                  key={album.id}
-                  onClick={() => setSelectedRelease(album)}
-                  className="group cursor-pointer bg-[#131822] hover:bg-[#1b2333] p-3 rounded-2xl border border-white/10 hover:border-amber-400/50 transition-all hover:shadow-2xl active:scale-95 flex flex-col"
-                >
-                  <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-lg bg-black">
-                    <img
-                      src={album.thumbnail}
-                      alt={album.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-2 left-2 bg-red-600/95 text-white font-mono text-[9px] font-black px-2 py-0.5 rounded shadow-md uppercase tracking-wider flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      <span>Release</span>
+              {releases.map((album) => {
+                const isSelected = selectedAlbumIds.has(album.id);
+                return (
+                  <div
+                    key={album.id}
+                    onClick={() => {
+                      if (isMultiAlbumMode) {
+                        toggleAlbumSelection(album.id);
+                      } else {
+                        setSelectedRelease(album);
+                      }
+                    }}
+                    className={`group cursor-pointer p-3 rounded-2xl border transition-all duration-200 flex flex-col relative select-none ${
+                      isSelected
+                        ? 'bg-amber-500/15 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] ring-1 ring-amber-400/60 scale-[1.01]'
+                        : 'bg-[#131822] hover:bg-[#1b2333] border-white/10 hover:border-amber-400/50 hover:shadow-xl active:scale-[0.98]'
+                    }`}
+                  >
+                    <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-lg bg-black">
+                      <img
+                        src={album.thumbnail}
+                        alt={album.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute top-2 left-2 bg-red-600/95 text-white font-mono text-[9px] font-black px-2 py-0.5 rounded shadow-md uppercase tracking-wider flex items-center gap-1 pointer-events-none">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        <span>Release</span>
+                      </div>
+
+                      {/* Multi-select Checkbox Badge */}
+                      {isMultiAlbumMode ? (
+                        <div className="absolute top-2 right-2">
+                          <div
+                            className={`w-7 h-7 rounded-xl flex items-center justify-center transition shadow-lg ${
+                              isSelected
+                                ? 'bg-amber-400 text-black ring-2 ring-amber-300'
+                                : 'bg-black/75 text-white/60 border border-white/20 backdrop-blur-sm hover:text-white'
+                            }`}
+                          >
+                            {isSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                          </div>
+                        </div>
+                      ) : album.year ? (
+                        <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm text-amber-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow pointer-events-none">
+                          {album.year}
+                        </div>
+                      ) : null}
                     </div>
-                    {album.year && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm text-amber-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                        {album.year}
+
+                    <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 truncate mt-2.5">
+                      {album.title}
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-zinc-400 font-mono truncate">
+                      {album.artist}
+                    </p>
+
+                    {/* Non-multiselect: Quick record button & track count */}
+                    {!isMultiAlbumMode ? (
+                      <>
+                        <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                          <span>{album.trackCount ? `${album.trackCount} canciones` : 'Álbum Oficial'}</span>
+                          <span className="text-amber-400 font-bold group-hover:underline">Ver pistas →</span>
+                        </div>
+
+                        {/* Direct 1-Click Tape Recording Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleQuickRecordAlbum(album, e)}
+                          disabled={recordingAlbumId === album.id}
+                          className={`w-full mt-2 py-1.5 px-2 rounded-xl text-[11px] font-mono-retro font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm border ${
+                            recordedSuccessAlbumId === album.id
+                              ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
+                              : 'bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border-amber-400/40 hover:shadow-md'
+                          }`}
+                          title="Grabar directamente este disco en cinta sin entrar a ver las pistas"
+                        >
+                          {recordingAlbumId === album.id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Grabando cinta...</span>
+                            </>
+                          ) : recordedSuccessAlbumId === album.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>¡Grabado en Cinta!</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                              <span>● Grabar en Cinta</span>
+                            </>
+                          )}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-zinc-400">{album.trackCount ? `${album.trackCount} pistas` : 'Álbum'}</span>
+                        <span className={isSelected ? 'text-amber-400 font-bold' : 'text-zinc-500'}>
+                          {isSelected ? '✓ Seleccionado' : 'Toca para elegir'}
+                        </span>
                       </div>
                     )}
                   </div>
-
-                  <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 truncate mt-2.5">
-                    {album.title}
-                  </h3>
-                  <p className="text-[11px] sm:text-xs text-zinc-400 font-mono truncate">
-                    {album.artist}
-                  </p>
-
-                  <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-400">
-                    <span>{album.trackCount ? `${album.trackCount} canciones` : 'Álbum Oficial'}</span>
-                    <span className="text-amber-400 font-bold group-hover:underline">Ver pistas →</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -573,6 +799,30 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 <p className="text-[10px] text-zinc-400 font-mono truncate w-full">
                   {album.year ? `${album.year} • ` : ''}{album.artist}
                 </p>
+
+                {/* Direct quick record on horizontal shelf */}
+                <button
+                  type="button"
+                  onClick={(e) => handleQuickRecordAlbum(album, e)}
+                  disabled={recordingAlbumId === album.id}
+                  className={`w-full mt-1.5 py-1 px-1.5 rounded-lg text-[10px] font-mono-retro font-bold flex items-center justify-center gap-1 transition active:scale-95 cursor-pointer border ${
+                    recordedSuccessAlbumId === album.id
+                      ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
+                      : 'bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border-amber-400/40'
+                  }`}
+                  title="Grabar directamente en cinta"
+                >
+                  {recordingAlbumId === album.id ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : recordedSuccessAlbumId === album.id ? (
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  ) : (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                      <span>Grabar</span>
+                    </>
+                  )}
+                </button>
               </div>
             ))}
           </div>
@@ -919,6 +1169,101 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         </div>
       )}
+      {/* Floating Action Bar for Multi-Album Batch Recording */}
+      {isMultiAlbumMode && selectedAlbumIds.size > 0 && (
+        <div className="fixed bottom-24 sm:bottom-28 left-3 right-3 sm:left-4 sm:right-4 max-w-xl mx-auto z-40 p-3 sm:p-4 rounded-2xl bg-[#0d121e]/95 border-2 border-amber-500/60 shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_25px_rgba(251,191,36,0.3)] backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom-5 select-none">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span>
+                {selectedAlbumIds.size}{' '}
+                {selectedAlbumIds.size === 1 ? 'disco seleccionado' : 'discos seleccionados'}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-400 font-mono truncate mt-0.5">
+              {selectedAlbumsList.map((a) => a.title).join(' • ')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={deselectAllAlbums}
+              className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-mono font-bold transition cursor-pointer"
+            >
+              Limpiar
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsMultiAlbumModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 via-amber-500 to-amber-400 hover:from-red-500 hover:to-amber-300 text-black font-mono-retro font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-amber-500/25 active:scale-95 transition cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-red-900 animate-ping" />
+              <span>Grabar en 1 Cinta</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Retro Tape Recording Notification Toast */}
+      {albumToast && (
+        <div className="fixed top-4 left-3 right-3 sm:left-4 sm:right-4 max-w-md mx-auto z-50 p-3.5 sm:p-4 rounded-2xl bg-[#0c111c]/95 border-2 border-amber-400/60 shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(251,191,36,0.35)] backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-4 select-none">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-amber-400 font-mono-retro text-xs font-black uppercase tracking-wider">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{albumToast.title}</span>
+            </div>
+            <p className="text-xs text-zinc-300 font-mono truncate mt-0.5">
+              {albumToast.message}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            {albumToast.tracks.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  playTrack(albumToast.tracks[0], albumToast.tracks);
+                  setAlbumToast(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-400 text-black font-bold text-xs hover:bg-amber-300 transition flex items-center gap-1 shadow-md cursor-pointer active:scale-95"
+                title="Reproducir esta cinta ahora"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span className="hidden sm:inline">Play</span>
+              </button>
+            )}
+            {onNavigateToPlaylist && albumToast.playlistId && (
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigateToPlaylist(albumToast.playlistId);
+                  setAlbumToast(null);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-mono font-bold transition cursor-pointer active:scale-95"
+              >
+                Ver Cinta
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setAlbumToast(null)}
+              className="p-1 rounded-lg text-zinc-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Multi-Album Recording Modal */}
+      <MultiAlbumRecordModal
+        isOpen={isMultiAlbumModalOpen}
+        onClose={() => setIsMultiAlbumModalOpen(false)}
+        selectedAlbums={selectedAlbumsList}
+        onRecordingComplete={handleBatchRecordComplete}
+      />
+
       {/* Reggaeton Prank Modal */}
       <ReggaetonPrankModal
         isOpen={!!prankPendingAction}

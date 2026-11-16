@@ -1,4 +1,5 @@
 import type { Track, YouTubeRelease } from '../types/music';
+import { streamResolver } from './streamResolver';
 
 class YouTubeReleaseService {
   private releaseCache = new Map<string, YouTubeRelease>();
@@ -303,6 +304,114 @@ class YouTubeReleaseService {
       }
     } catch (e) {
       console.warn('Invidious album tracks race error:', e);
+    }
+
+    // 3. Race Piped playlist instances as fallback
+    const pipedInstances = [
+      'https://api.piped.private.coffee',
+      'https://pipedapi.ducks.party',
+    ];
+
+    const parsePipedPlaylist = async (res: Response): Promise<YouTubeRelease> => {
+      if (!res.ok) throw new Error(`Piped HTTP ${res.status}`);
+      const data = await res.json();
+      const streams = data.relatedStreams || [];
+      if (!Array.isArray(streams) || streams.length === 0) {
+        throw new Error('No tracks found in Piped playlist');
+      }
+
+      const albumTitle =
+        (data.name || fallbackMeta?.title || '')
+          .replace(/^Album\s*[-–:]\s*/i, '')
+          .trim() || 'Álbum Oficial';
+
+      const albumArtist =
+        data.uploader || fallbackMeta?.artist || 'Artista Oficial';
+
+      const tracks: Track[] = streams
+        .filter((s: any) => s.url && s.title)
+        .map((s: any) => {
+          const vidId = s.url.includes('v=') ? s.url.split('v=')[1].split('&')[0] : s.url.replace('/watch?v=', '');
+          const dur = typeof s.duration === 'number' ? s.duration : 210;
+          return {
+            id: vidId,
+            title: s.title,
+            artist: s.uploaderName || albumArtist,
+            album: albumTitle,
+            duration: dur,
+            thumbnail: s.thumbnail || fallbackMeta?.thumbnail || `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`,
+            source: 'youtube' as const,
+            youtubeId: vidId,
+          };
+        });
+
+      return {
+        id: releaseId,
+        title: albumTitle,
+        artist: albumArtist,
+        year: fallbackMeta?.year,
+        thumbnail: fallbackMeta?.thumbnail || data.bannerUrl || tracks[0]?.thumbnail || '',
+        trackCount: tracks.length,
+        type: 'album',
+        tracks,
+      };
+    };
+
+    try {
+      const pipedDetails = await Promise.any(
+        pipedInstances.map(async (base) => {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 6000);
+          try {
+            const res = await fetch(`${base}/playlists/${releaseId}`, {
+              signal: controller.signal,
+            });
+            clearTimeout(tid);
+            return await parsePipedPlaylist(res);
+          } catch (e) {
+            clearTimeout(tid);
+            throw e;
+          }
+        })
+      );
+
+      if (pipedDetails) {
+        this.releaseCache.set(releaseId, pipedDetails);
+        return pipedDetails;
+      }
+    } catch (e) {
+      console.warn('Piped playlist fallback error:', e);
+    }
+
+    // 4. Ultimate fallback: Search tracks using query artist + album title
+    try {
+      const searchTerms = `${fallbackMeta?.artist || ''} ${fallbackMeta?.title || releaseId}`.trim();
+      if (searchTerms) {
+        const found = await streamResolver.search(searchTerms, 'youtube', 1);
+        if (found && found.length > 0) {
+          const albumTitle = fallbackMeta?.title || 'Álbum Oficial';
+          const albumArtist = fallbackMeta?.artist || 'Artista Oficial';
+          const tracks: Track[] = found.slice(0, 16).map((t) => ({
+            ...t,
+            album: albumTitle,
+            artist: t.artist || albumArtist,
+          }));
+          const fallbackRelease: YouTubeRelease = {
+            id: releaseId,
+            title: albumTitle,
+            artist: albumArtist,
+            year: fallbackMeta?.year,
+            thumbnail: fallbackMeta?.thumbnail || tracks[0]?.thumbnail || '',
+            trackCount: tracks.length,
+            type: 'album',
+            tracks,
+          };
+          this.releaseCache.set(releaseId, fallbackRelease);
+          return fallbackRelease;
+        }
+      }
+    } catch (e) {
+      console.warn('Search fallback error for album tracks:', e);
     }
 
     return null;

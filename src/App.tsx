@@ -239,6 +239,10 @@ const AppContent: React.FC = () => {
                 onSelectTrackForPlaylist={handleOpenAddToPlaylist}
                 onSelectMultipleForPlaylist={handleOpenAddMultipleToPlaylist}
                 onOpenSettingsModal={() => setIsSettingsModalOpen(true)}
+                onNavigateToPlaylist={(playlistId) => {
+                  setSelectedPlaylistId(playlistId);
+                  setActiveTab('library');
+                }}
                 initialQuery={searchQuery}
               />
             )}
