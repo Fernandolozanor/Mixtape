@@ -17,6 +17,8 @@ export interface Track {
   bpm?: number;
 }
 
+export type MediaFormat = 'tape' | 'vinyl';
+
 export interface Playlist {
   id: string;
   name: string;
@@ -25,6 +27,9 @@ export interface Playlist {
   tracks: Track[];
   createdAt: number;
   updatedAt: number;
+  mediaType?: 'tape' | 'vinyl';
+  artist?: string;
+  year?: string;
 }
 
 export type RepeatMode = 'off' | 'all' | 'one';

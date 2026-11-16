@@ -19,12 +19,14 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
+  const [mediaType, setMediaType] = useState<'tape' | 'vinyl'>('tape');
 
   useEffect(() => {
     if (playlist) {
       setName(playlist.name);
       setDescription(playlist.description || '');
       setCoverUrl(playlist.coverUrl || '');
+      setMediaType(playlist.mediaType || (playlist.description?.includes('vinilo') ? 'vinyl' : 'tape'));
     }
   }, [playlist]);
 
@@ -38,6 +40,7 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
       name: name.trim(),
       description: description.trim(),
       coverUrl: coverUrl.trim() || undefined,
+      mediaType,
     });
     onClose();
   };
@@ -125,6 +128,36 @@ export const EditPlaylistModal: React.FC<EditPlaylistModalProps> = ({
               placeholder="https://ejemplo.com/imagen.jpg"
               className="w-full px-4 py-2.5 rounded-xl glass-input text-sm"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">
+              Formato de Colección
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMediaType('tape')}
+                className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                  mediaType === 'tape'
+                    ? 'bg-amber-400 text-black border-amber-400 shadow-md'
+                    : 'bg-black/40 text-zinc-400 border-white/10 hover:text-white'
+                }`}
+              >
+                <span>📼 Cinta de Cassette</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaType('vinyl')}
+                className={`py-2 px-3 rounded-xl border text-xs font-mono font-bold flex items-center justify-center gap-2 transition cursor-pointer ${
+                  mediaType === 'vinyl'
+                    ? 'bg-amber-400 text-black border-amber-400 shadow-md'
+                    : 'bg-black/40 text-zinc-400 border-white/10 hover:text-white'
+                }`}
+              >
+                <span>💽 Disco de Vinilo (Álbum)</span>
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

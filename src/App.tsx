@@ -256,6 +256,7 @@ const AppContent: React.FC = () => {
                 openSpotifyCsvModal={() => setIsSpotifyCsvModalOpen(true)}
                 openSyncModal={() => setIsSyncModalOpen(true)}
                 openSettingsModal={() => setIsSettingsModalOpen(true)}
+                onNavigateToSearch={() => setActiveTab('search')}
                 selectedPlaylistId={selectedPlaylistId}
                 setSelectedPlaylistId={setSelectedPlaylistId}
               />

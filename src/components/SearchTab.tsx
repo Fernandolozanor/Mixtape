@@ -123,16 +123,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         throw new Error('No se pudieron obtener las pistas del álbum.');
       }
 
-      const tapeTitle = `${album.title} [Tape]`;
-      const tapeDesc = `Lanzamiento oficial de ${album.artist} (${album.year || 'Álbum'}) grabado en cinta`;
-      const createdTape = createPlaylist(tapeTitle, tapeDesc, album.thumbnail);
-      addTracksToPlaylist(createdTape.id, tracks);
+      const vinylTitle = album.title;
+      const vinylDesc = `Álbum de vinilo oficial de ${album.artist} (${album.year || 'LP'})`;
+      const createdVinyl = createPlaylist(
+        vinylTitle,
+        vinylDesc,
+        album.thumbnail,
+        'vinyl',
+        album.artist,
+        album.year
+      );
+      addTracksToPlaylist(createdVinyl.id, tracks);
 
       setRecordedSuccessAlbumId(album.id);
       setAlbumToast({
-        title: '¡Disco grabado en cinta!',
-        message: `"${album.title}" (${tracks.length} canciones añadidas a tu estantería)`,
-        playlistId: createdTape.id,
+        title: '¡Álbum guardado en Vinilo!',
+        message: `"${album.title}" (${tracks.length} canciones añadidas a tu colección de vinilos)`,
+        playlistId: createdVinyl.id,
         tracks,
       });
 
@@ -711,7 +718,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                           <span className="text-amber-400 font-bold group-hover:underline">Ver pistas →</span>
                         </div>
 
-                        {/* Direct 1-Click Tape Recording Button */}
+                        {/* Direct 1-Click Vinyl Recording Button */}
                         <button
                           type="button"
                           onClick={(e) => handleQuickRecordAlbum(album, e)}
@@ -721,22 +728,22 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                               ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
                               : 'bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border-amber-400/40 hover:shadow-md'
                           }`}
-                          title="Grabar directamente este disco en cinta sin entrar a ver las pistas"
+                          title="Guardar directamente este álbum en tu estantería de Vinilos"
                         >
                           {recordingAlbumId === album.id ? (
                             <>
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>Grabando cinta...</span>
+                              <span>Guardando vinilo...</span>
                             </>
                           ) : recordedSuccessAlbumId === album.id ? (
                             <>
                               <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              <span>¡Grabado en Cinta!</span>
+                              <span>¡Guardado en Vinilo!</span>
                             </>
                           ) : (
                             <>
-                              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                              <span>● Grabar en Cinta</span>
+                              <Disc3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <span>Guardar en Vinilo</span>
                             </>
                           )}
                         </button>
@@ -810,7 +817,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                       ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
                       : 'bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border-amber-400/40'
                   }`}
-                  title="Grabar directamente en cinta"
+                  title="Guardar álbum en vinilo"
                 >
                   {recordingAlbumId === album.id ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -818,8 +825,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                     <Check className="w-3 h-3 text-emerald-400" />
                   ) : (
                     <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-                      <span>Grabar</span>
+                      <Disc3 className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span>Vinilo</span>
                     </>
                   )}
                 </button>

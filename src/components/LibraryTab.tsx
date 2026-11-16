@@ -22,6 +22,7 @@ import { useTheme } from '../context/ThemeContext';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
+import { VinylCoverFlow } from './VinylCoverFlow';
 import { bpmService } from '../services/bpmService';
 import { SourceBadge } from './SourceBadge';
 import type { Playlist } from '../types/music';
@@ -31,6 +32,7 @@ interface LibraryTabProps {
   openSpotifyCsvModal?: () => void;
   openSyncModal?: () => void;
   openSettingsModal?: () => void;
+  onNavigateToSearch?: () => void;
   selectedPlaylistId: string | null;
   setSelectedPlaylistId: (id: string | null) => void;
   isFavoritesView?: boolean;
@@ -41,6 +43,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   openSpotifyCsvModal,
   openSyncModal,
   openSettingsModal,
+  onNavigateToSearch,
   selectedPlaylistId,
   setSelectedPlaylistId,
   isFavoritesView = false,
@@ -54,6 +57,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     reorderLikedTracks,
     removeLikedTrack,
     clearLikedTracks,
+    createPlaylist,
+    addTracksToPlaylist,
   } = useLibrary();
 
   const { playTrack, currentTrack, isPlaying } = usePlayer();
@@ -61,8 +66,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
   // Favorites view mode: 'vinyl' (default 3D vinyl records) or 'list'
   const [favoritesViewMode, setFavoritesViewMode] = useState<'vinyl' | 'list'>('vinyl');
-  // Library playlists view mode: 'rack' (3D cassette shelf) or 'grid' (cards)
-  const [libraryViewMode, setLibraryViewMode] = useState<'rack' | 'grid'>('rack');
+  // Library view mode: 'shelves' (Estanterías 3D de Cintas arriba y Vinilos Cover Flow abajo) vs 'lists'
+  const [libraryViewMode, setLibraryViewMode] = useState<'shelves' | 'lists'>('shelves');
+  const [listFilter, setListFilter] = useState<'all' | 'tapes' | 'vinyls'>('all');
 
   const handlePlayPlaylistFromRack = (playlist: Playlist) => {
     if (playlist.tracks.length > 0) {
@@ -612,9 +618,123 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     );
   }
 
+  const isVinylPlaylist = (p: Playlist) => {
+    return (
+      p.mediaType === 'vinyl' ||
+      p.description?.toLowerCase().includes('vinilo') ||
+      p.description?.toLowerCase().includes('lanzamiento oficial') ||
+      p.description?.toLowerCase().includes('álbum de vinilo')
+    );
+  };
+
+  const tapePlaylists = playlists.filter((p) => !isVinylPlaylist(p));
+  const vinylPlaylists = playlists.filter((p) => isVinylPlaylist(p));
+
+  const handleLoadDemoVinyls = () => {
+    const demos = [
+      {
+        name: 'A Night at the Opera',
+        artist: 'Queen',
+        year: '1975',
+        coverUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
+        tracks: [
+          {
+            id: 'fJ9rUzIMcZQ',
+            title: 'Bohemian Rhapsody',
+            artist: 'Queen',
+            album: 'A Night at the Opera',
+            duration: 359,
+            thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+            source: 'youtube' as const,
+          },
+          {
+            id: 'HgzGwKwLmgM',
+            title: "You're My Best Friend",
+            artist: 'Queen',
+            album: 'A Night at the Opera',
+            duration: 172,
+            thumbnail: 'https://i.ytimg.com/vi/HgzGwKwLmgM/hqdefault.jpg',
+            source: 'youtube' as const,
+          },
+        ],
+      },
+      {
+        name: 'The Dark Side of the Moon',
+        artist: 'Pink Floyd',
+        year: '1973',
+        coverUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80',
+        tracks: [
+          {
+            id: 'cpbbuaIA3Ds',
+            title: 'Time',
+            artist: 'Pink Floyd',
+            album: 'The Dark Side of the Moon',
+            duration: 425,
+            thumbnail: 'https://i.ytimg.com/vi/cpbbuaIA3Ds/hqdefault.jpg',
+            source: 'youtube' as const,
+          },
+          {
+            id: 'DLOth-BuCNY',
+            title: 'Money',
+            artist: 'Pink Floyd',
+            album: 'The Dark Side of the Moon',
+            duration: 382,
+            thumbnail: 'https://i.ytimg.com/vi/DLOth-BuCNY/hqdefault.jpg',
+            source: 'youtube' as const,
+          },
+        ],
+      },
+      {
+        name: 'Thriller',
+        artist: 'Michael Jackson',
+        year: '1982',
+        coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+        tracks: [
+          {
+            id: 'sOnqjkJTMaA',
+            title: 'Thriller',
+            artist: 'Michael Jackson',
+            album: 'Thriller',
+            duration: 357,
+            thumbnail: 'https://i.ytimg.com/vi/sOnqjkJTMaA/hqdefault.jpg',
+            source: 'youtube' as const,
+          },
+          {
+            id: 'Zi_XLOBDo_Y',
+            title: 'Billie Jean',
+            artist: 'Michael Jackson',
+            album: 'Thriller',
+            duration: 294,
+            thumbnail: 'https://i.ytimg.com/vi/Zi_XLOBDo_Y/hqdefault.jpg',
+            source: 'youtube' as const,
+          },
+        ],
+      },
+    ];
+
+    for (const demo of demos) {
+      const created = createPlaylist(
+        demo.name,
+        `Álbum de vinilo oficial de ${demo.artist} (${demo.year})`,
+        demo.coverUrl,
+        'vinyl',
+        demo.artist,
+        demo.year
+      );
+      addTracksToPlaylist(created.id, demo.tracks);
+    }
+  };
+
   // 3. Main Library Overview
+  const displayedListPlaylists =
+    listFilter === 'tapes'
+      ? tapePlaylists
+      : listFilter === 'vinyls'
+      ? vinylPlaylists
+      : playlists;
+
   return (
-    <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
+    <div className="space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48 select-none">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -624,36 +744,38 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             </span>
           </div>
           <h1 className="font-rock text-3xl sm:text-4xl tracking-widest text-white leading-tight">
-            ESTANTERÍA DE CINTAS & MIXTAPES
+            ESTANTERÍAS & COLECCIÓN
           </h1>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View Mode Toggle: Estantería vs Cuadrícula */}
-          <div className="flex items-center bg-black/50 p-1 rounded-xl border border-white/10">
+          {/* Selector principal: Estanterías 3D vs Listados */}
+          <div className="flex items-center bg-black/60 p-1 rounded-xl border border-white/10 shadow-inner">
             <button
               type="button"
-              onClick={() => setLibraryViewMode('rack')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono-retro font-bold uppercase transition ${
-                libraryViewMode === 'rack'
+              onClick={() => setLibraryViewMode('shelves')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono-retro font-bold uppercase transition cursor-pointer ${
+                libraryViewMode === 'shelves'
                   ? 'bg-amber-400 text-black shadow-md'
                   : 'text-zinc-400 hover:text-white'
               }`}
-              title="Vista de estantería de cintas 3D"
+              title="Ver estanterías analógicas 3D (Cintas arriba y Vinilos Cover Flow abajo)"
             >
-              <span>Estantería</span>
+              <Disc3 className="w-3.5 h-3.5" />
+              <span>Estanterías (3D)</span>
             </button>
             <button
               type="button"
-              onClick={() => setLibraryViewMode('grid')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono-retro font-bold uppercase transition ${
-                libraryViewMode === 'grid'
+              onClick={() => setLibraryViewMode('lists')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono-retro font-bold uppercase transition cursor-pointer ${
+                libraryViewMode === 'lists'
                   ? 'bg-amber-400 text-black shadow-md'
                   : 'text-zinc-400 hover:text-white'
               }`}
-              title="Vista de cuadrícula con carátulas"
+              title="Ver listados en tarjetas"
             >
-              <span>Cuadrícula</span>
+              <List className="w-3.5 h-3.5" />
+              <span>Listados</span>
             </button>
           </div>
 
@@ -700,106 +822,227 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </div>
       </div>
 
-      {libraryViewMode === 'rack' ? (
-        /* Authentic 80s Wooden Cassette Rack Shelf with Handwritten Spine Labels */
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <p className="font-mono-retro text-[10px] sm:text-xs font-bold uppercase tracking-widest text-zinc-400">
-              ESTANTERÍA DE CINTAS • TUS LISTAS EN EL LOMO ({playlists.length}/48)
-            </p>
-            <span className="text-[9px] font-mono text-amber-400/80 hidden sm:inline">
-              Toca una cinta para reproducirla directamente en la pletina
-            </span>
-          </div>
-          <CassetteRack
-            playlists={playlists}
-            onSelectPlaylist={(id) => setSelectedPlaylistId(id)}
-            onPlayPlaylist={handlePlayPlaylistFromRack}
-            onNewPlaylist={openNewPlaylistModal}
-          />
-        </div>
-      ) : (
-        /* Playlists Grid - Mixtape Cards */
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="font-mono-retro text-xs font-bold uppercase tracking-widest text-zinc-400">
-              TUS MIXTAPES GRABADAS ({playlists.length})
-            </p>
+      {libraryViewMode === 'shelves' ? (
+        <div className="space-y-12 animate-in fade-in">
+          {/* 1. SECCIÓN SUPERIOR: ESTANTERÍA DE CINTAS (LISTAS & MIXTAPES) */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+                <h2 className="font-mono-retro text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
+                  ESTANTERÍA DE CINTAS • TUS LISTAS EN EL LOMO ({tapePlaylists.length}/48)
+                </h2>
+              </div>
+              <span className="text-[10px] font-mono text-amber-400/80 hidden sm:inline">
+                Toca una cinta para reproducirla directamente en la pletina
+              </span>
+            </div>
+
+            <CassetteRack
+              playlists={tapePlaylists}
+              onSelectPlaylist={(id) => setSelectedPlaylistId(id)}
+              onPlayPlaylist={handlePlayPlaylistFromRack}
+              onNewPlaylist={openNewPlaylistModal}
+            />
           </div>
 
-          {playlists.length === 0 ? (
-            <div className="p-10 text-center retro-tape-chassis rounded-3xl border border-white/10 text-zinc-400">
-              <p className="font-rock text-xl text-white tracking-wider mb-1">LA PLETINA ESTÁ VACÍA</p>
-              <p className="text-xs font-mono text-zinc-400">No has grabado ninguna cinta de casette todavía.</p>
-              <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
-                <button
-                  onClick={openNewPlaylistModal}
-                  className="px-5 py-2 rounded-xl theme-btn text-sm cursor-pointer"
-                >
-                  Grabar cinta manual
-                </button>
-                {openSpotifyCsvModal && (
+          {/* 2. SECCIÓN INFERIOR: ESTANTERÍA DE VINILOS (ÁLBUMES DE GRUPOS - COVER FLOW) */}
+          <div className="space-y-3 pt-6 border-t border-white/10">
+            <div className="flex items-center justify-between flex-wrap gap-2 px-1">
+              <div className="flex items-center gap-2">
+                <Disc3 className="w-4 h-4 text-amber-400 animate-spin" />
+                <h2 className="font-mono-retro text-xs sm:text-sm font-bold uppercase tracking-wider text-white">
+                  ESTANTERÍA DE VINILOS • ÁLBUMES DE GRUPOS ({vinylPlaylists.length})
+                </h2>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 font-mono font-bold">
+                  COVER FLOW 3D
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {vinylPlaylists.length === 0 && (
                   <button
-                    onClick={openSpotifyCsvModal}
-                    className="px-5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold text-sm cursor-pointer flex items-center gap-2 transition active:scale-95 shadow-md shadow-emerald-500/10"
+                    type="button"
+                    onClick={handleLoadDemoVinyls}
+                    className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
                   >
-                    <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                    <span>Importar de Spotify (CSV)</span>
+                    + Cargar 3 Vinilos Clásicos (Demo)
+                  </button>
+                )}
+                {onNavigateToSearch && (
+                  <button
+                    type="button"
+                    onClick={onNavigateToSearch}
+                    className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Buscar Álbumes</span>
+                    <span>→</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <p className="text-[11px] font-mono text-zinc-400 px-1">
+              Hojear discos como en Cover Flow: desliza, usa las flechas o la rueda del ratón para girar las carátulas.
+            </p>
+
+            <VinylCoverFlow
+              vinyls={vinylPlaylists}
+              onSelectVinyl={(id) => setSelectedPlaylistId(id)}
+              onEditVinyl={(vinyl) => setPlaylistToEdit(vinyl)}
+              onDeleteVinyl={(id) => deletePlaylist(id)}
+              onOpenSearchReleases={onNavigateToSearch}
+            />
+          </div>
+        </div>
+      ) : (
+        /* VISTA DE LISTADOS (CUADRÍCULA / LISTA FILTRADA) */
+        <div className="space-y-4 animate-in fade-in">
+          {/* Sub-selector de tipo de lista */}
+          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-1.5 bg-black/40 p-1 rounded-xl border border-white/10">
+              <button
+                type="button"
+                onClick={() => setListFilter('all')}
+                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                  listFilter === 'all'
+                    ? 'bg-amber-400 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Todos ({playlists.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setListFilter('tapes')}
+                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                  listFilter === 'tapes'
+                    ? 'bg-amber-400 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                📼 Cintas ({tapePlaylists.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setListFilter('vinyls')}
+                className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition cursor-pointer ${
+                  listFilter === 'vinyls'
+                    ? 'bg-amber-400 text-black shadow-md'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                💽 Vinilos ({vinylPlaylists.length})
+              </button>
+            </div>
+
+            {vinylPlaylists.length === 0 && listFilter === 'vinyls' && (
+              <button
+                type="button"
+                onClick={handleLoadDemoVinyls}
+                className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+              >
+                + Cargar 3 Vinilos Clásicos (Demo)
+              </button>
+            )}
+          </div>
+
+          {displayedListPlaylists.length === 0 ? (
+            <div className="p-10 text-center retro-tape-chassis rounded-3xl border border-white/10 text-zinc-400">
+              <p className="font-rock text-xl text-white tracking-wider mb-1">NO HAY ELEMENTOS EN ESTA VISTA</p>
+              <p className="text-xs font-mono text-zinc-400">
+                {listFilter === 'vinyls'
+                  ? 'No has guardado álbumes en vinilo todavía.'
+                  : 'No has grabado ninguna cinta todavía.'}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+                {listFilter === 'vinyls' ? (
+                  <>
+                    <button
+                      onClick={handleLoadDemoVinyls}
+                      className="px-5 py-2 rounded-xl theme-btn text-sm cursor-pointer"
+                    >
+                      Cargar Vinilos Demo
+                    </button>
+                    {onNavigateToSearch && (
+                      <button
+                        onClick={onNavigateToSearch}
+                        className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm cursor-pointer"
+                      >
+                        Buscar Álbumes
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    onClick={openNewPlaylistModal}
+                    className="px-5 py-2 rounded-xl theme-btn text-sm cursor-pointer"
+                  >
+                    Grabar cinta manual
                   </button>
                 )}
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {playlists.map((playlist) => (
-                <div
-                  key={playlist.id}
-                  onClick={() => setSelectedPlaylistId(playlist.id)}
-                  className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
-                >
-                  {/* Cassette Cover Window */}
-                  <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
-                    {playlist.coverUrl ? (
-                      <img
-                        src={playlist.coverUrl}
-                        alt={playlist.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      />
-                    ) : playlist.tracks[0]?.thumbnail ? (
-                      <img
-                        src={playlist.tracks[0].thumbnail}
-                        alt={playlist.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                      />
-                    ) : (
-                      <ListMusic className="w-10 h-10 text-zinc-600" />
-                    )}
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                      <Play className="w-6 h-6 fill-white text-white" />
+              {displayedListPlaylists.map((playlist) => {
+                const isItemVinyl = isVinylPlaylist(playlist);
+                return (
+                  <div
+                    key={playlist.id}
+                    onClick={() => setSelectedPlaylistId(playlist.id)}
+                    className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
+                  >
+                    {/* Media Cover Window */}
+                    <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
+                      {playlist.coverUrl ? (
+                        <img
+                          src={playlist.coverUrl}
+                          alt={playlist.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        />
+                      ) : playlist.tracks[0]?.thumbnail ? (
+                        <img
+                          src={playlist.tracks[0].thumbnail}
+                          alt={playlist.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        />
+                      ) : (
+                        <ListMusic className="w-10 h-10 text-zinc-600" />
+                      )}
+
+                      {/* Format Badge */}
+                      <div className="absolute top-1.5 left-1.5 bg-black/85 text-amber-300 font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow border border-amber-400/30">
+                        {isItemVinyl ? '💽 VINILO' : '📼 CINTA'}
+                      </div>
+
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                        <Play className="w-6 h-6 fill-white text-white" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start justify-between gap-1">
+                      <div className="overflow-hidden">
+                        <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
+                        <p className="text-xs text-zinc-400 truncate">
+                          {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPlaylistToEdit(playlist);
+                        }}
+                        className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition shrink-0"
+                        title="Editar lista"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-start justify-between gap-1">
-                    <div className="overflow-hidden">
-                      <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
-                      <p className="text-xs text-zinc-400 truncate">
-                        {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPlaylistToEdit(playlist);
-                      }}
-                      className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition shrink-0"
-                      title="Editar lista"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -3,7 +3,6 @@ import {
   X,
   Play,
   Plus,
-  Radio,
   Disc3,
   Check,
   Loader2,
@@ -31,7 +30,6 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
   const [fullRelease, setFullRelease] = useState<YouTubeRelease | null>(release);
   const [isLoadingTracks, setIsLoadingTracks] = useState(false);
   const [recordedSuccess, setRecordedSuccess] = useState(false);
-  const tapeBias = 'chrome';
 
   const { playTrack, currentTrack } = usePlayer();
   const { createPlaylist, addTracksToPlaylist } = useLibrary();
@@ -77,13 +75,18 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
     onClose();
   };
 
-  const handleRecordToTape = () => {
+  const handleRecordToVinyl = () => {
     if (tracks.length === 0) return;
     const albumName = fullRelease?.title || release.title;
+    const artistName = fullRelease?.artist || release.artist;
+    const cover = fullRelease?.thumbnail || release.thumbnail;
     const playlist = createPlaylist(
-      `${albumName} [Tape]`,
-      `Lanzamiento oficial de ${fullRelease?.artist || release.artist} grabado en cinta ${tapeBias.toUpperCase()}`,
-      fullRelease?.thumbnail || release.thumbnail
+      albumName,
+      `Álbum de vinilo oficial de ${artistName} (${release.year || 'LP'})`,
+      cover,
+      'vinyl',
+      artistName,
+      release.year
     );
     addTracksToPlaylist(playlist.id, tracks);
     setRecordedSuccess(true);
@@ -166,24 +169,24 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={handleRecordToTape}
+                  onClick={handleRecordToVinyl}
                   disabled={tracks.length === 0 || recordedSuccess}
                   className={`px-3.5 py-2 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-2 border transition active:scale-95 cursor-pointer ${
                     recordedSuccess
                       ? 'bg-emerald-500 text-black border-emerald-400 shadow-md'
                       : 'bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 border-white/20'
                   }`}
-                  title="Guardar todas las canciones de este álbum en tu colección de Cintas"
+                  title="Guardar este álbum en tu estantería Cover Flow de Vinilos"
                 >
                   {recordedSuccess ? (
                     <>
                       <Check className="w-4 h-4 text-black" />
-                      <span>¡Grabado en Cinta!</span>
+                      <span>¡Guardado en Vinilo!</span>
                     </>
                   ) : (
                     <>
-                      <Radio className="w-4 h-4 text-amber-400" />
-                      <span>Grabar en Cinta</span>
+                      <Disc3 className="w-4 h-4 text-amber-400" />
+                      <span>Guardar en Vinilo</span>
                     </>
                   )}
                 </button>

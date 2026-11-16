@@ -9,8 +9,25 @@ interface LibraryContextType {
   likedTracks: Track[];
   settings: UserSettings;
   syncState: SyncStateInfo;
-  createPlaylist: (name: string, description?: string, coverUrl?: string) => Playlist;
-  updatePlaylist: (id: string, updates: { name?: string; description?: string; coverUrl?: string }) => void;
+  createPlaylist: (
+    name: string,
+    description?: string,
+    coverUrl?: string,
+    mediaType?: 'tape' | 'vinyl',
+    artist?: string,
+    year?: string
+  ) => Playlist;
+  updatePlaylist: (
+    id: string,
+    updates: {
+      name?: string;
+      description?: string;
+      coverUrl?: string;
+      mediaType?: 'tape' | 'vinyl';
+      artist?: string;
+      year?: string;
+    }
+  ) => void;
   deletePlaylist: (id: string) => void;
   addTrackToPlaylist: (playlistId: string, track: Track) => void;
   addTracksToPlaylist: (playlistId: string, tracks: Track[]) => void;
@@ -281,12 +298,22 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     syncService.clearJustLinkedFlag();
   };
 
-  const createPlaylist = (name: string, description?: string, coverUrl?: string): Playlist => {
+  const createPlaylist = (
+    name: string,
+    description?: string,
+    coverUrl?: string,
+    mediaType: 'tape' | 'vinyl' = 'tape',
+    artist?: string,
+    year?: string
+  ): Playlist => {
     const newPlaylist: Playlist = {
       id: 'pl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
       name: name.trim() || 'Nueva Lista',
       description,
       coverUrl,
+      mediaType,
+      artist,
+      year,
       tracks: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -303,7 +330,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updatePlaylist = (
     id: string,
-    updates: { name?: string; description?: string; coverUrl?: string }
+    updates: {
+      name?: string;
+      description?: string;
+      coverUrl?: string;
+      mediaType?: 'tape' | 'vinyl';
+      artist?: string;
+      year?: string;
+    }
   ) => {
     setPlaylists((prev) => {
       const updated = prev.map((p) => {
@@ -313,6 +347,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             name: updates.name !== undefined ? updates.name.trim() || p.name : p.name,
             description: updates.description !== undefined ? updates.description : p.description,
             coverUrl: updates.coverUrl !== undefined ? updates.coverUrl : p.coverUrl,
+            mediaType: updates.mediaType !== undefined ? updates.mediaType : p.mediaType,
+            artist: updates.artist !== undefined ? updates.artist : p.artist,
+            year: updates.year !== undefined ? updates.year : p.year,
             updatedAt: Date.now(),
           };
         }
