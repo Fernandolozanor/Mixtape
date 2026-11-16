@@ -30,10 +30,14 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const { playTrack, currentTrack, isPlaying, togglePlay } = usePlayer();
 
-  // Drag / swipe gesture state
+  // Fluid velocity & momentum swipe gesture state
   const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
   const dragStartX = useRef<number | null>(null);
-  const dragDistance = useRef<number>(0);
+  const dragStartY = useRef<number | null>(null);
+  const lastX = useRef<number>(0);
+  const lastTime = useRef<number>(0);
+  const velocity = useRef<number>(0);
   const stageRef = useRef<HTMLDivElement | null>(null);
 
   // Keep activeIndex within bounds if vinyls length changes
@@ -68,50 +72,98 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [vinyls, activeIndex]);
 
-  // Mouse wheel navigation
+  // Mouse wheel navigation with adaptive momentum
   const lastWheelTime = useRef<number>(0);
   const handleWheel = (e: React.WheelEvent) => {
     const now = Date.now();
-    if (now - lastWheelTime.current < 160) return; // throttle wheel steps
-
     const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) > 18) {
-      if (delta > 0) {
-        setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
-      } else {
-        setActiveIndex((prev) => Math.max(0, prev - 1));
-      }
-      lastWheelTime.current = now;
+    if (Math.abs(delta) < 15) return;
+
+    if (now - lastWheelTime.current < 90) return;
+    lastWheelTime.current = now;
+
+    const step = Math.abs(delta) > 120 ? 2 : 1;
+    if (delta > 0) {
+      setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + step));
+    } else {
+      setActiveIndex((prev) => Math.max(0, prev - step));
     }
   };
 
-  // Pointer / Touch drag gestures
+  // High-performance pointer / touch swipe gestures with velocity & inertia
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    if (['BUTTON', 'A', 'INPUT'].includes((e.target as HTMLElement).tagName)) return;
+
     setIsDragging(true);
     dragStartX.current = e.clientX;
-    dragDistance.current = 0;
+    dragStartY.current = e.clientY;
+    lastX.current = e.clientX;
+    lastTime.current = performance.now();
+    velocity.current = 0;
+    setDragOffset(0);
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging || dragStartX.current === null) return;
-    dragDistance.current = e.clientX - dragStartX.current;
+    const dx = e.clientX - dragStartX.current;
+    const dy = e.clientY - (dragStartY.current ?? e.clientY);
+
+    // Allow natural vertical page scrolling if swipe is primarily vertical
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 20 && Math.abs(dx) < 12) {
+      return;
+    }
+
+    const now = performance.now();
+    const dt = now - lastTime.current;
+    if (dt > 10) {
+      const instV = (e.clientX - lastX.current) / dt; // px / ms
+      velocity.current = velocity.current * 0.3 + instV * 0.7;
+      lastX.current = e.clientX;
+      lastTime.current = now;
+    }
+
+    setDragOffset(dx);
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e: React.PointerEvent) => {
     if (!isDragging) return;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
     setIsDragging(false);
 
-    if (Math.abs(dragDistance.current) > 35) {
-      if (dragDistance.current < 0) {
-        // Dragged left -> move forward
-        setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
-      } else {
-        // Dragged right -> move backward
-        setActiveIndex((prev) => Math.max(0, prev - 1));
-      }
+    const dx = dragOffset;
+    const v = velocity.current; // px per ms
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    const stepWidth = isMobile ? 55 : 75;
+
+    // Proportional displacement based on drag distance AND swipe speed (momentum)
+    const distanceFraction = -dx / stepWidth;
+    const velocityContribution = -v * 2.2;
+
+    let totalJump = Math.round(distanceFraction + velocityContribution);
+
+    // Guaranteed minimum 1-step navigation for definite swipes
+    if (Math.abs(v) > 0.3 && totalJump === 0) {
+      totalJump = v < 0 ? 1 : -1;
+    } else if (Math.abs(dx) > 30 && totalJump === 0) {
+      totalJump = dx < 0 ? 1 : -1;
     }
+
+    if (totalJump !== 0) {
+      const nextIndex = Math.max(0, Math.min(vinyls.length - 1, activeIndex + totalJump));
+      setActiveIndex(nextIndex);
+    }
+
+    setDragOffset(0);
     dragStartX.current = null;
-    dragDistance.current = 0;
+    velocity.current = 0;
   };
 
   const activeVinyl = vinyls[activeIndex];
@@ -172,6 +224,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
         style={{
           perspective: '1000px',
           perspectiveOrigin: '50% 45%',
+          touchAction: 'pan-y',
         }}
       >
         {/* Overhead Spotlights & Ambient Glow */}
@@ -214,11 +267,14 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
           style={{ transformStyle: 'preserve-3d' }}
         >
           {vinyls.map((album, idx) => {
-            const offset = idx - activeIndex;
-            const isCenter = offset === 0;
+            const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+            const cardShiftRatio = isMobile ? 100 : 140;
+            // Dynamic fluid offset during finger drag
+            const offset = (idx - activeIndex) + (isDragging ? dragOffset / cardShiftRatio : 0);
+            const absOffset = Math.abs(offset);
+            const isCenter = absOffset < 0.45;
 
             // Responsive spacing based on device width
-            const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
             const centerOffset = isMobile ? 110 : 155;
             const itemSpacing = isMobile ? 38 : 55;
 
@@ -226,34 +282,31 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             let rotateY = 0;
             let translateZ = 0;
             let scale = 1;
-            let zIndex = 30 - Math.abs(offset);
-            let opacity = 1;
-            let brightness = 1;
+            let zIndex = Math.round(50 - absOffset * 6);
+            let opacity = Math.max(0.12, 1 - absOffset * 0.18);
+            let brightness = Math.max(0.35, 1 - absOffset * 0.15);
 
-            if (isCenter) {
+            if (offset > 0) {
+              const clamped = Math.min(1, offset);
+              const extra = Math.max(0, offset - 1);
+              translateX = centerOffset * clamped + extra * itemSpacing;
+              rotateY = -52 * clamped;
+              translateZ = -90 * clamped - extra * 25;
+              scale = (isMobile ? 1.02 : 1.12) - (isMobile ? 0.24 : 0.27) * clamped;
+            } else if (offset < 0) {
+              const neg = -offset;
+              const clamped = Math.min(1, neg);
+              const extra = Math.max(0, neg - 1);
+              translateX = -centerOffset * clamped - extra * itemSpacing;
+              rotateY = 52 * clamped;
+              translateZ = -90 * clamped - extra * 25;
+              scale = (isMobile ? 1.02 : 1.12) - (isMobile ? 0.24 : 0.27) * clamped;
+            } else {
               translateX = 0;
               rotateY = 0;
               translateZ = 70;
               scale = isMobile ? 1.02 : 1.12;
-              zIndex = 50;
-              opacity = 1;
               brightness = 1.05;
-            } else if (offset < 0) {
-              // Left side albums: tilted right (+52deg)
-              translateX = -centerOffset - (Math.abs(offset) - 1) * itemSpacing;
-              rotateY = 52;
-              translateZ = -90 - Math.abs(offset) * 25;
-              scale = isMobile ? 0.78 : 0.85;
-              opacity = Math.max(0.15, 1 - Math.abs(offset) * 0.18);
-              brightness = Math.max(0.35, 0.75 - Math.abs(offset) * 0.1);
-            } else {
-              // Right side albums: tilted left (-52deg)
-              translateX = centerOffset + (Math.abs(offset) - 1) * itemSpacing;
-              rotateY = -52;
-              translateZ = -90 - Math.abs(offset) * 25;
-              scale = isMobile ? 0.78 : 0.85;
-              opacity = Math.max(0.15, 1 - Math.abs(offset) * 0.18);
-              brightness = Math.max(0.35, 0.75 - Math.abs(offset) * 0.1);
             }
 
             // Fallback thumbnail
@@ -270,13 +323,14 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                 key={album.id}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (Math.abs(dragOffset) > 8) return;
                   if (isCenter) {
                     handlePlayActiveVinyl();
                   } else {
                     setActiveIndex(idx);
                   }
                 }}
-                className="absolute w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 transition-all duration-500 ease-out cursor-pointer pointer-events-auto"
+                className="absolute w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 cursor-pointer pointer-events-auto select-none"
                 style={{
                   transform: `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                   zIndex,
@@ -284,6 +338,9 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   filter: `brightness(${brightness})`,
                   willChange: 'transform, opacity',
                   transformStyle: 'preserve-3d',
+                  transition: isDragging
+                    ? 'none'
+                    : 'transform 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms ease-out, filter 500ms ease-out',
                 }}
                 title={album.name}
               >
