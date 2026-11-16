@@ -76,7 +76,7 @@ class StreamResolver {
         }
       }
 
-      // 1c. Match against curated Rock Anthology (only when relevant to the actual query)
+      // 1c. Match against curated Rock Anthology (only when strictly relevant to the actual query)
       const lower = term.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const words = lower.split(/[\s,.-]+/).filter((w) => w.length > 2);
 
@@ -86,6 +86,12 @@ class StreamResolver {
         lower.includes('rock anthology') ||
         lower === 'rock';
 
+      const ROCK_STOPWORDS = new Set([
+        'the', 'and', 'for', 'with', 'from', 'los', 'las', 'del', 'con', 'para', 'por',
+        'una', 'uno', 'you', 'all', 'out', 'into', 'that', 'this', 'music', 'song',
+      ]);
+      const significantWords = words.filter((w) => !ROCK_STOPWORDS.has(w) && w.length >= 3);
+
       const matchedLocal = ROCK_ANTHOLOGY.filter((t) => {
         const text = `${t.title} ${t.artist} ${t.album || ''}`
           .toLowerCase()
@@ -93,7 +99,16 @@ class StreamResolver {
           .replace(/[\u0300-\u036f]/g, '');
 
         if (isStrictRockCatalogQuery) return true;
-        return words.length > 0 && words.some((w) => text.includes(w));
+        if (significantWords.length === 0) return false;
+
+        // For 1 or 2 significant words, all must match in the track text
+        if (significantWords.length <= 2) {
+          return significantWords.every((w) => text.includes(w));
+        }
+
+        // For 3+ words, require that both title & artist or 80%+ of words match
+        const matchCount = significantWords.filter((w) => text.includes(w)).length;
+        return matchCount >= Math.ceil(significantWords.length * 0.8);
       });
 
       if (matchedLocal.length > 0) {

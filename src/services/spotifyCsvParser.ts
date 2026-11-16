@@ -68,6 +68,30 @@ function detectDelimiter(firstFewLines: string[]): string {
   return ',';
 }
 
+function parseDurationValue(val: string): number | undefined {
+  if (!val) return undefined;
+  const trimmed = val.replace(/^["']|["']$/g, '').trim();
+  if (!trimmed) return undefined;
+
+  if (trimmed.includes(':')) {
+    const parts = trimmed.split(':').map((p) => parseFloat(p));
+    if (parts.some((p) => isNaN(p))) return undefined;
+    if (parts.length === 2) {
+      return Math.round((parts[0] * 60 + parts[1]) * 1000);
+    }
+    if (parts.length === 3) {
+      return Math.round((parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000);
+    }
+  }
+
+  const num = parseFloat(trimmed);
+  if (isNaN(num) || num <= 0) return undefined;
+  if (num > 10000) return Math.round(num);
+  if (num >= 10 && num <= 10000) return Math.round(num * 1000);
+
+  return undefined;
+}
+
 /**
  * Normalizes header string for fuzzy column identification.
  */
@@ -163,8 +187,7 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
         album = cols[albumIdx].replace(/^["']|["']$/g, '').trim();
       }
       if (durationIdx !== -1 && cols[durationIdx]) {
-        const ms = parseInt(cols[durationIdx], 10);
-        if (!isNaN(ms)) durationMs = ms;
+        durationMs = parseDurationValue(cols[durationIdx]);
       }
     } else {
       // Fallback heuristics: If column 0 and column 1 exist

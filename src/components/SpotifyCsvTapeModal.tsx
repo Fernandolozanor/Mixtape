@@ -7,13 +7,25 @@ import {
   Play,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Disc3,
   Sparkles,
   Radio,
   Check,
+  CheckCheck,
+  Copy,
   Music2,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
 } from 'lucide-react';
 import { parseSpotifyCsv, type ParsedSpotifyTrack } from '../services/spotifyCsvParser';
+import {
+  findStrictBestMatch,
+  cleanTitle,
+  type FailedTrackReport,
+} from '../services/trackMatcher';
 import { streamResolver } from '../services/streamResolver';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -51,15 +63,29 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
   const [parsedTracks, setParsedTracks] = useState<ParsedSpotifyTrack[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Tape types explanation accordion
+  const [showTypeExplanation, setShowTypeExplanation] = useState(false);
+
   // Recording phase state
   const [recordProgress, setRecordProgress] = useState<{
     current: number;
     total: number;
     currentTitle: string;
     currentArtist: string;
-  }>({ current: 0, total: 0, currentTitle: '', currentArtist: '' });
+    successCount: number;
+    failedCount: number;
+  }>({
+    current: 0,
+    total: 0,
+    currentTitle: '',
+    currentArtist: '',
+    successCount: 0,
+    failedCount: 0,
+  });
 
   const [resolvedTracks, setResolvedTracks] = useState<Track[]>([]);
+  const [failedTracks, setFailedTracks] = useState<FailedTrackReport[]>([]);
+  const [copiedMissing, setCopiedMissing] = useState(false);
   const [createdPlaylistId, setCreatedPlaylistId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const isCancelledRef = useRef(false);
@@ -119,7 +145,7 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
     });
   };
 
-  // Start the physical 80s tape recording process
+  // Start the physical 80s tape recording process with strict exact matching
   const startTapeRecording = async () => {
     const activeTracks = parsedTracks.filter((t) => selectedIds.has(t.id));
     if (activeTracks.length === 0) {
@@ -131,12 +157,15 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
     setErrorMsg(null);
     isCancelledRef.current = false;
     const finalResolved: Track[] = [];
+    const unrecordedList: FailedTrackReport[] = [];
 
     setRecordProgress({
       current: 0,
       total: activeTracks.length,
       currentTitle: activeTracks[0].title,
       currentArtist: activeTracks[0].artist,
+      successCount: 0,
+      failedCount: 0,
     });
 
     for (let i = 0; i < activeTracks.length; i++) {
@@ -148,45 +177,84 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
         total: activeTracks.length,
         currentTitle: spTrack.title,
         currentArtist: spTrack.artist,
+        successCount: finalResolved.length,
+        failedCount: unrecordedList.length,
       });
 
       try {
-        // Query search resolver for the highest fidelity YouTube audio stream match
-        const query = `${spTrack.title} ${spTrack.artist}`;
-        const searchMatches = await streamResolver.search(query, 'youtube', 1);
+        // Query search resolver: 1st pass with "Title Artist"
+        const query1 = `${spTrack.title} ${spTrack.artist}`;
+        const searchMatches = await streamResolver.search(query1, 'youtube', 1);
 
-        if (searchMatches.length > 0) {
-          finalResolved.push(searchMatches[0]);
+        let matchResult = findStrictBestMatch(spTrack, searchMatches);
+
+        // 2nd pass: if no strict match found, try "Artist Title" with cleaned title
+        if (!matchResult.matchedTrack) {
+          const query2 = `${spTrack.artist} ${cleanTitle(spTrack.title)}`;
+          const altMatches = await streamResolver.search(query2, 'youtube', 1);
+          matchResult = findStrictBestMatch(spTrack, altMatches);
+        }
+
+        if (matchResult.matchedTrack) {
+          finalResolved.push(matchResult.matchedTrack);
         } else {
-          // Fallback to title-only search
-          const fallbackMatches = await streamResolver.search(spTrack.title, 'youtube', 1);
-          if (fallbackMatches.length > 0) {
-            finalResolved.push(fallbackMatches[0]);
-          }
+          // STRICT RULE: Do not import anything if no exact match is confirmed
+          unrecordedList.push({
+            track: spTrack,
+            reason: matchResult.reason || 'Sin coincidencia exacta verificada',
+          });
         }
       } catch (err) {
         console.warn(`Error buscando "${spTrack.title}":`, err);
+        unrecordedList.push({
+          track: spTrack,
+          reason: 'Error al consultar servidores de streaming',
+        });
       }
 
       // Small throttle to ensure smooth network pacing and retro recording physics
       await new Promise((res) => setTimeout(res, 180));
     }
 
+    setResolvedTracks(finalResolved);
+    setFailedTracks(unrecordedList);
+
     if (finalResolved.length > 0) {
       // 1. Create the new Cassette Tape Playlist
-      const tapeDescription = `Cinta grabada desde Spotify CSV (${finalResolved.length} temas) • Calidad Hi-Fi ${tapeType.toUpperCase()}`;
+      const biasLabel =
+        tapeType === 'type1'
+          ? 'TYPE I (FERRO 120µs)'
+          : tapeType === 'type4'
+          ? 'TYPE IV (METAL 70µs)'
+          : 'TYPE II (CHROME 70µs)';
+      const tapeDescription = `Cinta grabada desde Spotify CSV (${finalResolved.length} de ${activeTracks.length} grabadas) • Calidad Hi-Fi ${biasLabel}`;
       const newPlaylist = createPlaylist(tapeName, tapeDescription);
 
-      // 2. Add all resolved audio tracks to it
+      // 2. Add all strictly resolved audio tracks to it
       addTracksToPlaylist(newPlaylist.id, finalResolved);
-
-      setResolvedTracks(finalResolved);
       setCreatedPlaylistId(newPlaylist.id);
       setStep('complete');
     } else {
-      setErrorMsg('No se pudieron indexar las canciones de la lista. Comprueba tu conexión a Internet.');
-      setStep('preview');
+      // All tracks failed strict matching
+      setStep('complete');
     }
+  };
+
+  const handleCopyMissingTracks = () => {
+    if (failedTracks.length === 0) return;
+    const textLines = [
+      `📋 Pistas de Spotify no grabadas en "${tapeName}":`,
+      `Total omitidas por falta de coincidencia exacta: ${failedTracks.length}`,
+      '',
+      ...failedTracks.map(
+        (f, idx) => `${idx + 1}. ${f.track.artist} - ${f.track.title} [Motivo: ${f.reason}]`
+      ),
+    ].join('\n');
+
+    navigator.clipboard.writeText(textLines).then(() => {
+      setCopiedMissing(true);
+      setTimeout(() => setCopiedMissing(false), 3000);
+    });
   };
 
   const handlePlayNow = () => {
@@ -213,6 +281,8 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
     setSelectedIds(new Set());
     setErrorMsg(null);
     setResolvedTracks([]);
+    setFailedTracks([]);
+    setCopiedMissing(false);
     setCreatedPlaylistId(null);
   };
 
@@ -243,6 +313,9 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
               <span className="text-[10px] font-mono uppercase font-bold tracking-widest text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
                 EXPORTIFY & SPOTIFY CSV
               </span>
+              <span className="text-[10px] font-mono uppercase font-bold text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" /> COINCIDENCIA EXACTA
+              </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-rock tracking-widest text-white leading-tight mt-0.5">
               GRABADORA DE CINTAS SPOTIFY
@@ -264,7 +337,7 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
         {step === 'input' && (
           <div className="space-y-4">
             <p className="text-xs text-zinc-300 leading-relaxed">
-              Carga tu archivo exportado de Spotify (desde <strong>Exportify</strong>, <strong>TuneMyMusic</strong> o Soundiiz) o pega la lista de canciones. Mixtape buscará automáticamente los streams de audio de alta fidelidad y los grabará en una nueva cinta analógica.
+              Carga tu archivo exportado de Spotify (desde <strong>Exportify</strong>, <strong>TuneMyMusic</strong> o Soundiiz) o pega la lista de canciones. Mixtape buscará automáticamente los streams con <strong>coincidencia estricta y exacta</strong> (título, artista y duración), omitiendo cualquier resultado ambiguo para proteger la calidad de tu cinta.
             </p>
 
             {/* Input Mode Selector */}
@@ -320,7 +393,7 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
                 <textarea
                   value={rawText}
                   onChange={(e) => setRawText(e.target.value)}
-                  placeholder={`Pega aquí el contenido de tu CSV de Spotify...\nEjemplo:\nTrack Name,Artist Name(s),Album Name\nBohemian Rhapsody,Queen,A Night At The Opera`}
+                  placeholder={`Pega aquí el contenido de tu CSV de Spotify...\nEjemplo:\nTrack Name,Artist Name(s),Album Name,Duration (ms)\nBohemian Rhapsody,Queen,A Night At The Opera,354320`}
                   className="w-full h-36 p-3 rounded-2xl bg-black/50 border border-white/10 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-amber-400"
                 />
                 <button
@@ -368,14 +441,30 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
 
             {/* Tape Bias Type */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold text-zinc-400">
-                Tipo de Cinta Magnética:
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-zinc-400">
+                  Tipo de Cinta Magnética (Emulsión):
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowTypeExplanation(!showTypeExplanation)}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 font-mono flex items-center gap-1 transition cursor-pointer"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                  <span>¿Diferencias entre tipos?</span>
+                  {showTypeExplanation ? (
+                    <ChevronUp className="w-3 h-3" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3" />
+                  )}
+                </button>
+              </div>
+
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'type1', name: 'Type I (Ferro)', desc: 'EQ Normal 120µs' },
-                  { id: 'type2', name: 'Type II (Chrome)', desc: 'High Bias 70µs' },
-                  { id: 'type4', name: 'Type IV (Metal)', desc: 'Metal Bias 70µs' },
+                  { id: 'type1', name: 'Type I (Ferro)', desc: 'EQ Normal 120µs', tag: 'Cálido' },
+                  { id: 'type2', name: 'Type II (Chrome)', desc: 'High Bias 70µs', tag: 'Recomendada' },
+                  { id: 'type4', name: 'Type IV (Metal)', desc: 'Metal Bias 70µs', tag: 'Audiófilo' },
                 ].map((t) => (
                   <button
                     key={t.id}
@@ -389,9 +478,38 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
                   >
                     <p className="text-xs font-bold font-mono">{t.name}</p>
                     <p className="text-[9px] text-zinc-500 font-mono mt-0.5">{t.desc}</p>
+                    <span className={`inline-block text-[8px] font-mono uppercase px-1.5 py-0.2 rounded mt-1 ${
+                      tapeType === t.id ? 'bg-amber-400 text-black font-bold' : 'bg-white/5 text-zinc-500'
+                    }`}>
+                      {t.tag}
+                    </span>
                   </button>
                 ))}
               </div>
+
+              {/* Tape Type Quick Guide (Accordion) */}
+              {showTypeExplanation && (
+                <div className="p-3 rounded-xl bg-black/60 border border-amber-500/30 text-xs space-y-2 animate-in fade-in slide-in-from-top-1 text-zinc-300 font-mono">
+                  <div className="border-b border-white/10 pb-1.5">
+                    <p className="font-bold text-amber-300">📼 Type I - Normal / Ferro (120µs):</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Óxido de hierro. Calidez analógica clásica de los 70s/80s con medios ricos y soplido de cinta vintage. Ideal para voces y pop acústico.
+                    </p>
+                  </div>
+                  <div className="border-b border-white/10 pb-1.5">
+                    <p className="font-bold text-amber-300">💽 Type II - Chrome / CrO₂ (70µs):</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Dióxido de cromo. Alta fidelidad, agudos nítidos y transparentes, menor distorsión y soplido reducido. Es el estándar recomendado para rock, pop y electrónica.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-amber-300">⚡ Type IV - Metal Puro (70µs):</p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      Partículas de hierro puro. Máximo rango dinámico de estudio, cero saturación en picos y pegada de graves contundente. Nivel audiófilo master.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Detected Tracks Header */}
@@ -438,6 +556,11 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
                         </p>
                         <p className="text-[10px] text-zinc-400 truncate mt-0.5">
                           {tr.artist} {tr.album ? `• ${tr.album}` : ''}
+                          {tr.durationMs
+                            ? ` (${Math.floor(tr.durationMs / 60000)}:${String(
+                                Math.floor((tr.durationMs % 60000) / 1000)
+                              ).padStart(2, '0')})`
+                            : ''}
                         </p>
                       </div>
                     </div>
@@ -480,7 +603,7 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
         )}
 
         {/* ==============================================================
-            STEP 3: ACTIVE RECORDING ANIMATION
+            STEP 3: ACTIVE RECORDING ANIMATION & STRICT MATCHING
            ============================================================== */}
         {step === 'recording' && (
           <div className="p-6 rounded-2xl bg-black/60 border-2 border-amber-500/50 space-y-5 text-center shadow-inner">
@@ -505,6 +628,16 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
                 </p>
               </div>
               <Disc3 className="w-14 h-14 text-amber-400 animate-spin" style={{ animationDuration: '1.2s' }} />
+            </div>
+
+            {/* Live Counters */}
+            <div className="flex items-center justify-center gap-4 text-xs font-mono">
+              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                ✓ Grabadas: {recordProgress.successCount}
+              </span>
+              <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                ⚠ Omitidas: {recordProgress.failedCount}
+              </span>
             </div>
 
             {/* Progress Bar */}
@@ -542,55 +675,181 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
         )}
 
         {/* ==============================================================
-            STEP 4: COMPLETE RECORDING SUCCESS
+            STEP 4: COMPLETE RECORDING REPORT WINDOW
            ============================================================== */}
         {step === 'complete' && (
-          <div className="p-6 rounded-2xl bg-gradient-to-b from-emerald-500/15 via-black/40 to-black/60 border-2 border-emerald-500/40 space-y-5 text-center">
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/20 animate-in zoom-in-95">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
+          <div className="space-y-4">
+            {/* Header depending on results */}
+            {resolvedTracks.length > 0 && failedTracks.length === 0 ? (
+              // 100% SUCCESS
+              <div className="p-5 rounded-2xl bg-gradient-to-b from-emerald-500/20 via-black/40 to-black/60 border-2 border-emerald-500/40 text-center space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/20">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-rock tracking-wider text-white">
+                    ¡CINTA GRABADA AL 100%!
+                  </h3>
+                  <p className="text-sm font-semibold text-emerald-300 mt-0.5">
+                    "{tapeName}"
+                  </p>
+                  <p className="text-xs text-zinc-300 font-mono mt-1">
+                    Se han verificado y grabado {resolvedTracks.length} canciones con coincidencia exacta y calidad Hi-Fi en tu biblioteca.
+                  </p>
+                </div>
+              </div>
+            ) : resolvedTracks.length > 0 && failedTracks.length > 0 ? (
+              // PARTIAL SUCCESS WITH FAILED REPORT
+              <div className="p-4 rounded-2xl bg-gradient-to-b from-amber-500/15 via-black/40 to-black/60 border-2 border-amber-500/40 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-rock tracking-wider text-white">
+                      GRABACIÓN COMPLETADA CON REPORTE
+                    </h3>
+                    <p className="text-xs font-semibold text-amber-300">
+                      "{tapeName}"
+                    </p>
+                  </div>
+                </div>
 
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-rock tracking-wider text-white">
-                ¡CINTA GRABADA CON ÉXITO!
-              </h3>
-              <p className="text-sm font-semibold text-emerald-300">
-                "{tapeName}"
-              </p>
-              <p className="text-xs text-zinc-300 font-mono">
-                Se han indexado y grabado {resolvedTracks.length} canciones con calidad Hi-Fi en tu biblioteca de cintas.
-              </p>
-            </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-center">
+                    <p className="text-xs font-bold text-emerald-300">
+                      ✓ {resolvedTracks.length} grabadas
+                    </p>
+                    <p className="text-[10px] text-zinc-400">Coincidencia exacta</p>
+                  </div>
+                  <div className="flex-1 p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-center">
+                    <p className="text-xs font-bold text-amber-300">
+                      ⚠ {failedTracks.length} omitidas
+                    </p>
+                    <p className="text-[10px] text-zinc-400">Sin resultado exacto</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  Para garantizar que tu cinta sólo contenga las versiones originales legítimas de tu lista de Spotify, Mixtape <strong>no grabó</strong> las canciones sin coincidencia exacta verificada de artista, título o duración.
+                </p>
+              </div>
+            ) : (
+              // ZERO TRACKS RECORDED
+              <div className="p-5 rounded-2xl bg-gradient-to-b from-red-500/20 via-black/40 to-black/60 border-2 border-red-500/40 text-center space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-full bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shadow-xl shadow-red-500/20">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-rock tracking-wider text-white">
+                    NO SE PUDO GRABAR LA CINTA
+                  </h3>
+                  <p className="text-xs text-zinc-300 font-mono mt-1">
+                    Ninguna de las {failedTracks.length} canciones seleccionadas superó la verificación estricta de título y artista. No se creó ninguna cinta vacía.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* UNRECORDED TRACKS REPORT WINDOW (when failedTracks > 0) */}
+            {failedTracks.length > 0 && (
+              <div className="p-3.5 rounded-2xl bg-black/60 border border-amber-500/35 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-400" />
+                    <span>Pistas no grabadas ({failedTracks.length}):</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyMissingTracks}
+                    className="px-2.5 py-1 rounded-lg bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/40 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                  >
+                    {copiedMissing ? (
+                      <>
+                        <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400">¡Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar lista de omitidas</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Scrollable list of failed tracks */}
+                <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                  {failedTracks.map((item, idx) => (
+                    <div
+                      key={item.track.id || idx}
+                      className="p-2 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold text-white truncate leading-tight">
+                          {idx + 1}. {item.track.title}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 truncate mt-0.5">
+                          {item.track.artist} {item.track.album ? `• ${item.track.album}` : ''}
+                        </p>
+                      </div>
+                      <span className="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
+                        {item.reason}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-[10px] text-zinc-500 font-mono">
+                  💡 Tip: Puedes buscar manualmente estas canciones desde la pestaña de búsqueda para agregarlas individualmente a tu cinta.
+                </p>
+              </div>
+            )}
 
             {/* Next Action Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handlePlayNow}
-                className="py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Play className="w-4 h-4 fill-slate-950" />
-                <span>Escuchar cinta ahora ▶</span>
-              </button>
+            {resolvedTracks.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handlePlayNow}
+                  className="py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/30 transition active:scale-95 cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <Play className="w-4 h-4 fill-slate-950" />
+                  <span>Escuchar cinta ahora ({resolvedTracks.length}) ▶</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={handleOpenInLibrary}
-                className="py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/10 transition active:scale-95 cursor-pointer"
-              >
-                Ver en Mixtapes & Cintas
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleOpenInLibrary}
+                  className="py-3 px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider border border-white/10 transition active:scale-95 cursor-pointer"
+                >
+                  Ver en Mixtapes & Cintas
+                </button>
+              </div>
+            ) : (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={resetModal}
+                  className="w-full py-3 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase tracking-wider shadow-lg transition active:scale-95 cursor-pointer"
+                >
+                  ← Volver a intentar con otra lista
+                </button>
+              </div>
+            )}
 
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={resetModal}
-                className="text-xs font-mono text-zinc-400 hover:text-white underline cursor-pointer"
-              >
-                Grabar otra cinta desde CSV
-              </button>
-            </div>
+            {resolvedTracks.length > 0 && (
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={resetModal}
+                  className="text-xs font-mono text-zinc-400 hover:text-white underline cursor-pointer"
+                >
+                  Grabar otra cinta desde CSV
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
