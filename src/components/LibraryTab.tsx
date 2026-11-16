@@ -206,9 +206,12 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const isVinylPlaylist = (p: Playlist) => {
     return (
       p.mediaType === 'vinyl' ||
+      Boolean(p.artist && p.year) ||
       p.description?.toLowerCase().includes('vinilo') ||
+      p.description?.toLowerCase().includes('álbum') ||
+      p.description?.toLowerCase().includes('album') ||
       p.description?.toLowerCase().includes('lanzamiento oficial') ||
-      p.description?.toLowerCase().includes('álbum de vinilo')
+      p.description?.toLowerCase().includes('disco de vinilo')
     );
   };
 

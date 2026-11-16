@@ -91,6 +91,10 @@ export interface SyncStateInfo {
   justLinkedFromUrl: boolean;
 }
 
+// Primary and fallback cloud relays for real-time peer device synchronization
+const PRIMARY_RELAY = 'https://ntfy.envs.net';
+const FALLBACK_RELAY = 'https://ntfy.sh';
+
 // Deterministic hash helper for deriving private topic names
 function quickHash(input: string): string {
   let h1 = 0xdeadbeef ^ input.length;
@@ -223,9 +227,11 @@ function fromCompactTrack(c: CompactTrack): Track {
 function toCompactPlaylist(pl: Playlist): CompactPlaylist {
   const isVinyl =
     pl.mediaType === 'vinyl' ||
+    Boolean(pl.artist && pl.year) ||
     pl.description?.toLowerCase().includes('vinilo') ||
     pl.description?.toLowerCase().includes('álbum') ||
-    pl.description?.toLowerCase().includes('album');
+    pl.description?.toLowerCase().includes('album') ||
+    pl.description?.toLowerCase().includes('lanzamiento oficial');
 
   return {
     i: pl.id,
@@ -244,9 +250,11 @@ function toCompactPlaylist(pl: Playlist): CompactPlaylist {
 function fromCompactPlaylist(cp: CompactPlaylist): Playlist {
   const isVinyl =
     cp.mt === 'vinyl' ||
+    Boolean(cp.ar && cp.yr) ||
     cp.ds?.toLowerCase().includes('vinilo') ||
     cp.ds?.toLowerCase().includes('álbum') ||
-    cp.ds?.toLowerCase().includes('album');
+    cp.ds?.toLowerCase().includes('album') ||
+    cp.ds?.toLowerCase().includes('lanzamiento oficial');
 
   return {
     id: cp.i,
@@ -518,7 +526,7 @@ class SyncService {
 
     const topic = getTopicForSyncCode(this.syncCode);
     try {
-      const es = new EventSource(`https://ntfy.sh/${topic}/sse`);
+      const es = new EventSource(`${PRIMARY_RELAY}/${topic}/sse`);
       this.eventSource = es;
 
       es.onmessage = (event) => {
@@ -644,44 +652,58 @@ class SyncService {
     }
     for (const rPl of remotePlaylists) {
       const deletedAt = mergedTombstones.playlists[rPl.id];
-      if (deletedAt && rPl.updatedAt <= deletedAt) {
+      if (deletedAt && (rPl.updatedAt || 0) <= deletedAt) {
         continue;
       }
       const existing = playlistMap.get(rPl.id);
       if (!existing) {
         playlistMap.set(rPl.id, rPl);
-      } else if ((rPl.updatedAt || 0) > (existing.updatedAt || 0)) {
-        playlistMap.set(rPl.id, {
-          ...existing,
-          ...rPl,
-          mediaType:
-            rPl.mediaType === 'vinyl' || existing.mediaType === 'vinyl'
-              ? 'vinyl'
-              : rPl.mediaType || existing.mediaType || 'tape',
-          artist: rPl.artist || existing.artist,
-          year: rPl.year || existing.year,
-          coverUrl: rPl.coverUrl || existing.coverUrl,
-        });
-      } else if ((rPl.updatedAt || 0) === (existing.updatedAt || 0)) {
-        // Merge tracks inside the playlist if timestamps match
-        const trackIds = new Set(existing.tracks.map((t) => t.id));
-        const combinedTracks = [...existing.tracks];
-        for (const rt of rPl.tracks) {
-          if (!trackIds.has(rt.id)) {
-            combinedTracks.push(rt);
-            trackIds.add(rt.id);
+      } else {
+        const isVinyl =
+          existing.mediaType === 'vinyl' ||
+          rPl.mediaType === 'vinyl' ||
+          Boolean((existing.artist || rPl.artist) && (existing.year || rPl.year)) ||
+          existing.description?.toLowerCase().includes('vinilo') ||
+          rPl.description?.toLowerCase().includes('vinilo') ||
+          existing.description?.toLowerCase().includes('álbum') ||
+          rPl.description?.toLowerCase().includes('álbum') ||
+          existing.description?.toLowerCase().includes('album') ||
+          rPl.description?.toLowerCase().includes('album') ||
+          existing.description?.toLowerCase().includes('lanzamiento oficial');
+
+        const useRemote = (rPl.updatedAt || 0) > (existing.updatedAt || 0);
+        const base = useRemote ? rPl : existing;
+        const other = useRemote ? existing : rPl;
+
+        // Ensure tracks are never lost if one device has tracks and the other had none
+        let resolvedTracks: Track[];
+        if ((rPl.tracks?.length || 0) > 0 && (existing.tracks?.length || 0) === 0) {
+          resolvedTracks = rPl.tracks;
+        } else if ((existing.tracks?.length || 0) > 0 && (rPl.tracks?.length || 0) === 0) {
+          resolvedTracks = existing.tracks;
+        } else if ((rPl.updatedAt || 0) === (existing.updatedAt || 0)) {
+          const trackIds = new Set(existing.tracks.map((t) => t.id));
+          const combined = [...existing.tracks];
+          for (const rt of rPl.tracks) {
+            if (!trackIds.has(rt.id)) {
+              combined.push(rt);
+              trackIds.add(rt.id);
+            }
           }
+          resolvedTracks = combined;
+        } else {
+          resolvedTracks = base.tracks && base.tracks.length > 0 ? base.tracks : other.tracks;
         }
+
         playlistMap.set(rPl.id, {
-          ...existing,
-          mediaType:
-            existing.mediaType === 'vinyl' || rPl.mediaType === 'vinyl'
-              ? 'vinyl'
-              : existing.mediaType || rPl.mediaType || 'tape',
-          artist: existing.artist || rPl.artist,
-          year: existing.year || rPl.year,
-          coverUrl: existing.coverUrl || rPl.coverUrl,
-          tracks: combinedTracks,
+          ...other,
+          ...base,
+          mediaType: isVinyl ? 'vinyl' : base.mediaType || other.mediaType || 'tape',
+          artist: base.artist || other.artist,
+          year: base.year || other.year,
+          coverUrl: base.coverUrl || other.coverUrl || resolvedTracks[0]?.thumbnail,
+          tracks: resolvedTracks,
+          updatedAt: Math.max(existing.updatedAt || 0, rPl.updatedAt || 0),
         });
       }
     }
@@ -773,7 +795,7 @@ class SyncService {
       };
 
       const encoded = encodePayload(JSON.stringify(body), this.syncCode);
-      const CHUNK_SIZE = 2800; // Safe size under 4KB per message
+      const CHUNK_SIZE = 3500; // Optimal chunk size under 4KB
       const totalChunks = Math.max(1, Math.ceil(encoded.length / CHUNK_SIZE));
       const rev = Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       const topic = getTopicForSyncCode(this.syncCode);
@@ -791,10 +813,32 @@ class SyncService {
           data: slice,
         };
 
-        await fetch(`https://ntfy.sh/${topic}`, {
-          method: 'POST',
-          body: JSON.stringify(packet),
-        });
+        const postBody = JSON.stringify(packet);
+
+        // Try primary relay first
+        try {
+          const res = await fetch(`${PRIMARY_RELAY}/${topic}`, {
+            method: 'POST',
+            body: postBody,
+            headers: { 'Title': 'MixtapeSync' },
+            signal: AbortSignal.timeout(4000),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch {
+          // Fallback to secondary relay if primary fails
+          try {
+            await fetch(`${FALLBACK_RELAY}/${topic}`, {
+              method: 'POST',
+              body: postBody,
+              signal: AbortSignal.timeout(4000),
+            });
+          } catch {}
+        }
+
+        // Small pause between chunks to prevent burst drops
+        if (totalChunks > 1 && idx < totalChunks - 1) {
+          await new Promise((r) => setTimeout(r, 45));
+        }
       }
 
       // Also sync to Firebase if configured
@@ -835,8 +879,26 @@ class SyncService {
     const topic = getTopicForSyncCode(this.syncCode);
 
     try {
-      const response = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=all`);
-      if (!response.ok) {
+      let response: Response | null = null;
+      try {
+        response = await fetch(`${PRIMARY_RELAY}/${topic}/json?poll=1&since=all`, {
+          signal: AbortSignal.timeout(4500),
+        });
+      } catch {
+        response = null;
+      }
+
+      if (!response || !response.ok) {
+        try {
+          response = await fetch(`${FALLBACK_RELAY}/${topic}/json?poll=1&since=all`, {
+            signal: AbortSignal.timeout(4000),
+          });
+        } catch {
+          response = null;
+        }
+      }
+
+      if (!response || !response.ok) {
         this.setStatus('idle');
         return { playlists: currentPlaylists, likedTracks: currentLiked };
       }

@@ -127,7 +127,11 @@ export const MultiAlbumRecordModal: React.FC<MultiAlbumRecordModalProps> = ({
         const newTape = createPlaylist(
           finalTapeTitle,
           (tapeDesc.trim() || `Grabación combinada de ${selectedAlbums.length} discos`) + biasNote,
-          firstCover
+          firstCover,
+          'tape',
+          undefined,
+          undefined,
+          allExtractedTracks
         );
         targetTapeId = newTape.id;
         addTracksToPlaylist(newTape.id, allExtractedTracks);

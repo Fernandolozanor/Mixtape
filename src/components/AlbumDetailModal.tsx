@@ -95,7 +95,8 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
       cover,
       'vinyl',
       artistName,
-      release.year
+      release.year,
+      tracks
     );
     addTracksToPlaylist(playlist.id, tracks);
     setRecordedSuccess(true);

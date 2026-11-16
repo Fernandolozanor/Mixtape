@@ -15,7 +15,8 @@ interface LibraryContextType {
     coverUrl?: string,
     mediaType?: 'tape' | 'vinyl',
     artist?: string,
-    year?: string
+    year?: string,
+    initialTracks?: Track[]
   ) => Playlist;
   updatePlaylist: (
     id: string,
@@ -305,17 +306,22 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     coverUrl?: string,
     mediaType: 'tape' | 'vinyl' = 'tape',
     artist?: string,
-    year?: string
+    year?: string,
+    initialTracks: Track[] = []
   ): Playlist => {
+    const formattedTracks = (initialTracks || []).map((t) => ({
+      ...t,
+      addedAt: t.addedAt || Date.now(),
+    }));
     const newPlaylist: Playlist = {
       id: 'pl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
       name: name.trim() || 'Nueva Lista',
       description,
-      coverUrl,
+      coverUrl: coverUrl || formattedTracks[0]?.thumbnail,
       mediaType,
       artist,
       year,
-      tracks: [],
+      tracks: formattedTracks,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
