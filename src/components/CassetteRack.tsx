@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Playlist } from '../types/music';
+import { tapeProgressService } from '../services/tapeProgressService';
 import { Play, Plus, Info } from 'lucide-react';
 
 interface CassetteRackProps {
@@ -83,6 +84,8 @@ export const CassetteRack: React.FC<CassetteRackProps> = ({
         {SLOTS.map((slot) => {
           const playlist = playlists[slot.index];
           const hasPlaylist = !!playlist;
+          const progress = hasPlaylist ? tapeProgressService.getProgress(playlist.id) : null;
+          const isInterrupted = !!progress;
           const isOdd = slot.index % 2 === 1;
 
           // Ink color: alternating authentic Bic Ballpoint Blue and Pilot Red
@@ -126,7 +129,9 @@ export const CassetteRack: React.FC<CassetteRackProps> = ({
               }`}
               title={
                 hasPlaylist
-                  ? `Reproducir cinta "${playlist.name}" (${playlist.tracks.length} canciones)`
+                  ? isInterrupted
+                    ? `Cinta "${playlist.name}" • Interrumpida en pista ${progress.trackIndex + 1} (${progress.trackTitle})`
+                    : `Reproducir cinta "${playlist.name}" (${playlist.tracks.length} canciones)`
                   : 'Hueco vacío • Haz clic para grabar una nueva cinta'
               }
             >
@@ -154,16 +159,24 @@ export const CassetteRack: React.FC<CassetteRackProps> = ({
                     >
                       {playlist.name}
                     </span>
+
+                    {/* Subtle warm amber spool indicator if tape was interrupted */}
+                    {isInterrupted && (
+                      <span
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_4px_#f59e0b] animate-pulse"
+                        title={`Cinta a medias en pista ${progress.trackIndex + 1}`}
+                      />
+                    )}
                   </div>
 
                   {/* Hover Overlay with Quick Play & Info Buttons */}
-                  <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/slot:opacity-100 transition-opacity flex items-center justify-between px-2 rounded backdrop-blur-[1px]">
+                  <div className="absolute inset-0 bg-black/55 opacity-0 group-hover/slot:opacity-100 transition-opacity flex items-center justify-between px-2 rounded backdrop-blur-[1px]">
                     <div className="flex items-center gap-1.5 text-white font-mono text-[9px] sm:text-xs">
                       <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg">
                         <Play className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-black ml-0.5" />
                       </div>
                       <span className="font-bold hidden sm:inline text-amber-300">
-                        REPRODUCIR CINTA
+                        {isInterrupted ? `CONTINUAR (Pista ${progress.trackIndex + 1})` : 'REPRODUCIR CINTA'}
                       </span>
                     </div>
 

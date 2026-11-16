@@ -20,16 +20,20 @@ import {
   Mic2,
   Music2,
   Sparkles,
+  CassetteTape,
+  RotateCcw,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { EditPlaylistModal } from './EditPlaylistModal';
+import { ResumeTapeModal } from './ResumeTapeModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
 import { VinylCoverFlow } from './VinylCoverFlow';
 import { JukeboxView } from './JukeboxView';
 import { bpmService } from '../services/bpmService';
+import { tapeProgressService, type TapeProgress } from '../services/tapeProgressService';
 import { SourceBadge } from './SourceBadge';
 import type { Playlist, Track } from '../types/music';
 
@@ -168,7 +172,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     updateSettings,
   } = useLibrary();
 
-  const { playTrack, currentTrack, isPlaying } = usePlayer();
+  const { playTrack, playTape, currentTrack, isPlaying } = usePlayer();
   const { currentTheme } = useTheme();
 
   // Search and Filter states
@@ -392,12 +396,48 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     });
   }, [likedTracks, searchQuery, selectedGenre, selectedArtist]);
 
-  const handlePlayPlaylistFromRack = (playlist: Playlist) => {
-    if (playlist.tracks.length > 0) {
-      playTrack(playlist.tracks[0], playlist.tracks, false, 'tape');
-    } else {
+  const [resumeTapeModalData, setResumeTapeModalData] = useState<{
+    playlist: Playlist;
+    progress: TapeProgress;
+  } | null>(null);
+
+  const handlePlayTapeWithResumeCheck = (playlist: Playlist, forceBeginning: boolean = false) => {
+    if (playlist.tracks.length === 0) {
       setSelectedPlaylistId(playlist.id);
+      return;
     }
+
+    if (isVinylPlaylist(playlist)) {
+      playTrack(playlist.tracks[0], playlist.tracks, false, 'vinyl');
+      return;
+    }
+
+    if (!forceBeginning) {
+      const progress = tapeProgressService.getProgress(playlist.id);
+      if (progress && (progress.trackIndex > 0 || progress.currentTime >= 4)) {
+        setResumeTapeModalData({ playlist, progress });
+        return;
+      }
+    }
+
+    // Play from beginning
+    tapeProgressService.clearProgress(playlist.id);
+    playTape(playlist, 0, 0);
+  };
+
+  const handleConfirmResumeTape = (playlist: Playlist, progress: TapeProgress) => {
+    setResumeTapeModalData(null);
+    playTape(playlist, progress.trackIndex, progress.currentTime);
+  };
+
+  const handleRestartTapeFromModal = (playlist: Playlist) => {
+    setResumeTapeModalData(null);
+    tapeProgressService.clearProgress(playlist.id);
+    playTape(playlist, 0, 0);
+  };
+
+  const handlePlayPlaylistFromRack = (playlist: Playlist) => {
+    handlePlayTapeWithResumeCheck(playlist);
   };
 
   // Editing state
@@ -786,14 +826,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {selectedPlaylist.tracks.length > 0 && !isEditingMode && (
               <button
-                onClick={() =>
-                  playTrack(
-                    selectedPlaylist.tracks[0],
-                    selectedPlaylist.tracks,
-                    false,
-                    isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape'
-                  )
-                }
+                onClick={() => handlePlayTapeWithResumeCheck(selectedPlaylist)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold shadow-lg transition theme-btn"
               >
                 <Play className="w-4 h-4 fill-white" />
@@ -850,6 +883,48 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Banner retro si la cinta fue interrumpida previamente */}
+        {(() => {
+          const pProg = !isVinylPlaylist(selectedPlaylist)
+            ? tapeProgressService.getProgress(selectedPlaylist.id)
+            : null;
+          if (!pProg) return null;
+          return (
+            <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center shrink-0 text-amber-400">
+                  <CassetteTape className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 text-xs">
+                  <span className="text-amber-300 font-bold block truncate">
+                    Cinta a medias • Pista {pProg.trackIndex + 1}: {pProg.trackTitle}
+                  </span>
+                  <span className="text-zinc-400 font-mono text-[11px] block">
+                    Posición: {formatDuration(pProg.currentTime)} {pProg.duration > 0 ? `/ ${formatDuration(pProg.duration)}` : ''}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleConfirmResumeTape(selectedPlaylist, pProg)}
+                  className="px-3.5 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow"
+                >
+                  <Play className="w-3.5 h-3.5 fill-black text-black" />
+                  <span>Continuar ({formatDuration(pProg.currentTime)})</span>
+                </button>
+                <button
+                  onClick={() => handleRestartTapeFromModal(selectedPlaylist)}
+                  className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs flex items-center gap-1 transition"
+                  title="Reiniciar cinta desde el principio"
+                >
+                  <RotateCcw className="w-3 h-3 text-zinc-300" />
+                  <span className="hidden sm:inline">Desde inicio</span>
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {selectedPlaylist.tracks.length > 0 && (
           <div className="flex items-center justify-between text-xs text-zinc-400 font-mono px-1">
@@ -913,7 +988,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     track,
                     selectedPlaylist.tracks,
                     false,
-                    isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape'
+                    isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape',
+                    null,
+                    selectedPlaylist.id
                   )
                 }
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
@@ -1639,6 +1716,16 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         playlist={playlistToEdit}
         isOpen={playlistToEdit !== null}
         onClose={() => setPlaylistToEdit(null)}
+      />
+
+      {/* Modal para reanudar cinta interrumpida */}
+      <ResumeTapeModal
+        isOpen={resumeTapeModalData !== null}
+        playlist={resumeTapeModalData?.playlist || null}
+        progress={resumeTapeModalData?.progress || null}
+        onResume={handleConfirmResumeTape}
+        onRestart={handleRestartTapeFromModal}
+        onClose={() => setResumeTapeModalData(null)}
       />
     </div>
   );

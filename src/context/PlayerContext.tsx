@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import type { Track, RepeatMode, LyricLine } from '../types/music';
+import type { Track, RepeatMode, LyricLine, Playlist } from '../types/music';
 import { audioEngine } from '../services/audioEngine';
 import { lyricsService } from '../services/lyricsService';
+import { tapeProgressService } from '../services/tapeProgressService';
 import { useLibrary } from './LibraryContext';
 
 interface PlayerContextType {
@@ -29,12 +30,17 @@ interface PlayerContextType {
   setPlaybackContext: (context: string | null) => void;
   activeNavigationTab: string;
   setActiveNavigationTab: (tab: string) => void;
+  activeTapeId: string | null;
+  activeTapeName: string | null;
+  playTape: (playlist: Playlist, startIndex?: number, startTime?: number) => Promise<void>;
   playTrack: (
     track: Track,
     newQueue?: Track[],
     isCrossfade?: boolean,
     mediaType?: 'tape' | 'vinyl',
-    context?: string | null
+    context?: string | null,
+    playlistId?: string | null,
+    startTime?: number
   ) => Promise<void>;
   togglePlay: () => void;
   nextTrack: () => void;
@@ -80,6 +86,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [playbackMediaType, setPlaybackMediaType] = useState<'tape' | 'vinyl' | null>(null);
   const [playbackContext, setPlaybackContext] = useState<string | null>(null);
   const [activeNavigationTab, setActiveNavigationTab] = useState<string>('home');
+  const [activeTapeId, setActiveTapeId] = useState<string | null>(null);
+  const [activeTapeName, setActiveTapeName] = useState<string | null>(null);
 
   // References to avoid stale closures in callbacks
   const queueRef = useRef<Track[]>(queue);
@@ -91,17 +99,67 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isShuffleRef = useRef<boolean>(isShuffle);
   isShuffleRef.current = isShuffle;
 
+  const activeTapeIdRef = useRef<string | null>(null);
+  activeTapeIdRef.current = activeTapeId;
+  const activeTapeNameRef = useRef<string | null>(null);
+  activeTapeNameRef.current = activeTapeName;
+  const currentTrackRef = useRef<Track | null>(null);
+  currentTrackRef.current = currentTrack;
+  const currentTimeRef = useRef<number>(0);
+  currentTimeRef.current = currentTime;
+  const durationRef = useRef<number>(0);
+  durationRef.current = duration;
+  const playbackMediaTypeRef = useRef<'tape' | 'vinyl' | null>(null);
+  playbackMediaTypeRef.current = playbackMediaType;
+  const lastSaveTimeRef = useRef<number>(0);
+
+  const saveCurrentTapeProgress = () => {
+    const tapeId = activeTapeIdRef.current;
+    const media = playbackMediaTypeRef.current;
+    const track = currentTrackRef.current;
+    const curTime = currentTimeRef.current;
+    const dur = durationRef.current;
+    const qIdx = queueIndexRef.current;
+    const tapeName = activeTapeNameRef.current;
+
+    if (tapeId && media === 'tape' && track) {
+      tapeProgressService.saveProgress({
+        playlistId: tapeId,
+        playlistName: tapeName || 'Cinta',
+        trackId: track.id,
+        trackIndex: qIdx >= 0 ? qIdx : 0,
+        trackTitle: track.title,
+        trackArtist: track.artist,
+        currentTime: Math.floor(curTime),
+        duration: Math.floor(dur),
+        updatedAt: Date.now(),
+      });
+    }
+  };
+
   useEffect(() => {
     // Setup AudioEngine event hooks
     audioEngine.onTimeUpdate((cur, dur, buf) => {
       setCurrentTime(cur);
+      currentTimeRef.current = cur;
       setDuration(dur);
+      durationRef.current = dur;
       setBuffered(buf);
+
+      // Save tape progress throttled to every 2 seconds during playback
+      if (Math.abs(cur - lastSaveTimeRef.current) >= 2) {
+        lastSaveTimeRef.current = cur;
+        saveCurrentTapeProgress();
+      }
     });
 
     audioEngine.onStateChange(() => {
-      setIsPlaying(audioEngine.isPlaying());
+      const playing = audioEngine.isPlaying();
+      setIsPlaying(playing);
       setIsLoading(audioEngine.isBuffering());
+      if (!playing) {
+        saveCurrentTapeProgress();
+      }
     });
 
     audioEngine.onTrackEnd(() => {
@@ -121,11 +179,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Setup MediaSession hardware controls
     audioEngine.setupMediaSession({
       onPlay: () => audioEngine.play(),
-      onPause: () => audioEngine.pause(),
+      onPause: () => {
+        saveCurrentTapeProgress();
+        audioEngine.pause();
+      },
       onNext: () => handleNextTrack(),
       onPrev: () => handlePrevTrack(),
-      onSeek: (time) => audioEngine.seek(time),
+      onSeek: (time) => {
+        audioEngine.seek(time);
+        currentTimeRef.current = time;
+        saveCurrentTapeProgress();
+      },
     });
+
+    const handleUnloadOrHide = () => {
+      saveCurrentTapeProgress();
+    };
+    window.addEventListener('beforeunload', handleUnloadOrHide);
+    document.addEventListener('visibilitychange', handleUnloadOrHide);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleUnloadOrHide);
+      document.removeEventListener('visibilitychange', handleUnloadOrHide);
+    };
   }, []);
 
   // Update active lyric index whenever currentTime changes
@@ -177,12 +253,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     newQueue?: Track[],
     isCrossfade: boolean = false,
     mediaType?: 'tape' | 'vinyl',
-    context?: string | null
+    context?: string | null,
+    playlistId?: string | null,
+    startTime?: number
   ) => {
+    // If playing from a different context or switching away from an active tape, save previous tape progress
+    if (activeTapeIdRef.current && (mediaType !== 'tape' || (playlistId && playlistId !== activeTapeIdRef.current))) {
+      saveCurrentTapeProgress();
+    }
+
+    if (mediaType === 'tape') {
+      if (playlistId) {
+        setActiveTapeId(playlistId);
+      }
+    } else if (mediaType === 'vinyl' || context === 'favorites') {
+      setActiveTapeId(null);
+      setActiveTapeName(null);
+    }
+
     if (!isCrossfade) {
       setIsLoading(true);
     }
     setCurrentTrack(track);
+    currentTrackRef.current = track;
     setPlayTriggerCount((c) => c + 1);
 
     if (context !== undefined) {
@@ -193,26 +286,39 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     if (mediaType) {
       setPlaybackMediaType(mediaType);
+      playbackMediaTypeRef.current = mediaType;
     } else if (newQueue) {
       setPlaybackMediaType(null);
+      playbackMediaTypeRef.current = null;
     }
 
     let updatedQueue = newQueue || queueRef.current;
     if (newQueue) {
       setQueue(newQueue);
+      queueRef.current = newQueue;
       const idx = newQueue.findIndex((t) => t.id === track.id);
-      setQueueIndex(idx >= 0 ? idx : 0);
+      const chosenIdx = idx >= 0 ? idx : 0;
+      setQueueIndex(chosenIdx);
+      queueIndexRef.current = chosenIdx;
     } else {
       // If playing a standalone track not in queue, set it
       const existingIdx = updatedQueue.findIndex((t) => t.id === track.id);
       if (existingIdx >= 0) {
         setQueueIndex(existingIdx);
+        queueIndexRef.current = existingIdx;
       } else {
         const appended = [track, ...updatedQueue];
         setQueue(appended);
+        queueRef.current = appended;
         setQueueIndex(0);
+        queueIndexRef.current = 0;
         updatedQueue = appended;
       }
+    }
+
+    if (startTime && startTime > 0) {
+      setCurrentTime(startTime);
+      currentTimeRef.current = startTime;
     }
 
     // Fetch lyrics in background
@@ -220,9 +326,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setLyrics(lrc);
     });
 
-    const success = await audioEngine.playTrack(track, isCrossfade);
+    const success = await audioEngine.playTrack(track, isCrossfade, startTime);
     setIsLoading(false);
     setIsPlaying(success);
+
+    if (success && startTime && startTime > 0) {
+      setTimeout(() => {
+        audioEngine.seek(startTime);
+        setCurrentTime(startTime);
+        currentTimeRef.current = startTime;
+      }, 150);
+    }
 
     // Preload next track
     const currentIdx = updatedQueue.findIndex((t) => t.id === track.id);
@@ -231,9 +345,19 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const playTape = async (playlist: Playlist, startIndex: number = 0, startTime: number = 0) => {
+    if (!playlist || playlist.tracks.length === 0) return;
+    const clampedIndex = Math.max(0, Math.min(startIndex, playlist.tracks.length - 1));
+    const targetTrack = playlist.tracks[clampedIndex];
+    setActiveTapeId(playlist.id);
+    setActiveTapeName(playlist.name);
+    await playTrack(targetTrack, playlist.tracks, false, 'tape', null, playlist.id, startTime);
+  };
+
   const togglePlay = () => {
     if (!currentTrack) return;
     if (isPlaying) {
+      saveCurrentTapeProgress();
       audioEngine.pause();
     } else {
       audioEngine.play();
@@ -265,10 +389,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (nextIdx < q.length) {
       playTrack(q[nextIdx], undefined, isCrossfade);
     } else if (rMode === 'all' || q.length > 1) {
+      if (rMode !== 'all' && activeTapeIdRef.current && playbackMediaTypeRef.current === 'tape') {
+        tapeProgressService.clearProgress(activeTapeIdRef.current);
+      }
       playTrack(q[0], undefined, isCrossfade);
     } else {
       if (!isCrossfade) {
         setIsPlaying(false);
+      }
+      if (activeTapeIdRef.current && playbackMediaTypeRef.current === 'tape') {
+        tapeProgressService.clearProgress(activeTapeIdRef.current);
       }
     }
   };
@@ -295,6 +425,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const seek = (seconds: number) => {
     audioEngine.seek(seconds);
     setCurrentTime(seconds);
+    currentTimeRef.current = seconds;
+    saveCurrentTapeProgress();
   };
 
   const setVolume = (vol: number) => {
@@ -366,6 +498,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setPlaybackContext,
         activeNavigationTab,
         setActiveNavigationTab,
+        activeTapeId,
+        activeTapeName,
+        playTape,
         playTrack,
         togglePlay,
         nextTrack: handleNextTrack,

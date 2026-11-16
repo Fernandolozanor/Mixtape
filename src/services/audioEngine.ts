@@ -73,6 +73,7 @@ class AudioEngine {
   private ytPlayer: any = null;
   private ytPlayerReady: boolean = false;
   private pendingTrack: Track | null = null;
+  private pendingStartTime?: number;
   private isUsingYouTube: boolean = false;
   private currentTrack: Track | null = null;
   private sponsorSegments: SponsorSegment[] = [];
@@ -579,8 +580,10 @@ class AudioEngine {
               }
               if (this.pendingTrack) {
                 const track = this.pendingTrack;
+                const startSec = this.pendingStartTime;
                 this.pendingTrack = null;
-                this.playTrack(track);
+                this.pendingStartTime = undefined;
+                this.playTrack(track, false, startSec);
               }
             },
             onStateChange: (event: any) => {
@@ -881,7 +884,7 @@ class AudioEngine {
     }
   }
 
-  private fallbackToYouTubeIFrame(track: Track): boolean {
+  private fallbackToYouTubeIFrame(track: Track, startTime?: number): boolean {
     if (!track.youtubeId || this.currentTrack?.youtubeId !== track.youtubeId) return false;
     this.isUsingYouTube = true;
     this.audio.pause();
@@ -889,13 +892,14 @@ class AudioEngine {
 
     if (!this.ytPlayerReady || !this.ytPlayer) {
       this.pendingTrack = track;
+      this.pendingStartTime = startTime;
       return true;
     }
 
     try {
       this.ytPlayer.loadVideoById({
         videoId: track.youtubeId,
-        startSeconds: 0.1,
+        startSeconds: startTime && startTime > 0 ? startTime : 0.1,
         suggestedQuality: 'small',
       });
       this.ytPlayer.unMute();
@@ -915,7 +919,7 @@ class AudioEngine {
   /**
    * Play a track (Full YouTube song or Full Audius stream)
    */
-  public async playTrack(track: Track, isCrossfade: boolean = false): Promise<boolean> {
+  public async playTrack(track: Track, isCrossfade: boolean = false, startTime?: number): Promise<boolean> {
     this.crossfadeTriggeredForCurrent = false;
 
     // Capture outgoing state before switching
@@ -976,9 +980,19 @@ class AudioEngine {
           }
 
           this.audio.src = directAudioUrl;
-          this.audio.currentTime = 0;
+          this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
           this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
           this.audio.playbackRate = this.playbackRate;
+
+          if (startTime && startTime > 0) {
+            const seekTarget = startTime;
+            const onLoaded = () => {
+              try {
+                this.audio.currentTime = seekTarget;
+              } catch {}
+            };
+            this.audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+          }
 
           let hasRetriedCompanion = false;
           const onAudioError = async (e: any) => {
@@ -992,7 +1006,7 @@ class AudioEngine {
                 // Try backup itag 251 (Opus audio stream)
                 const backupUrl = `https://yt.chocolatemoo53.com/latest_version?id=${ytId}&itag=251&local=true`;
                 this.audio.src = backupUrl;
-                this.audio.currentTime = 0;
+                this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
                 this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
                 this.audio.playbackRate = this.playbackRate;
                 await this.audio.play();
@@ -1007,7 +1021,7 @@ class AudioEngine {
             }
 
             console.warn('Direct stream error after retry, falling back to YouTube iframe:', e);
-            this.fallbackToYouTubeIFrame(track);
+            this.fallbackToYouTubeIFrame(track, startTime);
           };
           this.audio.addEventListener('error', onAudioError, { once: true });
 
@@ -1022,7 +1036,7 @@ class AudioEngine {
         console.warn('Direct audio resolution error, falling back to YouTube iframe:', err);
       }
 
-      const res = this.fallbackToYouTubeIFrame(track);
+      const res = this.fallbackToYouTubeIFrame(track, startTime);
       if (res && isCrossfade && outgoingDeck) {
         this.startCrossfadeRamp(outgoingDeck, false, null, true, this.crossfadeDuration);
       }
@@ -1039,9 +1053,18 @@ class AudioEngine {
 
       try {
         this.audio.src = track.audioUrl;
-        this.audio.currentTime = 0;
+        this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
         this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
         this.audio.playbackRate = this.playbackRate;
+        if (startTime && startTime > 0) {
+          const seekTarget = startTime;
+          const onLoaded = () => {
+            try {
+              this.audio.currentTime = seekTarget;
+            } catch {}
+          };
+          this.audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+        }
         await this.audio.play();
         if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
           this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
