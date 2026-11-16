@@ -206,6 +206,154 @@ function youtubeSearchPlugin(): Plugin {
           res.end(JSON.stringify({ error: err.message }));
         }
       });
+
+      // Search YouTube Releases / Albums
+      server.middlewares.use('/api/yt/releases', async (req, res) => {
+        const urlObj = new URL(req.url || '', 'http://localhost:3030');
+        const query = urlObj.searchParams.get('q') || '';
+        if (!query.trim()) {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify([]));
+          return;
+        }
+
+        try {
+          const pUrl = `https://api.piped.private.coffee/search?q=${encodeURIComponent(query)}&filter=music_albums`;
+          const response = await fetch(pUrl, { signal: AbortSignal.timeout(6000) });
+          if (!response.ok) throw new Error(`Piped HTTP ${response.status}`);
+          const data: any = await response.json();
+          const items = data.items || [];
+          const albums = items
+            .filter((it: any) => it.url && it.name)
+            .map((it: any) => {
+              const listId = it.url.includes('list=')
+                ? it.url.split('list=')[1].split('&')[0]
+                : '';
+              let cleanName = (it.name || '').replace(/^Album\s*[-–:]\s*/i, '').trim();
+              const yearMatch = cleanName.match(/[\(\[]\s*(\d{4})\s*[\)\]]/);
+              return {
+                id: listId,
+                title: cleanName,
+                artist: it.uploaderName || query,
+                year: yearMatch ? yearMatch[1] : undefined,
+                thumbnail: it.thumbnail || `https://i.ytimg.com/vi/${listId}/hqdefault.jpg`,
+                trackCount: it.videos > 0 ? it.videos : undefined,
+                type: 'album',
+                url: it.url,
+              };
+            })
+            .filter((a: any) => a.id && a.id.startsWith('OLAK5uy_'));
+
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify(albums));
+        } catch (err: any) {
+          console.warn('Dev release search error:', err.message);
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify([]));
+        }
+      });
+
+      // Get YouTube Release / Album Tracks
+      server.middlewares.use('/api/yt/release-tracks', async (req, res) => {
+        const urlObj = new URL(req.url || '', 'http://localhost:3030');
+        const releaseId = urlObj.searchParams.get('id') || '';
+        if (!releaseId) {
+          res.statusCode = 400;
+          res.end(JSON.stringify({ error: 'Missing id parameter' }));
+          return;
+        }
+
+        try {
+          const url = `https://www.youtube.com/playlist?list=${encodeURIComponent(releaseId)}`;
+          const response = await fetch(url, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            },
+          });
+          const html = await response.text();
+          const match =
+            html.match(/var ytInitialData = ({.*?});<\/script>/s) ||
+            html.match(/ytInitialData\s*=\s*({.*?});/s);
+
+          if (!match) throw new Error('No ytInitialData');
+          const data = JSON.parse(match[1]);
+
+          const findKey = (obj: any, target: string, results: any[] = []): any[] => {
+            if (!obj || typeof obj !== 'object') return results;
+            if (obj[target]) results.push(obj[target]);
+            for (const k of Object.keys(obj)) findKey(obj[k], target, results);
+            return results;
+          };
+
+          const albumTitle =
+            data.metadata?.playlistMetadataRenderer?.title ||
+            data.header?.playlistHeaderRenderer?.title?.simpleText ||
+            data.microformat?.microformatDataRenderer?.title ||
+            'Álbum Oficial';
+
+          const lockups = findKey(data, 'lockupViewModel');
+          const tracks = lockups
+            .filter((l: any) => l.contentId)
+            .map((l: any, i: number) => {
+              const vidId = l.contentId;
+              const title = l.metadata?.lockupMetadataViewModel?.title?.content || `Pista ${i + 1}`;
+              const artist =
+                l.metadata?.lockupMetadataViewModel?.metadata?.contentMetadataViewModel
+                  ?.metadataRows?.[0]?.metadataParts?.[0]?.text?.content || '';
+
+              // Extract duration from overlay badges
+              let durSec = 210;
+              try {
+                const badgeText =
+                  l.contentImage?.thumbnailViewModel?.overlays?.[0]
+                    ?.thumbnailBottomOverlayViewModel?.badges?.[0]
+                    ?.thumbnailBadgeViewModel?.text;
+                if (badgeText) {
+                  const parts = badgeText.split(':').map(Number);
+                  if (parts.length === 2) durSec = parts[0] * 60 + parts[1];
+                  else if (parts.length === 3) durSec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                }
+              } catch {}
+
+              return {
+                id: vidId,
+                title,
+                artist: artist || albumTitle,
+                album: albumTitle,
+                duration: durSec,
+                thumbnail: `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`,
+                source: 'youtube',
+                youtubeId: vidId,
+              };
+            });
+
+          const albumCover =
+            data.microformat?.microformatDataRenderer?.thumbnail?.thumbnails?.[0]?.url ||
+            data.sidebar?.playlistSidebarRenderer?.items?.[0]
+              ?.playlistSidebarPrimaryInfoRenderer?.thumbnailRenderer
+              ?.playlistCustomThumbnailRenderer?.thumbnail?.thumbnails?.[0]?.url ||
+            `https://i.ytimg.com/vi/${tracks[0]?.id}/hqdefault.jpg`;
+
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              id: releaseId,
+              title: albumTitle,
+              artist: tracks[0]?.artist || 'Artista Oficial',
+              thumbnail: albumCover,
+              trackCount: tracks.length,
+              type: 'album',
+              tracks,
+            })
+          );
+        } catch (err: any) {
+          console.warn('Dev release-tracks error:', err.message);
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
     },
   };
 }

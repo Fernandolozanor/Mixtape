@@ -17,9 +17,12 @@ import {
   Sparkles,
   Layers,
   Settings,
+  Music2,
+  Disc3,
 } from 'lucide-react';
-import type { Track, AudioSourceType } from '../types/music';
+import type { Track, AudioSourceType, YouTubeRelease } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
+import { youtubeReleaseService } from '../services/youtubeReleaseService';
 import { recommendationService } from '../services/recommendationService';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
@@ -27,6 +30,7 @@ import { useTheme } from '../context/ThemeContext';
 import { SourceBadge } from './SourceBadge';
 import { RadioTunerDial } from './RadioTunerDial';
 import { ReggaetonPrankModal } from './ReggaetonPrankModal';
+import { AlbumDetailModal } from './AlbumDetailModal';
 import { isReggaetonTag, shouldTriggerReggaetonJoke } from '../services/prankService';
 
 const GENRE_TAGS = [
@@ -64,6 +68,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [visibleCount, setVisibleCount] = useState<number>(25);
 
+  const [searchContentType, setSearchContentType] = useState<'tracks' | 'releases'>('tracks');
+  const [releases, setReleases] = useState<YouTubeRelease[]>([]);
+  const [isSearchingReleases, setIsSearchingReleases] = useState(false);
+  const [selectedRelease, setSelectedRelease] = useState<YouTubeRelease | null>(null);
+
   // Multi-selection state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -96,16 +105,26 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
     recommendationService.recordSearch(term);
     setIsSearching(true);
+    setIsSearchingReleases(true);
     setCurrentPage(1);
     setVisibleCount(25); // initial generous batch
+
+    const tracksPromise = streamResolver.search(term, filter, 1);
+    const releasesPromise = youtubeReleaseService.searchReleases(term);
+
     try {
-      const tracks = await streamResolver.search(term, filter, 1);
+      const [tracks, foundReleases] = await Promise.all([
+        tracksPromise.catch(() => []),
+        releasesPromise.catch(() => []),
+      ]);
       setResults(tracks);
+      setReleases(foundReleases);
       setSelectedIds(new Set()); // reset selection on new search
     } catch (e) {
       console.error('Search failed:', e);
     } finally {
       setIsSearching(false);
+      setIsSearchingReleases(false);
     }
   };
 
@@ -382,6 +401,43 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </button>
         </div>
 
+        {/* Content Type Selector: Canciones vs Lanzamientos Oficiales (Álbumes) */}
+        <div className="flex items-center gap-2 pt-2 border-t border-white/10 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setSearchContentType('tracks')}
+            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              searchContentType === 'tracks'
+                ? 'bg-amber-400 text-black shadow-md'
+                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Music2 className="w-3.5 h-3.5" />
+            <span>Canciones ({results.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSearchContentType('releases');
+              if (releases.length === 0 && query.trim()) {
+                handleSearch(query);
+              }
+            }}
+            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              searchContentType === 'releases'
+                ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
+                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Disc3 className={`w-3.5 h-3.5 ${isSearchingReleases ? 'animate-spin text-amber-300' : 'text-amber-400'}`} />
+            <span>Lanzamientos / Álbumes {releases.length > 0 ? `(${releases.length})` : ''}</span>
+            {releases.length > 0 && (
+              <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
+            )}
+          </button>
+        </div>
+
         {/* Sort By Dropdown (Only shown when there are results) */}
         {results.length > 0 && (
           <div className="flex items-center justify-end gap-1.5 sm:gap-2 pt-2 border-t border-white/5 text-xs">
@@ -406,8 +462,125 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         )}
       </div>
 
+      {/* Releases View (Álbumes y Lanzamientos Oficiales) */}
+      {searchContentType === 'releases' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Disc3 className="w-4 h-4 text-amber-400" />
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white font-mono-retro">
+                Lanzamientos y Álbumes Oficiales ({releases.length})
+              </h2>
+            </div>
+            <span className="text-[11px] font-mono text-zinc-400">
+              Contenido oficial catalogado de YouTube Music (Releases)
+            </span>
+          </div>
+
+          {isSearchingReleases ? (
+            <div className="py-16 flex flex-col items-center justify-center gap-3 text-zinc-400 font-mono text-xs">
+              <Loader2 className="w-7 h-7 animate-spin text-amber-400" />
+              <span>Buscando álbumes y lanzamientos oficiales...</span>
+            </div>
+          ) : releases.length === 0 ? (
+            <div className="py-16 text-center text-xs font-mono text-zinc-400 bg-white/5 rounded-2xl border border-white/5 p-6">
+              <Disc3 className="w-10 h-10 text-zinc-600 mx-auto mb-2.5" />
+              <p className="font-bold text-zinc-200">No se han encontrado lanzamientos oficiales para "{query}".</p>
+              <p className="text-[11px] text-zinc-500 mt-1">Prueba a buscar el nombre del artista (ej: Queen, The Beatles, Michael Jackson, Rosalía...)</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+              {releases.map((album) => (
+                <div
+                  key={album.id}
+                  onClick={() => setSelectedRelease(album)}
+                  className="group cursor-pointer bg-[#131822] hover:bg-[#1b2333] p-3 rounded-2xl border border-white/10 hover:border-amber-400/50 transition-all hover:shadow-2xl active:scale-95 flex flex-col"
+                >
+                  <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-lg bg-black">
+                    <img
+                      src={album.thumbnail}
+                      alt={album.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-2 left-2 bg-red-600/95 text-white font-mono text-[9px] font-black px-2 py-0.5 rounded shadow-md uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      <span>Release</span>
+                    </div>
+                    {album.year && (
+                      <div className="absolute bottom-2 right-2 bg-black/80 backdrop-blur-sm text-amber-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                        {album.year}
+                      </div>
+                    )}
+                  </div>
+
+                  <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 truncate mt-2.5">
+                    {album.title}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-zinc-400 font-mono truncate">
+                    {album.artist}
+                  </p>
+
+                  <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                    <span>{album.trackCount ? `${album.trackCount} canciones` : 'Álbum Oficial'}</span>
+                    <span className="text-amber-400 font-bold group-hover:underline">Ver pistas →</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Horizontal Shelf of Official Releases / Albums when in Tracks view */}
+      {searchContentType === 'tracks' && releases.length > 0 && (
+        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-transparent border border-amber-500/25 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Disc3 className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono-retro">
+                Lanzamientos de {query || 'este artista'}
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSearchContentType('releases')}
+              className="text-[11px] font-mono font-bold text-amber-400 hover:text-amber-300 cursor-pointer"
+            >
+              Ver todos ({releases.length}) →
+            </button>
+          </div>
+
+          <div className="flex gap-3 overflow-x-auto pb-1 pt-1 no-scrollbar">
+            {releases.slice(0, 10).map((album) => (
+              <div
+                key={album.id}
+                onClick={() => setSelectedRelease(album)}
+                className="w-28 sm:w-32 shrink-0 group cursor-pointer bg-black/40 hover:bg-black/60 p-2 rounded-xl border border-white/10 hover:border-amber-400/50 transition active:scale-95 text-center flex flex-col items-center"
+              >
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden relative shadow-md bg-black">
+                  <img
+                    src={album.thumbnail}
+                    alt={album.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute top-1 right-1 bg-red-600/90 text-white font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow">
+                    ÁLBUM
+                  </div>
+                </div>
+                <p className="text-xs font-bold text-zinc-100 truncate w-full mt-1.5 group-hover:text-amber-300">
+                  {album.title}
+                </p>
+                <p className="text-[10px] text-zinc-400 font-mono truncate w-full">
+                  {album.year ? `${album.year} • ` : ''}{album.artist}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Quick Category Chips */}
-      {results.length === 0 && !isSearching && (
+      {searchContentType === 'tracks' && results.length === 0 && !isSearching && (
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
             Explora por géneros
@@ -427,7 +600,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       )}
 
       {/* Results List */}
-      {results.length > 0 && (
+      {searchContentType === 'tracks' && results.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -740,6 +913,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           setPrankPendingAction(null);
           if (action) action();
         }}
+      />
+
+      {/* Album / Release Detail Modal */}
+      <AlbumDetailModal
+        isOpen={Boolean(selectedRelease)}
+        onClose={() => setSelectedRelease(null)}
+        release={selectedRelease}
+        onOpenAddToPlaylist={onSelectTrackForPlaylist}
+        onOpenAddMultipleToPlaylist={onSelectMultipleForPlaylist}
       />
     </div>
   );

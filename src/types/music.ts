@@ -40,6 +40,18 @@ export interface SponsorSegment {
   category: string;
 }
 
+export interface YouTubeRelease {
+  id: string;
+  title: string;
+  artist: string;
+  year?: string;
+  thumbnail: string;
+  trackCount?: number;
+  type: 'album' | 'single' | 'ep';
+  url?: string;
+  tracks?: Track[];
+}
+
 export type TextSizeType = 'small' | 'medium' | 'large' | 'xlarge';
 
 export interface UserSettings {
