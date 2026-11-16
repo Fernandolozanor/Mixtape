@@ -63,9 +63,22 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
 
   const [currentPage, setCurrentPage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [credits, setCredits] = useState(2);
+  const [credits, setCredits] = useState(() => {
+    const s = localStorage.getItem('mixtape_jukebox_credits');
+    return s ? parseInt(s, 10) : 2;
+  });
   const [coinMessage, setCoinMessage] = useState<string | null>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleRemoteSettings = (e: any) => {
+      if (e.detail?.jukeboxCredits !== undefined) {
+        setCredits(e.detail.jukeboxCredits);
+      }
+    };
+    window.addEventListener('mixtape:remote-settings-sync', handleRemoteSettings);
+    return () => window.removeEventListener('mixtape:remote-settings-sync', handleRemoteSettings);
+  }, []);
 
   const STRIPS_PER_PAGE = 12; // 3 columns x 4 rows
   const totalPages = Math.max(1, Math.ceil(tracks.length / STRIPS_PER_PAGE));
@@ -124,7 +137,11 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
   // Handle coin insert easter egg
   const handleInsertCoin = () => {
     playJukeboxCoinDrop();
-    setCredits((prev) => prev + 1);
+    setCredits((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('mixtape_jukebox_credits', String(next));
+      return next;
+    });
     setCoinMessage('★ 25¢ INSERTADO • +1 CRÉDITO ★');
     setTimeout(() => setCoinMessage(null), 2500);
   };

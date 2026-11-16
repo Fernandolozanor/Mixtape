@@ -449,8 +449,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       const [moved] = list.splice(fromIndex, 1);
       list.splice(toIndex, 0, moved);
-      persistLikedTracks(list);
-      return list;
+      const now = Date.now();
+      const updated = list.map((t, idx) => ({
+        ...t,
+        addedAt: now - idx * 1000,
+      }));
+      persistLikedTracks(updated);
+      return updated;
     });
   };
 

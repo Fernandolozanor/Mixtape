@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Heart,
   Plus,
@@ -165,6 +165,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     clearLikedTracks,
     createPlaylist,
     addTracksToPlaylist,
+    updateSettings,
   } = useLibrary();
 
   const { playTrack, currentTrack, isPlaying } = usePlayer();
@@ -177,7 +178,26 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const [showMatchingTracks, setShowMatchingTracks] = useState(true);
 
   // Favorites view mode: 'jukebox' (Gramola Jukebox interactiva con neones y burbujas), 'vinyl' o 'list'
-  const [favoritesViewMode, setFavoritesViewMode] = useState<'jukebox' | 'vinyl' | 'list'>('jukebox');
+  const [favoritesViewMode, setFavoritesViewMode] = useState<'jukebox' | 'vinyl' | 'list'>(() => {
+    return (localStorage.getItem('mixtape_favorites_view_mode') as 'jukebox' | 'vinyl' | 'list') || 'jukebox';
+  });
+
+  useEffect(() => {
+    const handleRemoteSettings = (e: any) => {
+      const mode = e.detail?.favoritesViewMode;
+      if (mode && (mode === 'jukebox' || mode === 'vinyl' || mode === 'list')) {
+        setFavoritesViewMode(mode);
+      }
+    };
+    window.addEventListener('mixtape:remote-settings-sync', handleRemoteSettings);
+    return () => window.removeEventListener('mixtape:remote-settings-sync', handleRemoteSettings);
+  }, []);
+
+  const handleSelectFavoritesViewMode = (mode: 'jukebox' | 'vinyl' | 'list') => {
+    setFavoritesViewMode(mode);
+    localStorage.setItem('mixtape_favorites_view_mode', mode);
+    updateSettings({ favoritesViewMode: mode });
+  };
   // Library view mode: 'shelves' (Estanterías 3D de Cintas arriba y Vinilos Cover Flow abajo) vs 'lists'
   const [libraryViewMode, setLibraryViewMode] = useState<'shelves' | 'lists'>('shelves');
   const [listFilter, setListFilter] = useState<'all' | 'tapes' | 'vinyls'>('all');
@@ -438,7 +458,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             {likedTracks.length > 0 && (
               <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/10 shadow-inner">
                 <button
-                  onClick={() => setFavoritesViewMode('jukebox')}
+                  onClick={() => handleSelectFavoritesViewMode('jukebox')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     favoritesViewMode === 'jukebox'
                       ? 'bg-amber-400 text-black shadow-md font-bold'
@@ -450,7 +470,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   <span>Jukebox</span>
                 </button>
                 <button
-                  onClick={() => setFavoritesViewMode('vinyl')}
+                  onClick={() => handleSelectFavoritesViewMode('vinyl')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     favoritesViewMode === 'vinyl'
                       ? 'bg-amber-400 text-black shadow-md font-bold'
@@ -462,7 +482,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   <span>Vinilos</span>
                 </button>
                 <button
-                  onClick={() => setFavoritesViewMode('list')}
+                  onClick={() => handleSelectFavoritesViewMode('list')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                     favoritesViewMode === 'list'
                       ? 'bg-amber-400 text-black shadow-md font-bold'

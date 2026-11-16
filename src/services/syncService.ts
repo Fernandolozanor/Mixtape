@@ -17,6 +17,8 @@ export interface SyncSettingsBundle {
   themeId?: string;
   kidsPin?: string;
   kidsMaxVol?: number;
+  favoritesViewMode?: 'jukebox' | 'vinyl' | 'list';
+  jukeboxCredits?: number;
   updatedAt: number;
 }
 
@@ -55,6 +57,9 @@ interface CompactPlaylist {
   c?: string;         // coverUrl
   ca: number;         // createdAt
   ua: number;         // updatedAt
+  mt?: 'tape' | 'vinyl'; // mediaType (📼 cinta o 💽 vinilo)
+  ar?: string;        // artist (for vinyl albums)
+  yr?: string;        // year (for vinyl albums)
   tr: CompactTrack[]; // tracks
 }
 
@@ -212,6 +217,48 @@ function fromCompactTrack(c: CompactTrack): Track {
     viewsFormatted: c.vf,
     addedAt: c.at,
     bpm: c.b,
+  };
+}
+
+function toCompactPlaylist(pl: Playlist): CompactPlaylist {
+  const isVinyl =
+    pl.mediaType === 'vinyl' ||
+    pl.description?.toLowerCase().includes('vinilo') ||
+    pl.description?.toLowerCase().includes('álbum') ||
+    pl.description?.toLowerCase().includes('album');
+
+  return {
+    i: pl.id,
+    n: pl.name,
+    ds: pl.description,
+    c: pl.coverUrl,
+    ca: pl.createdAt,
+    ua: pl.updatedAt,
+    mt: isVinyl ? 'vinyl' : 'tape',
+    ar: pl.artist,
+    yr: pl.year,
+    tr: (pl.tracks || []).map(toCompactTrack),
+  };
+}
+
+function fromCompactPlaylist(cp: CompactPlaylist): Playlist {
+  const isVinyl =
+    cp.mt === 'vinyl' ||
+    cp.ds?.toLowerCase().includes('vinilo') ||
+    cp.ds?.toLowerCase().includes('álbum') ||
+    cp.ds?.toLowerCase().includes('album');
+
+  return {
+    id: cp.i,
+    name: cp.n,
+    description: cp.ds,
+    coverUrl: cp.c,
+    createdAt: cp.ca,
+    updatedAt: cp.ua,
+    mediaType: isVinyl ? 'vinyl' : 'tape',
+    artist: cp.ar,
+    year: cp.yr,
+    tracks: (cp.tr || []).map(fromCompactTrack),
   };
 }
 
@@ -405,6 +452,9 @@ class SyncService {
     const kidsPin = localStorage.getItem('mixtape_kids_pin') || undefined;
     const kidsMaxVolRaw = localStorage.getItem('mixtape_kids_max_vol');
     const kidsMaxVol = kidsMaxVolRaw ? parseFloat(kidsMaxVolRaw) : undefined;
+    const favModeRaw = (localStorage.getItem('mixtape_favorites_view_mode') as 'jukebox' | 'vinyl' | 'list') || undefined;
+    const jbCreditsRaw = localStorage.getItem('mixtape_jukebox_credits');
+    const jukeboxCredits = jbCreditsRaw ? parseInt(jbCreditsRaw, 10) : undefined;
     const updatedAt = parseInt(localStorage.getItem(SETTINGS_TS_KEY) || '0', 10) || Date.now();
 
     return {
@@ -412,6 +462,8 @@ class SyncService {
       themeId,
       kidsPin,
       kidsMaxVol,
+      favoritesViewMode: favModeRaw,
+      jukeboxCredits,
       updatedAt,
     };
   }
@@ -518,15 +570,7 @@ class SyncService {
       const jsonStr = decodePayload(encodedData, this.syncCode);
       const body: CompactPayloadBody = JSON.parse(jsonStr);
 
-      const remotePlaylists: Playlist[] = (body.p || []).map((cp) => ({
-        id: cp.i,
-        name: cp.n,
-        description: cp.ds,
-        coverUrl: cp.c,
-        createdAt: cp.ca,
-        updatedAt: cp.ua,
-        tracks: (cp.tr || []).map(fromCompactTrack),
-      }));
+      const remotePlaylists: Playlist[] = (body.p || []).map(fromCompactPlaylist);
 
       const remoteLiked: Track[] = (body.l || []).map(fromCompactTrack);
       const remoteTombstones: SyncTombstones = body.tb || { playlists: {}, liked: {} };
@@ -607,7 +651,17 @@ class SyncService {
       if (!existing) {
         playlistMap.set(rPl.id, rPl);
       } else if ((rPl.updatedAt || 0) > (existing.updatedAt || 0)) {
-        playlistMap.set(rPl.id, rPl);
+        playlistMap.set(rPl.id, {
+          ...existing,
+          ...rPl,
+          mediaType:
+            rPl.mediaType === 'vinyl' || existing.mediaType === 'vinyl'
+              ? 'vinyl'
+              : rPl.mediaType || existing.mediaType || 'tape',
+          artist: rPl.artist || existing.artist,
+          year: rPl.year || existing.year,
+          coverUrl: rPl.coverUrl || existing.coverUrl,
+        });
       } else if ((rPl.updatedAt || 0) === (existing.updatedAt || 0)) {
         // Merge tracks inside the playlist if timestamps match
         const trackIds = new Set(existing.tracks.map((t) => t.id));
@@ -618,7 +672,17 @@ class SyncService {
             trackIds.add(rt.id);
           }
         }
-        playlistMap.set(rPl.id, { ...existing, tracks: combinedTracks });
+        playlistMap.set(rPl.id, {
+          ...existing,
+          mediaType:
+            existing.mediaType === 'vinyl' || rPl.mediaType === 'vinyl'
+              ? 'vinyl'
+              : existing.mediaType || rPl.mediaType || 'tape',
+          artist: existing.artist || rPl.artist,
+          year: existing.year || rPl.year,
+          coverUrl: existing.coverUrl || rPl.coverUrl,
+          tracks: combinedTracks,
+        });
       }
     }
 
@@ -666,6 +730,12 @@ class SyncService {
       if (remoteSettings.kidsMaxVol !== undefined) {
         localStorage.setItem('mixtape_kids_max_vol', String(remoteSettings.kidsMaxVol));
       }
+      if (remoteSettings.favoritesViewMode) {
+        localStorage.setItem('mixtape_favorites_view_mode', remoteSettings.favoritesViewMode);
+      }
+      if (remoteSettings.jukeboxCredits !== undefined) {
+        localStorage.setItem('mixtape_jukebox_credits', String(remoteSettings.jukeboxCredits));
+      }
     }
 
     return {
@@ -696,15 +766,7 @@ class SyncService {
 
     try {
       const body: CompactPayloadBody = {
-        p: playlists.map((pl) => ({
-          i: pl.id,
-          n: pl.name,
-          ds: pl.description,
-          c: pl.coverUrl,
-          ca: pl.createdAt,
-          ua: pl.updatedAt,
-          tr: pl.tracks.map(toCompactTrack),
-        })),
+        p: playlists.map(toCompactPlaylist),
         l: likedTracks.map(toCompactTrack),
         tb: this.getTombstones(),
         sb: this.getLocalSettingsBundle(),
@@ -836,15 +898,7 @@ class SyncService {
         const jsonStr = decodePayload(combined, this.syncCode);
         const body: CompactPayloadBody = JSON.parse(jsonStr);
 
-        const remotePlaylists: Playlist[] = (body.p || []).map((cp) => ({
-          id: cp.i,
-          name: cp.n,
-          description: cp.ds,
-          coverUrl: cp.c,
-          createdAt: cp.ca,
-          updatedAt: cp.ua,
-          tracks: (cp.tr || []).map(fromCompactTrack),
-        }));
+        const remotePlaylists: Playlist[] = (body.p || []).map(fromCompactPlaylist);
 
         const remoteLiked: Track[] = (body.l || []).map(fromCompactTrack);
         const remoteTombstones: SyncTombstones = body.tb || { playlists: {}, liked: {} };

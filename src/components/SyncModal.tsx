@@ -430,8 +430,9 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-xs font-bold text-white">
-                      {playlists.length} {playlists.length === 1 ? 'cinta' : 'cintas'} •{' '}
-                      {likedTracks.length} favoritos
+                      {playlists.filter((p) => p.mediaType !== 'vinyl' && !p.description?.toLowerCase().includes('vinilo')).length} cintas •{' '}
+                      {playlists.filter((p) => p.mediaType === 'vinyl' || p.description?.toLowerCase().includes('vinilo')).length} vinilos •{' '}
+                      {likedTracks.length} en Jukebox
                     </span>
                   </div>
                   <p className="text-[11px] text-zinc-400 font-mono">
