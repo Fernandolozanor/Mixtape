@@ -30,6 +30,7 @@ import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import { SourceBadge } from './SourceBadge';
 import { RadioTunerDial } from './RadioTunerDial';
+import { playRadioTuningSound } from '../utils/radioAudio';
 import { ReggaetonPrankModal } from './ReggaetonPrankModal';
 import { AlbumDetailModal } from './AlbumDetailModal';
 import { MultiAlbumRecordModal } from './MultiAlbumRecordModal';
@@ -219,6 +220,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     if (!term) return;
 
     recommendationService.recordSearch(term);
+    const stopTuning = playRadioTuningSound(5.0, 0.35);
     setIsSearching(true);
     setIsSearchingReleases(true);
     setCurrentPage(1);
@@ -238,6 +240,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     } catch (e) {
       console.error('Search failed:', e);
     } finally {
+      stopTuning();
       setIsSearching(false);
       setIsSearchingReleases(false);
     }
@@ -245,6 +248,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   const handleFetchMoreFromNetwork = async () => {
     if (isLoadingMore || !query.trim()) return;
+    const stopTuning = playRadioTuningSound(3.5, 0.3);
     setIsLoadingMore(true);
     try {
       const nextPage = currentPage + 1;
@@ -261,6 +265,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     } catch (e) {
       console.error('Failed to load deep search results:', e);
     } finally {
+      stopTuning();
       setIsLoadingMore(false);
     }
   };

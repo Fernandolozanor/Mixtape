@@ -1,8 +1,12 @@
 /**
- * Web Audio API Vintage FM Radio Tuning Sound Synthesizer
- * Produces authentic analog radio frequency sweep static, heterodyne whistle, and lock-in pop.
- * Zero external audio files required, zero latency, light & pleasant volume.
+ * Authentic Vintage Radio Tuning Sound Player
+ * Uses the authentic analog radio tuning sound effect (from YouTube LNCziHXp1BY)
+ * Located at /assets/radio-tuning.mp3.
+ * Seamless fallback to Web Audio API synthesizer if needed.
  */
+
+let activeTuningAudio: HTMLAudioElement | null = null;
+let activeFadeInterval: any = null;
 
 let audioCtx: AudioContext | null = null;
 
@@ -19,23 +23,21 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
-export function playRadioTuningSound(durationSec: number = 0.9): () => void {
+function playSynthesizedRadioTuning(durationSec: number = 0.9, volume: number = 0.25): () => void {
   const ctx = getAudioContext();
   if (!ctx) return () => {};
 
   try {
     const now = ctx.currentTime;
-    const dur = Math.max(0.4, Math.min(durationSec, 2.0));
+    const dur = Math.max(0.4, Math.min(durationSec, 3.0));
 
-    // Master gain node for tuning burst
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0.001, now);
-    masterGain.gain.linearRampToValueAtTime(0.12, now + 0.06);
-    masterGain.gain.setValueAtTime(0.12, now + dur - 0.12);
+    masterGain.gain.linearRampToValueAtTime(volume * 0.45, now + 0.06);
+    masterGain.gain.setValueAtTime(volume * 0.45, now + dur - 0.12);
     masterGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
     masterGain.connect(ctx.destination);
 
-    // 1. Noise Generator (FM Interstation Static)
     const bufferSize = ctx.sampleRate * dur;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -43,15 +45,13 @@ export function playRadioTuningSound(durationSec: number = 0.9): () => void {
 
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
-      // Pink noise filtering
-      lastOut = (lastOut * 0.95) + (white * 0.05);
-      output[i] = lastOut * 3.5 + (white * 0.2);
+      lastOut = lastOut * 0.95 + white * 0.05;
+      output[i] = lastOut * 3.5 + white * 0.2;
     }
 
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = noiseBuffer;
 
-    // Bandpass filter to simulate dial sweep through resonant frequency bands
     const bandpass = ctx.createBiquadFilter();
     bandpass.type = 'bandpass';
     bandpass.Q.setValueAtTime(2.8, now);
@@ -62,7 +62,6 @@ export function playRadioTuningSound(durationSec: number = 0.9): () => void {
     noiseSource.connect(bandpass);
     bandpass.connect(masterGain);
 
-    // 2. Heterodyne Whistle Oscillator (analog frequency beat note)
     const whistle = ctx.createOscillator();
     const whistleGain = ctx.createGain();
 
@@ -72,20 +71,18 @@ export function playRadioTuningSound(durationSec: number = 0.9): () => void {
     whistle.frequency.exponentialRampToValueAtTime(600, now + dur * 0.85);
 
     whistleGain.gain.setValueAtTime(0.001, now);
-    whistleGain.gain.linearRampToValueAtTime(0.025, now + 0.1);
+    whistleGain.gain.linearRampToValueAtTime(volume * 0.1, now + 0.1);
     whistleGain.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.85);
 
     whistle.connect(whistleGain);
     whistleGain.connect(masterGain);
 
-    // Start audio sources
     noiseSource.start(now);
     whistle.start(now);
 
     noiseSource.stop(now + dur);
     whistle.stop(now + dur);
 
-    // Return stop callback
     return () => {
       try {
         const stopTime = ctx.currentTime;
@@ -93,15 +90,101 @@ export function playRadioTuningSound(durationSec: number = 0.9): () => void {
         masterGain.gain.setValueAtTime(masterGain.gain.value, stopTime);
         masterGain.gain.exponentialRampToValueAtTime(0.0001, stopTime + 0.05);
         setTimeout(() => {
-          noiseSource.stop();
-          whistle.stop();
+          try {
+            noiseSource.stop();
+            whistle.stop();
+          } catch {}
         }, 60);
-      } catch {
-        // Ignored
-      }
+      } catch {}
     };
-  } catch (e) {
-    console.warn('Radio tuning audio error:', e);
+  } catch {
     return () => {};
+  }
+}
+
+/**
+ * Plays the authentic analog radio tuning sound effect (from YouTube LNCziHXp1BY).
+ * Returns a smooth stop/fade-out callback to be called when search completes.
+ */
+export function playRadioTuningSound(maxDurationSec: number = 4.0, volume: number = 0.35): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  // Clean up any previously active tuning sound
+  if (activeFadeInterval) {
+    clearInterval(activeFadeInterval);
+    activeFadeInterval = null;
+  }
+  if (activeTuningAudio) {
+    try {
+      activeTuningAudio.pause();
+      activeTuningAudio.currentTime = 0;
+    } catch {}
+    activeTuningAudio = null;
+  }
+
+  try {
+    const audio = new Audio('./assets/radio-tuning.mp3');
+    activeTuningAudio = audio;
+    audio.volume = Math.max(0.05, Math.min(1, volume));
+
+    // Pick a random offset between 0 and 18s for variety across searches
+    const randomStart = Math.random() * 18;
+    audio.currentTime = randomStart;
+
+    const playPromise = audio.play();
+    let isStopped = false;
+
+    const stop = () => {
+      if (isStopped) return;
+      isStopped = true;
+
+      if (activeFadeInterval) {
+        clearInterval(activeFadeInterval);
+        activeFadeInterval = null;
+      }
+
+      const fadeSteps = 10;
+      const stepTime = 20; // 200ms total smooth fade out
+      let currentStep = 0;
+      const initialVol = audio.volume;
+
+      activeFadeInterval = setInterval(() => {
+        currentStep++;
+        const factor = Math.max(0, 1 - currentStep / fadeSteps);
+        try {
+          audio.volume = initialVol * factor;
+        } catch {}
+
+        if (currentStep >= fadeSteps) {
+          clearInterval(activeFadeInterval);
+          activeFadeInterval = null;
+          try {
+            audio.pause();
+            audio.currentTime = 0;
+          } catch {}
+          if (activeTuningAudio === audio) {
+            activeTuningAudio = null;
+          }
+        }
+      }, stepTime);
+    };
+
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        // Fallback to Web Audio synthesis if autoplay policy blocked HTMLAudioElement
+        playSynthesizedRadioTuning(maxDurationSec, volume);
+      });
+    }
+
+    const autoTimer = setTimeout(() => {
+      stop();
+    }, maxDurationSec * 1000);
+
+    return () => {
+      clearTimeout(autoTimer);
+      stop();
+    };
+  } catch {
+    return playSynthesizedRadioTuning(maxDurationSec, volume);
   }
 }
