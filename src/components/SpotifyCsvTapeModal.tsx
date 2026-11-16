@@ -259,7 +259,7 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
 
   const handlePlayNow = () => {
     if (resolvedTracks.length > 0) {
-      playTrack(resolvedTracks[0], resolvedTracks);
+      playTrack(resolvedTracks[0], resolvedTracks, false, 'tape');
       setFullScreenPlayerOpen(true);
       onClose();
     }

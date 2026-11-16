@@ -53,13 +53,14 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     isFullScreenPlayerOpen,
     deckActivationTrigger,
     setFullScreenPlayerOpen,
+    playbackMediaType,
   } = usePlayer();
 
   const { isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
 
   // Active Center View: 'deck' | 'lyrics' | 'queue'
-  // When 'deck' is active, RetroTapeDeck automatically displays vinyl for favorites and cassette for regular tracks
+  // When 'deck' is active, RetroTapeDeck automatically displays vinyl for saved albums and cassette for other tracks
   const [centerView, setCenterView] = useState<'deck' | 'lyrics' | 'queue'>('deck');
   const [showPitchControl, setShowPitchControl] = useState(false);
 
@@ -71,7 +72,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     if (currentTrack) {
       setCenterView('deck');
     }
-  }, [currentTrack?.id, deckActivationTrigger, liked]);
+  }, [currentTrack?.id, deckActivationTrigger, playbackMediaType]);
 
   if (!isFullScreenPlayerOpen || !currentTrack) return null;
 

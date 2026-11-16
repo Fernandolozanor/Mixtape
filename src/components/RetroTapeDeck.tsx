@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useId } from 'react';
+import React, { useEffect, useRef, useState, useId, useMemo } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -19,21 +19,46 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   className = '',
   forceMedia,
 }) => {
-  const { currentTrack, isPlaying, togglePlay, currentTime, volume, playbackRate } = usePlayer();
-  const { isLiked, settings } = useLibrary();
+  const { currentTrack, isPlaying, togglePlay, currentTime, volume, playbackRate, playbackMediaType } = usePlayer();
+  const { playlists, settings } = useLibrary();
   const { currentTheme } = useTheme();
   const isSteel = currentTheme.id === 'retro-rock-80s';
   const vuStyle = settings.vuMeterStyle || 'analog'; // 'analog' | 'led'
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Playback mode: forceMedia prop overrides, or automatic: DISCO.mp4 for Favorites, cassette.mp4 for normal tracks
-  const isFavorite = forceMedia
-    ? forceMedia === 'vinyl'
-    : currentTrack
-    ? isLiked(currentTrack.id)
-    : false;
-  const videoSrc = isFavorite ? './assets/disco.mp4' : './assets/cassette.mp4';
-  const videoPoster = isFavorite ? './assets/disco.png' : './assets/cassette-poster.webp';
+  // Helper to check if a playlist is a saved vinyl album
+  const isVinylPlaylist = (p: { mediaType?: 'tape' | 'vinyl'; description?: string }) => {
+    return (
+      p.mediaType === 'vinyl' ||
+      p.description?.toLowerCase().includes('vinilo') ||
+      p.description?.toLowerCase().includes('lanzamiento oficial') ||
+      p.description?.toLowerCase().includes('álbum de vinilo')
+    );
+  };
+
+  // Playback mode according to user criterion:
+  // "Si es un disco guardado, muestra el vinilo cuando se reproduzca. Si no muestra la cinta."
+  const isVinyl = useMemo(() => {
+    if (forceMedia) return forceMedia === 'vinyl';
+    if (playbackMediaType) return playbackMediaType === 'vinyl';
+    if (!currentTrack) return false;
+
+    // Check if the currentTrack belongs to any saved vinyl album in the library
+    return playlists.some(
+      (p) =>
+        isVinylPlaylist(p) &&
+        p.tracks.some(
+          (t) =>
+            t.id === currentTrack.id ||
+            (t.youtubeId && currentTrack.youtubeId && t.youtubeId === currentTrack.youtubeId) ||
+            (t.title?.toLowerCase().trim() === currentTrack.title?.toLowerCase().trim() &&
+              t.artist?.toLowerCase().trim() === currentTrack.artist?.toLowerCase().trim())
+        )
+    );
+  }, [forceMedia, playbackMediaType, currentTrack, playlists]);
+
+  const videoSrc = isVinyl ? './assets/disco.mp4' : './assets/cassette.mp4';
+  const videoPoster = isVinyl ? './assets/disco.png' : './assets/cassette-poster.webp';
 
   // Moving analog VU needles for Left and Right channels (direct DOM refs for 60fps physics)
   const needleLeftRef = useRef<HTMLDivElement>(null);
@@ -667,7 +692,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
    * When playing standard tracks, renders the handwritten cassette tape label.
    */
   const renderMediaOverlay = (size: 'sm' | 'md' | 'lg') => {
-    if (isFavorite) {
+    if (isVinyl) {
       return renderSpinningVinylLabel(size);
     }
     return renderHandwrittenTapeLabel(size);
@@ -685,18 +710,20 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         <div className="flex items-center justify-between px-2 pt-1 pb-1.5">
           <div className="flex items-center gap-1.5">
             <Disc3
-              className={`w-3.5 h-3.5 ${isFavorite ? 'text-rose-400' : 'text-amber-500'} ${isPlaying ? 'animate-spin' : ''}`}
+              className={`w-3.5 h-3.5 ${isVinyl ? 'text-amber-400' : 'text-amber-500'} ${isPlaying ? 'animate-spin' : ''}`}
               style={{ animationDuration: '3s' }}
             />
             <span className="text-[10px] font-extrabold tracking-widest uppercase text-zinc-300">
-              {isFavorite ? 'VINILO DECK' : 'MIXTAPE DECK'}
+              {isVinyl ? 'DISCO VINILO' : 'MIXTAPE DECK'}
             </span>
             <span
               className={`text-[8px] px-1 py-0.2 rounded font-mono font-bold ${
-                isFavorite ? 'bg-rose-500/20 text-rose-400' : 'bg-amber-500/20 text-amber-400'
+                isVinyl
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  : 'bg-amber-500/20 text-amber-400'
               }`}
             >
-              {isFavorite ? 'FAV' : 'CrO2'}
+              {isVinyl ? 'LP' : 'CrO2'}
             </span>
           </div>
 
@@ -840,11 +867,11 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
             <div className="flex items-center gap-2">
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isFavorite ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+                  isVinyl ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
                 }`}
               />
               <span className="text-xs font-bold tracking-widest text-zinc-300 font-mono-retro">
-                {isFavorite ? 'VINILO HI-FI' : 'HI-FI CASSETTE'}
+                {isVinyl ? 'DISCO VINILO' : 'HI-FI CASSETTE'}
               </span>
             </div>
             <div className="retro-counter-display px-2 py-0.5 rounded font-mono-retro text-xs font-bold text-amber-400">
@@ -935,17 +962,17 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               isSteel ? 'text-slate-900' : 'text-white'
             }`}
           >
-            {isFavorite ? 'TOCADISCOS VINILO HI-FI' : 'MIXTAPE DECK'}
+            {isVinyl ? 'TOCADISCOS VINILO HI-FI' : 'MIXTAPE DECK'}
             <span
               className={`text-[8px] sm:text-[9.5px] px-1 sm:px-1.5 py-0.2 rounded font-mono-retro font-bold border ${
-                isFavorite
-                  ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                isVinyl
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                   : isSteel
                   ? 'bg-amber-500/20 text-amber-900 border-amber-600/40'
                   : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
               }`}
             >
-              {isFavorite ? 'FAVORITOS • 33⅓ RPM' : 'SOLID STATE'}
+              {isVinyl ? 'ÁLBUM VINILO • 33⅓ RPM' : 'SOLID STATE'}
             </span>
           </h3>
           <p
@@ -953,7 +980,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
               isSteel ? 'text-slate-600' : 'text-zinc-400'
             }`}
           >
-            {isFavorite
+            {isVinyl
               ? 'DIRECT DRIVE • SHURE M97xE • VINILO AUDIÓFILO'
               : '3-HEAD • DUAL CAPSTAN • TYPE II CrO2'}
           </p>

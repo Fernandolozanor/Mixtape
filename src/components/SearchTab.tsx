@@ -1230,7 +1230,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  playTrack(albumToast.tracks[0], albumToast.tracks);
+                  playTrack(albumToast.tracks[0], albumToast.tracks, false, 'tape');
                   setAlbumToast(null);
                 }}
                 className="px-3 py-1.5 rounded-xl bg-amber-400 text-black font-bold text-xs hover:bg-amber-300 transition flex items-center gap-1 shadow-md cursor-pointer active:scale-95"

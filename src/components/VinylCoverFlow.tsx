@@ -128,7 +128,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
       return;
     }
 
-    playTrack(activeVinyl.tracks[0], activeVinyl.tracks);
+    playTrack(activeVinyl.tracks[0], activeVinyl.tracks, false, 'vinyl');
   };
 
   // Empty state if user has no vinyl albums yet

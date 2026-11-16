@@ -22,7 +22,14 @@ interface PlayerContextType {
   deckActivationTrigger: number;
   isQueueOpen: boolean;
   isLyricsOpen: boolean;
-  playTrack: (track: Track, newQueue?: Track[], isCrossfade?: boolean) => Promise<void>;
+  playbackMediaType: 'tape' | 'vinyl' | null;
+  setPlaybackMediaType: (mediaType: 'tape' | 'vinyl' | null) => void;
+  playTrack: (
+    track: Track,
+    newQueue?: Track[],
+    isCrossfade?: boolean,
+    mediaType?: 'tape' | 'vinyl'
+  ) => Promise<void>;
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -63,6 +70,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [playTriggerCount, setPlayTriggerCount] = useState<number>(0);
   const [isQueueOpen, setQueueOpen] = useState<boolean>(false);
   const [isLyricsOpen, setLyricsOpen] = useState<boolean>(false);
+  const [playbackMediaType, setPlaybackMediaType] = useState<'tape' | 'vinyl' | null>(null);
 
   // References to avoid stale closures in callbacks
   const queueRef = useRef<Track[]>(queue);
@@ -141,12 +149,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => clearTimeout(timer);
   }, [isPlaying, currentTrack?.id, playTriggerCount]);
 
-  const playTrack = async (track: Track, newQueue?: Track[], isCrossfade: boolean = false) => {
+  const playTrack = async (
+    track: Track,
+    newQueue?: Track[],
+    isCrossfade: boolean = false,
+    mediaType?: 'tape' | 'vinyl'
+  ) => {
     if (!isCrossfade) {
       setIsLoading(true);
     }
     setCurrentTrack(track);
     setPlayTriggerCount((c) => c + 1);
+
+    if (mediaType) {
+      setPlaybackMediaType(mediaType);
+    } else if (newQueue) {
+      setPlaybackMediaType(null);
+    }
 
     let updatedQueue = newQueue || queueRef.current;
     if (newQueue) {
@@ -311,6 +330,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deckActivationTrigger,
         isQueueOpen,
         isLyricsOpen,
+        playbackMediaType,
+        setPlaybackMediaType,
         playTrack,
         togglePlay,
         nextTrack: handleNextTrack,

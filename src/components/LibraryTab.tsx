@@ -72,7 +72,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
   const handlePlayPlaylistFromRack = (playlist: Playlist) => {
     if (playlist.tracks.length > 0) {
-      playTrack(playlist.tracks[0], playlist.tracks);
+      playTrack(playlist.tracks[0], playlist.tracks, false, 'tape');
     } else {
       setSelectedPlaylistId(playlist.id);
     }
@@ -389,7 +389,14 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             {selectedPlaylist.tracks.length > 0 && !isEditingMode && (
               <button
-                onClick={() => playTrack(selectedPlaylist.tracks[0], selectedPlaylist.tracks)}
+                onClick={() =>
+                  playTrack(
+                    selectedPlaylist.tracks[0],
+                    selectedPlaylist.tracks,
+                    false,
+                    isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape'
+                  )
+                }
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold shadow-lg transition theme-btn"
               >
                 <Play className="w-4 h-4 fill-white" />
@@ -503,7 +510,15 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   setDraggedIndex(null);
                   setDragOverIndex(null);
                 }}
-                onClick={() => !isEditingMode && playTrack(track, selectedPlaylist.tracks)}
+                onClick={() =>
+                  !isEditingMode &&
+                  playTrack(
+                    track,
+                    selectedPlaylist.tracks,
+                    false,
+                    isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape'
+                  )
+                }
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
                   isEditingMode ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-pointer'
                 } ${

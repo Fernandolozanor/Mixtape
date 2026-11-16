@@ -32,7 +32,16 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
   const [recordedSuccess, setRecordedSuccess] = useState(false);
 
   const { playTrack, currentTrack } = usePlayer();
-  const { createPlaylist, addTracksToPlaylist } = useLibrary();
+  const { createPlaylist, addTracksToPlaylist, playlists } = useLibrary();
+
+  const isSavedVinyl = release
+    ? playlists.some(
+        (p) =>
+          (p.mediaType === 'vinyl' || p.description?.toLowerCase().includes('vinilo')) &&
+          (p.name.toLowerCase() === (release.title || '').toLowerCase() ||
+            p.tracks.some((t) => (fullRelease?.tracks || release.tracks || []).some((at) => at.id === t.id)))
+      )
+    : false;
 
   useEffect(() => {
     if (!isOpen || !release) return;
@@ -71,7 +80,7 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
 
   const handlePlayAll = () => {
     if (tracks.length === 0) return;
-    playTrack(tracks[0], tracks);
+    playTrack(tracks[0], tracks, false, isSavedVinyl ? 'vinyl' : 'tape');
     onClose();
   };
 
@@ -244,7 +253,7 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
 
                         <button
                           type="button"
-                          onClick={() => playTrack(t, tracks)}
+                          onClick={() => playTrack(t, tracks, false, isSavedVinyl ? 'vinyl' : 'tape')}
                           className="w-7 h-7 rounded-lg bg-white/10 group-hover:bg-amber-400 group-hover:text-black flex items-center justify-center text-zinc-300 transition shrink-0 cursor-pointer"
                           aria-label={`Reproducir ${t.title}`}
                         >
