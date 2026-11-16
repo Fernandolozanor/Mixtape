@@ -128,53 +128,95 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
 
   for (let i = 0; i < normalizedHeaders.length; i++) {
     const h = normalizedHeaders[i];
-    // Track Name / Title
+    const isUriOrUrlOrId =
+      h.includes('uri') ||
+      h.includes('url') ||
+      h.includes('id') ||
+      h.includes('link') ||
+      h.includes('isrc') ||
+      h.includes('preview');
+    const isNumber =
+      h.includes('numero') ||
+      h.includes('number') ||
+      h.includes('tracknumber') ||
+      h.includes('pos');
+    const isDuration =
+      h.includes('duracion') ||
+      h.includes('duration') ||
+      h.includes('length') ||
+      h.includes('time') ||
+      h.includes('dauer') ||
+      h.includes('duree') ||
+      h.includes('tempo');
+    const isImage =
+      h.includes('imagen') ||
+      h.includes('image') ||
+      h.includes('cover') ||
+      h.includes('artwork') ||
+      h.includes('foto');
+    const isArtist =
+      (h.includes('artist') ||
+        h.includes('artista') ||
+        h.includes('interprete') ||
+        h.includes('autor') ||
+        h.includes('performer') ||
+        h.includes('creator') ||
+        h.includes('band') ||
+        h.includes('grupo') ||
+        h.includes('singer')) &&
+      !isUriOrUrlOrId &&
+      !isImage;
+    const isAlbum =
+      (h.includes('album') || h.includes('disco')) &&
+      !isUriOrUrlOrId &&
+      !isImage &&
+      !h.includes('fecha') &&
+      !h.includes('date');
+
+    // 1. Track Title (Song / Track name)
     if (
       titleIdx === -1 &&
-      (h === 'trackname' ||
-        h === 'track' ||
-        h === 'title' ||
-        h === 'name' ||
-        h === 'song' ||
-        h === 'songname' ||
-        h === 'songtitle' ||
-        h === 'cancion' ||
-        h === 'titulo' ||
-        h === 'nombre' ||
-        h === 'tracktitle' ||
-        h === 'track_name' ||
-        h === 'titulodelacancion' ||
-        h === 'nombredelacancion')
+      !isUriOrUrlOrId &&
+      !isNumber &&
+      !isDuration &&
+      !isImage &&
+      !isArtist &&
+      !isAlbum
     ) {
-      titleIdx = i;
+      if (
+        h.includes('cancion') ||
+        h.includes('track') ||
+        h.includes('title') ||
+        h.includes('titulo') ||
+        h.includes('song') ||
+        h.includes('name') ||
+        h.includes('nombre') ||
+        h.includes('faixa') ||
+        h.includes('musica') ||
+        h.includes('morceau') ||
+        h.includes('brano')
+      ) {
+        titleIdx = i;
+      }
     }
 
-    // Artist Name
-    if (
-      artistIdx === -1 &&
-      (h === 'artistnames' ||
-        h === 'artistname' ||
-        h === 'artists' ||
-        h === 'artist' ||
-        h === 'artist_name' ||
-        h === 'artist_names' ||
-        h === 'artista' ||
-        h === 'artistas' ||
-        h === 'interprete' ||
-        h === 'autor' ||
-        h === 'performer' ||
-        h === 'creator')
-    ) {
-      artistIdx = i;
+    // 2. Artist Name (prefer track artist over album artist)
+    if (isArtist) {
+      if (
+        artistIdx === -1 ||
+        (!h.includes('album') && normalizedHeaders[artistIdx].includes('album'))
+      ) {
+        artistIdx = i;
+      }
     }
 
-    // Album Name
-    if (albumIdx === -1 && (h === 'albumname' || h === 'album' || h === 'albumtitle' || h.includes('album'))) {
+    // 3. Album Name (exclude album artist columns)
+    if (isAlbum && !isArtist && albumIdx === -1) {
       albumIdx = i;
     }
 
-    // Duration (ms)
-    if (durationIdx === -1 && (h.includes('duration') || h.includes('duracion') || h === 'time' || h === 'length')) {
+    // 4. Duration
+    if (isDuration && durationIdx === -1) {
       durationIdx = i;
     }
   }
@@ -201,10 +243,26 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
         durationMs = parseDurationValue(cols[durationIdx]);
       }
     } else {
-      // Fallback heuristics: If column 0 and column 1 exist
-      if (cols.length >= 2) {
-        title = cols[0].replace(/^["']|["']$/g, '').trim();
-        artist = cols[1].replace(/^["']|["']$/g, '').trim();
+      // Intelligent fallback when headers aren't detected:
+      // Discard columns that look like URIs, URLs, or pure numbers
+      const candidateCols = cols
+        .map((c, colIdx) => ({
+          text: c.replace(/^["']|["']$/g, '').trim(),
+          colIdx,
+        }))
+        .filter(
+          (c) =>
+            c.text.length > 0 &&
+            !c.text.startsWith('spotify:') &&
+            !c.text.startsWith('http://') &&
+            !c.text.startsWith('https://') &&
+            !/^[a-zA-Z0-9]{22}$/.test(c.text) &&
+            !/^\d+$/.test(c.text)
+        );
+
+      if (candidateCols.length >= 2) {
+        title = candidateCols[0].text;
+        artist = candidateCols[1].text;
       } else if (line.includes(' - ')) {
         // Line-by-line "Artist - Title" format
         const parts = line.split(' - ');
@@ -215,7 +273,14 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
       }
     }
 
-    if (title && artist) {
+    if (
+      title &&
+      artist &&
+      !title.startsWith('spotify:') &&
+      !artist.startsWith('spotify:') &&
+      !title.startsWith('http') &&
+      !artist.startsWith('http')
+    ) {
       tracks.push({
         id: `sp_import_${r}_${Math.random().toString(36).substring(2, 6)}`,
         title,

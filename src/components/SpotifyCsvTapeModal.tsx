@@ -24,6 +24,7 @@ import { parseSpotifyCsv, type ParsedSpotifyTrack } from '../services/spotifyCsv
 import {
   findStrictBestMatch,
   cleanTitle,
+  extractArtists,
   type FailedTrackReport,
 } from '../services/trackMatcher';
 import { streamResolver } from '../services/streamResolver';
@@ -183,29 +184,38 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
 
       try {
         const cleaned = cleanTitle(spTrack.title);
+        const expArtists = extractArtists(spTrack.artist);
+        const primaryArtist = expArtists[0] || spTrack.artist;
 
-        // Pass 1: Canonical Title + Artist (best accuracy on video platforms)
-        const query1 = `${cleaned || spTrack.title} ${spTrack.artist}`;
+        // Pass 1: Canonical Title + Primary Artist (cleanest search for YouTube / streaming)
+        const query1 = `${cleaned || spTrack.title} ${primaryArtist}`;
         let searchMatches = await streamResolver.search(query1, 'youtube', 1);
         let matchResult = findStrictBestMatch(spTrack, searchMatches);
 
-        // Pass 2: Artist + Canonical Title
-        if (!matchResult.matchedTrack) {
-          const query2 = `${spTrack.artist} ${cleaned || spTrack.title}`;
+        // Pass 2: Canonical Title + Full Artist String (if multiple artists)
+        if (!matchResult.matchedTrack && spTrack.artist !== primaryArtist) {
+          const query2 = `${cleaned || spTrack.title} ${spTrack.artist}`;
           const altMatches = await streamResolver.search(query2, 'youtube', 1);
           matchResult = findStrictBestMatch(spTrack, altMatches);
         }
 
-        // Pass 3: Title alone (evaluateTrackMatch strictly enforces artist confirmation)
+        // Pass 3: Artist + Canonical Title
+        if (!matchResult.matchedTrack) {
+          const query3 = `${primaryArtist} ${cleaned || spTrack.title}`;
+          const altMatches = await streamResolver.search(query3, 'youtube', 1);
+          matchResult = findStrictBestMatch(spTrack, altMatches);
+        }
+
+        // Pass 4: Title alone (evaluateTrackMatch strictly enforces artist confirmation)
         if (!matchResult.matchedTrack && cleaned) {
           const titleMatches = await streamResolver.search(cleaned, 'youtube', 1);
           matchResult = findStrictBestMatch(spTrack, titleMatches);
         }
 
-        // Pass 4: Comprehensive search across all providers (Audius / Local catalog / YouTube)
+        // Pass 5: Comprehensive search across all providers (Audius / Local catalog / YouTube)
         if (!matchResult.matchedTrack) {
-          const query4 = `${cleaned || spTrack.title} ${spTrack.artist}`;
-          const allMatches = await streamResolver.search(query4, 'all', 1);
+          const query5 = `${cleaned || spTrack.title} ${primaryArtist}`;
+          const allMatches = await streamResolver.search(query5, 'all', 1);
           matchResult = findStrictBestMatch(spTrack, allMatches);
         }
 

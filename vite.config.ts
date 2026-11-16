@@ -461,6 +461,10 @@ function youtubeSearchPlugin(): Plugin {
         }
       });
     },
+    configurePreviewServer(server) {
+      // Re-use API endpoints in preview mode
+      (this as any).configureServer?.(server);
+    },
   };
 }
 

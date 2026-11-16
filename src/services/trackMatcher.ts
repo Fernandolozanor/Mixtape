@@ -54,17 +54,17 @@ export function cleanTitle(title: string): string {
     .replace(/["“”'’`´]/g, '')
     // Remove parenthetical with keywords or 4-digit year anywhere inside
     .replace(
-      /\([^(]*\b(?:remaster|remastered|\d{4}|mix|version|edit|live|deluxe|edition|anniversary|explicit|clean|audio|video|soundtrack|from|ost|theme|mono|stereo|feat|ft|featuring|with)\b[^)]*\)/gi,
+      /\([^(]*\b(?:remaster|remastered|\d{4}|mix|version|edit|live|deluxe|edition|anniversary|explicit|clean|audio|video|soundtrack|from|ost|theme|mono|stereo|feat|ft|featuring|with|re-recorded|rerecorded|session|bonus|single|album)\b[^)]*\)/gi,
       ''
     )
     // Remove brackets with keywords or 4-digit year anywhere inside
     .replace(
-      /\[[^[]*\b(?:remaster|remastered|\d{4}|mix|version|edit|live|deluxe|edition|anniversary|explicit|clean|audio|video|soundtrack|from|ost|theme|mono|stereo|feat|ft|featuring|with)\b[^\]]*\]/gi,
+      /\[[^[]*\b(?:remaster|remastered|\d{4}|mix|version|edit|live|deluxe|edition|anniversary|explicit|clean|audio|video|soundtrack|from|ost|theme|mono|stereo|feat|ft|featuring|with|re-recorded|rerecorded|session|bonus|single|album)\b[^\]]*\]/gi,
       ''
     )
     // Remove trailing dash metadata (remaster, soundtrack, live, radio edit, etc.)
     .replace(
-      /\s*-\s*(?:from\s+.*|remaster|remastered|\d{4}\s*remaster|\d{4}\s*mix|deluxe|single\s*version|album\s*version|radio\s*edit|mono|stereo|live|anniversary|original|bonus).*$/gi,
+      /\s*-\s*(?:from\s+.*|remaster|remastered|\d{4}\s*remaster|\d{4}\s*mix|\d{4}\s*remastered.*|deluxe|single\s*version|album\s*version|radio\s*edit|mono|stereo|live|anniversary|original|bonus|re-recorded|rerecorded).*$/gi,
       ''
     )
     // Remove trailing dash feat metadata
