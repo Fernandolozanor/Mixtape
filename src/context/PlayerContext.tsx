@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import type { Track, RepeatMode, LyricLine } from '../types/music';
 import { audioEngine } from '../services/audioEngine';
 import { lyricsService } from '../services/lyricsService';
+import { useLibrary } from './LibraryContext';
 
 interface PlayerContextType {
   currentTrack: Track | null;
@@ -49,6 +50,7 @@ interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | null>(null);
 
 export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { settings } = useLibrary();
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -137,17 +139,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveLyricIndex(found);
   }, [currentTime, lyrics]);
 
-  // Auto-activate cassette or vinyl (FullScreenPlayer in 'deck' view) after 3 seconds of active playback
+  // Auto-activate cassette or vinyl (FullScreenPlayer in 'deck' view) after 2 seconds of active playback if enabled in settings
   useEffect(() => {
     if (!isPlaying || !currentTrack) return;
+    if (settings?.autoOpenPlayerDeck === false) return;
 
     const timer = setTimeout(() => {
       setFullScreenPlayerOpen(true);
       setDeckActivationTrigger(Date.now());
-    }, 3000);
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isPlaying, currentTrack?.id, playTriggerCount]);
+  }, [isPlaying, currentTrack?.id, playTriggerCount, settings?.autoOpenPlayerDeck]);
 
   const playTrack = async (
     track: Track,

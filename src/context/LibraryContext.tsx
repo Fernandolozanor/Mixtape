@@ -59,6 +59,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   textSize: 'medium',
   crossfadeEnabled: false,
   crossfadeDuration: 5,
+  autoOpenPlayerDeck: true,
 };
 
 const LibraryContext = createContext<LibraryContextType | null>(null);

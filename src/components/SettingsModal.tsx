@@ -419,6 +419,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               className="w-5 h-5 accent-pink-500 rounded cursor-pointer"
             />
           </label>
+
+          <label className="flex items-center justify-between cursor-pointer pt-2 border-t border-white/5">
+            <div>
+              <p className="text-sm text-zinc-200">Apertura automática del reproductor (2s)</p>
+              <p className="text-xs text-zinc-400">Muestra la pletina de cinta o vinilo a pantalla completa tras 2 segundos</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={settings.autoOpenPlayerDeck !== false}
+              onChange={(e) => updateSettings({ autoOpenPlayerDeck: e.target.checked })}
+              className="w-5 h-5 accent-pink-500 rounded cursor-pointer"
+            />
+          </label>
         </div>
 
         {/* Section 3: Offline Storage */}

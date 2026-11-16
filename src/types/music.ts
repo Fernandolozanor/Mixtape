@@ -70,6 +70,7 @@ export interface UserSettings {
   textSize?: TextSizeType;
   crossfadeEnabled?: boolean;
   crossfadeDuration?: number; // in seconds (e.g. 2 - 12)
+  autoOpenPlayerDeck?: boolean; // Abrir automáticamente el dispositivo de reproducción (cinta o vinilo) a los 2 segundos
   firebaseConfig?: {
     apiKey: string;
     authDomain: string;
