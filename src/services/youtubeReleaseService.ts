@@ -16,10 +16,10 @@ class YouTubeReleaseService {
       return this.searchCache.get(cacheKey)!;
     }
 
-    // 1. Try local dev middleware if running on Vite dev server
+    // 1. Try local dev middleware if running on Vite dev server (fetches official channel /releases tab)
     try {
       const devRes = await fetch(`/api/yt/releases?q=${encodeURIComponent(term)}`, {
-        signal: AbortSignal.timeout(2500),
+        signal: AbortSignal.timeout(5500),
       });
       if (devRes.ok) {
         const devData = await devRes.json();

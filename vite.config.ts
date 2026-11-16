@@ -207,7 +207,7 @@ function youtubeSearchPlugin(): Plugin {
         }
       });
 
-      // Search YouTube Releases / Albums
+      // Search YouTube Releases / Albums (Channel Releases Tab + Album Search)
       server.middlewares.use('/api/yt/releases', async (req, res) => {
         const urlObj = new URL(req.url || '', 'http://localhost:3030');
         const query = urlObj.searchParams.get('q') || '';
@@ -217,21 +217,134 @@ function youtubeSearchPlugin(): Plugin {
           return;
         }
 
+        const albums: any[] = [];
+        const seenIds = new Set<string>();
+
+        const findObjectsWith = (obj: any, key: string, results: any[] = []): any[] => {
+          if (!obj || typeof obj !== 'object') return results;
+          if (obj[key] !== undefined) results.push(obj);
+          for (const k of Object.keys(obj)) findObjectsWith(obj[k], key, results);
+          return results;
+        };
+
+        // 1. Check artist / group channel releases tab on YouTube
+        try {
+          const sUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}&sp=EgIQAg%253D%253D`;
+          const sRes = await fetch(sUrl, {
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+            },
+            signal: AbortSignal.timeout(4500),
+          });
+          if (sRes.ok) {
+            const sHtml = await sRes.text();
+            const sMatch =
+              sHtml.match(/var ytInitialData = ({.*?});<\/script>/s) ||
+              sHtml.match(/ytInitialData\s*=\s*({.*?});/s);
+            if (sMatch) {
+              const sData = JSON.parse(sMatch[1]);
+              const channels = findObjectsWith(sData, 'channelRenderer').map((c) => c.channelRenderer);
+              if (channels.length > 0) {
+                const qNorm = query.toLowerCase().trim();
+                const best =
+                  channels.find((c: any) => {
+                    const badges = JSON.stringify(c.ownerBadges || []);
+                    const title = (c.title?.simpleText || '').toLowerCase();
+                    return (
+                      (badges.includes('OFFICIAL') || badges.includes('ARTIST') || badges.includes('VERIFIED')) &&
+                      (title.includes(qNorm) || qNorm.includes(title))
+                    );
+                  }) ||
+                  channels.find((c: any) => {
+                    const title = (c.title?.simpleText || '').toLowerCase();
+                    return title === qNorm || title.includes(qNorm) || qNorm.includes(title);
+                  }) ||
+                  channels[0];
+
+                const channelPath =
+                  best.navigationEndpoint?.browseEndpoint?.canonicalBaseUrl ||
+                  (best.channelId ? `/channel/${best.channelId}` : '');
+                const channelName = best.title?.simpleText || query;
+
+                if (channelPath) {
+                  const relUrl = `https://www.youtube.com${channelPath}/releases`;
+                  const relRes = await fetch(relUrl, {
+                    headers: {
+                      'User-Agent':
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                      'Accept-Language': 'es-ES,es;q=0.9,en;q=0.8',
+                    },
+                    signal: AbortSignal.timeout(5000),
+                  });
+                  if (relRes.ok) {
+                    const relHtml = await relRes.text();
+                    const relMatch =
+                      relHtml.match(/var ytInitialData = ({.*?});<\/script>/s) ||
+                      relHtml.match(/ytInitialData\s*=\s*({.*?});/s);
+                    if (relMatch) {
+                      const relData = JSON.parse(relMatch[1]);
+                      const playlists = findObjectsWith(relData, 'playlistRenderer').map((p) => p.playlistRenderer);
+                      for (const pl of playlists) {
+                        const id = pl.playlistId;
+                        if (!id || seenIds.has(id)) continue;
+                        seenIds.add(id);
+
+                        const title = pl.title?.simpleText || pl.title?.runs?.[0]?.text || 'Álbum Oficial';
+                        const yearMatch = title.match(/[\(\[]\s*(\d{4})\s*[\)\]]/);
+                        const thumbs =
+                          pl.thumbnailRenderer?.playlistCustomThumbnailRenderer?.thumbnail?.thumbnails ||
+                          pl.thumbnails?.[0]?.thumbnails ||
+                          [];
+                        const thumb =
+                          thumbs[thumbs.length - 1]?.url ||
+                          `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+                        const tracksText =
+                          pl.videoCount ||
+                          pl.thumbnailOverlays?.[0]?.thumbnailOverlayBottomPanelRenderer?.text?.simpleText ||
+                          '';
+                        const tracksCount = parseInt(tracksText.replace(/[^0-9]/g, ''), 10) || undefined;
+
+                        albums.push({
+                          id,
+                          title,
+                          artist: channelName,
+                          year: yearMatch ? yearMatch[1] : undefined,
+                          thumbnail: thumb,
+                          trackCount: tracksCount,
+                          type: 'album',
+                          url: `https://www.youtube.com/playlist?list=${id}`,
+                        });
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          console.warn('Channel releases search error:', err.message);
+        }
+
+        // 2. Complementary search via Piped music_albums (for direct album searches or fallback)
         try {
           const pUrl = `https://api.piped.private.coffee/search?q=${encodeURIComponent(query)}&filter=music_albums`;
-          const response = await fetch(pUrl, { signal: AbortSignal.timeout(6000) });
-          if (!response.ok) throw new Error(`Piped HTTP ${response.status}`);
-          const data: any = await response.json();
-          const items = data.items || [];
-          const albums = items
-            .filter((it: any) => it.url && it.name)
-            .map((it: any) => {
+          const response = await fetch(pUrl, { signal: AbortSignal.timeout(4500) });
+          if (response.ok) {
+            const data: any = await response.json();
+            const items = data.items || [];
+            for (const it of items) {
+              if (!it.url || !it.name) continue;
               const listId = it.url.includes('list=')
                 ? it.url.split('list=')[1].split('&')[0]
                 : '';
+              if (!listId || seenIds.has(listId)) continue;
+              seenIds.add(listId);
+
               let cleanName = (it.name || '').replace(/^Album\s*[-–:]\s*/i, '').trim();
               const yearMatch = cleanName.match(/[\(\[]\s*(\d{4})\s*[\)\]]/);
-              return {
+              albums.push({
                 id: listId,
                 title: cleanName,
                 artist: it.uploaderName || query,
@@ -240,17 +353,15 @@ function youtubeSearchPlugin(): Plugin {
                 trackCount: it.videos > 0 ? it.videos : undefined,
                 type: 'album',
                 url: it.url,
-              };
-            })
-            .filter((a: any) => a.id && a.id.startsWith('OLAK5uy_'));
-
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify(albums));
+              });
+            }
+          }
         } catch (err: any) {
-          console.warn('Dev release search error:', err.message);
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify([]));
+          console.warn('Piped release search error:', err.message);
         }
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify(albums));
       });
 
       // Get YouTube Release / Album Tracks

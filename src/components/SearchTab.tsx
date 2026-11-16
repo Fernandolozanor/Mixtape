@@ -733,7 +733,21 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                         </p>
                       </div>
                       <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-zinc-400 mt-0.5 overflow-hidden flex-wrap">
-                        <span className="truncate max-w-[120px] sm:max-w-none">{track.artist}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (track.artist && track.artist !== 'YouTube') {
+                              setQuery(track.artist);
+                              setSearchContentType('releases');
+                              handleSearch(track.artist);
+                            }
+                          }}
+                          className="truncate max-w-[120px] sm:max-w-none hover:text-amber-300 hover:underline cursor-pointer text-left font-medium"
+                          title={`Ver lanzamientos y álbumes de ${track.artist}`}
+                        >
+                          {track.artist}
+                        </button>
                         <span>•</span>
                         {getSourceBadge(track.source)}
                         {track.viewsFormatted && (
