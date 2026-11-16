@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Baby, Volume2, Moon, Lock, ShieldCheck, Check } from 'lucide-react';
+import { X, Baby, Volume2, Moon, Lock, ShieldCheck, Check, Eye, EyeOff } from 'lucide-react';
 import { useKidsMode } from '../context/KidsModeContext';
 
 interface KidsModeModalProps {
@@ -11,8 +11,8 @@ export const KidsModeModal: React.FC<KidsModeModalProps> = ({ isOpen, onClose })
   const {
     isKidsMode,
     enableKidsMode,
-    parentalPin,
-    setParentalPin,
+    parentalPassword,
+    setParentalPassword,
     maxVolume,
     setMaxVolume,
     sleepTimerMinutes,
@@ -20,16 +20,17 @@ export const KidsModeModal: React.FC<KidsModeModalProps> = ({ isOpen, onClose })
     cancelSleepTimer,
   } = useKidsMode();
 
-  const [pinInput, setPinInput] = useState(parentalPin);
-  const [pinSaved, setPinSaved] = useState(false);
+  const [passwordInput, setPasswordInput] = useState(parentalPassword);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSavePin = () => {
-    if (pinInput.trim().length >= 4) {
-      setParentalPin(pinInput.trim());
-      setPinSaved(true);
-      setTimeout(() => setPinSaved(false), 2000);
+  const handleSavePassword = () => {
+    if (passwordInput.trim().length >= 3) {
+      setParentalPassword(passwordInput.trim());
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 2000);
     }
   };
 
@@ -151,38 +152,48 @@ export const KidsModeModal: React.FC<KidsModeModalProps> = ({ isOpen, onClose })
           </div>
         </div>
 
-        {/* Setting 3: Parental PIN */}
+        {/* Setting 3: Parental Password */}
         <div className="mb-5 p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-white">
               <Lock className="w-4 h-4 text-rose-400" />
-              <span>PIN de Seguridad Parental</span>
+              <span>Contraseña Parental de Desbloqueo</span>
             </div>
-            {pinSaved && (
+            {passwordSaved && (
               <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-bold">
-                <Check className="w-3 h-3" /> Guardado
+                <Check className="w-3 h-3" /> Guardada
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              maxLength={6}
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
-              placeholder="PIN (ej: 1234)"
-              className="flex-1 py-1.5 px-3 rounded-lg bg-black/50 border border-white/20 text-sm font-mono text-white focus:outline-none focus:border-rose-400"
-            />
+            <div className="relative flex-1">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                maxLength={20}
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="Contraseña (ej: 1234)"
+                className="w-full py-1.5 pl-3 pr-8 rounded-lg bg-black/50 border border-white/20 text-sm font-mono text-white focus:outline-none focus:border-rose-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
             <button
-              onClick={handleSavePin}
-              disabled={pinInput.trim().length < 4}
-              className="py-1.5 px-3 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold text-white transition"
+              onClick={handleSavePassword}
+              disabled={passwordInput.trim().length < 3}
+              className="py-1.5 px-3 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold text-white transition cursor-pointer"
             >
               Guardar
             </button>
           </div>
           <p className="text-[10px] text-zinc-400">
-            Los padres siempre pueden salir respondiendo una pregunta matemática si olvidan el PIN.
+            Esta contraseña es imprescindible para autorizar la salida del Modo Niños, impidiendo que menores o niños de 12 años salgan resolviendo solo la operación matemática. Por defecto: <span className="text-zinc-300 font-mono font-bold">1234</span>.
           </p>
         </div>
 

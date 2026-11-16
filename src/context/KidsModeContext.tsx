@@ -9,14 +9,17 @@ interface MathChallenge {
 interface KidsModeContextType {
   isKidsMode: boolean;
   parentalPin: string;
+  parentalPassword: string;
   maxVolume: number;
   sleepTimerMinutes: number | null;
   sleepTimerRemaining: number | null;
   mathChallenge: MathChallenge;
   generateNewChallenge: () => void;
+  verifyMathChallenge: (answer: string | number) => boolean;
   enableKidsMode: () => void;
-  disableKidsMode: (pinOrAnswer: string) => boolean;
+  disableKidsMode: (password: string) => boolean;
   setParentalPin: (pin: string) => void;
+  setParentalPassword: (password: string) => void;
   setMaxVolume: (vol: number) => void;
   startSleepTimer: (minutes: number) => void;
   cancelSleepTimer: () => void;
@@ -25,8 +28,17 @@ interface KidsModeContextType {
 const KidsModeContext = createContext<KidsModeContextType | undefined>(undefined);
 
 function generateRandomMathChallenge(): MathChallenge {
-  const a = Math.floor(Math.random() * 8) + 4; // 4 to 11
-  const b = Math.floor(Math.random() * 8) + 3; // 3 to 10
+  const isMult = Math.random() > 0.45;
+  if (isMult) {
+    const a = Math.floor(Math.random() * 6) + 4; // 4 to 9
+    const b = Math.floor(Math.random() * 6) + 3; // 3 to 8
+    return {
+      question: `¿Cuánto es ${a} × ${b}?`,
+      answer: a * b,
+    };
+  }
+  const a = Math.floor(Math.random() * 15) + 12; // 12 to 26
+  const b = Math.floor(Math.random() * 15) + 11; // 11 to 25
   return {
     question: `¿Cuánto es ${a} + ${b}?`,
     answer: a + b,
@@ -42,9 +54,25 @@ export const KidsModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   });
 
+  const [parentalPassword, setParentalPasswordState] = useState<string>(() => {
+    try {
+      return (
+        localStorage.getItem('mixtape_kids_password') ||
+        localStorage.getItem('mixtape_kids_pin') ||
+        '1234'
+      );
+    } catch {
+      return '1234';
+    }
+  });
+
   const [parentalPin, setPinState] = useState<string>(() => {
     try {
-      return localStorage.getItem('mixtape_kids_pin') || '1234';
+      return (
+        localStorage.getItem('mixtape_kids_password') ||
+        localStorage.getItem('mixtape_kids_pin') ||
+        '1234'
+      );
     } catch {
       return '1234';
     }
@@ -70,6 +98,15 @@ export const KidsModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMathChallenge(generateRandomMathChallenge());
   };
 
+  const verifyMathChallenge = (answer: string | number): boolean => {
+    const num = typeof answer === 'number' ? answer : parseInt(String(answer).trim(), 10);
+    const isCorrect = !isNaN(num) && num === mathChallenge.answer;
+    if (!isCorrect) {
+      generateNewChallenge();
+    }
+    return isCorrect;
+  };
+
   const enableKidsMode = () => {
     setIsKidsMode(true);
     try {
@@ -81,12 +118,13 @@ export const KidsModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const disableKidsMode = (input: string): boolean => {
-    const trimmed = input.trim();
-    const isPinCorrect = trimmed === parentalPin;
-    const isMathCorrect = parseInt(trimmed, 10) === mathChallenge.answer;
+  const disableKidsMode = (password: string): boolean => {
+    const trimmed = password.trim();
+    const isPasswordCorrect =
+      trimmed === parentalPassword ||
+      trimmed === parentalPin;
 
-    if (isPinCorrect || isMathCorrect) {
+    if (isPasswordCorrect) {
       setIsKidsMode(false);
       try {
         localStorage.setItem('mixtape_kids_mode', 'false');
@@ -95,17 +133,22 @@ export const KidsModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return true;
     }
 
-    generateNewChallenge();
     return false;
   };
 
-  const setParentalPin = (pin: string) => {
-    const clean = pin.trim().slice(0, 8);
+  const setParentalPassword = (pwd: string) => {
+    const clean = pwd.trim();
     if (!clean) return;
+    setParentalPasswordState(clean);
     setPinState(clean);
     try {
+      localStorage.setItem('mixtape_kids_password', clean);
       localStorage.setItem('mixtape_kids_pin', clean);
     } catch {}
+  };
+
+  const setParentalPin = (pin: string) => {
+    setParentalPassword(pin);
   };
 
   const setMaxVolume = (vol: number) => {
@@ -165,14 +208,17 @@ export const KidsModeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         isKidsMode,
         parentalPin,
+        parentalPassword,
         maxVolume,
         sleepTimerMinutes,
         sleepTimerRemaining,
         mathChallenge,
         generateNewChallenge,
+        verifyMathChallenge,
         enableKidsMode,
         disableKidsMode,
         setParentalPin,
+        setParentalPassword,
         setMaxVolume,
         startSleepTimer,
         cancelSleepTimer,
