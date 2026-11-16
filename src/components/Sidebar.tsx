@@ -86,7 +86,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.id === 'favorites') {
+                    setFullScreenPlayerOpen(false);
+                  }
+                }}
                 className={`w-full flex items-center justify-between px-3.5 py-2 rounded-xl font-stereo text-sm font-semibold tracking-wider uppercase transition-all duration-100 cursor-pointer ${
                   isActive
                     ? 'bg-gradient-to-r from-[#20293a] to-[#141a26] text-amber-400 border border-amber-500/40 shadow-inner'

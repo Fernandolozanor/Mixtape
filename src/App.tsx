@@ -39,8 +39,15 @@ const AppContent: React.FC = () => {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
-  const { currentTrack, isFullScreenPlayerOpen, setFullScreenPlayerOpen } = usePlayer();
+  const { currentTrack, isFullScreenPlayerOpen, setFullScreenPlayerOpen, setActiveNavigationTab } = usePlayer();
   const { syncState, dismissJustLinkedBanner } = useLibrary();
+
+  React.useEffect(() => {
+    setActiveNavigationTab(activeTab);
+    if (activeTab === 'favorites') {
+      setFullScreenPlayerOpen(false);
+    }
+  }, [activeTab, setActiveNavigationTab, setFullScreenPlayerOpen]);
   const { isKidsMode } = useKidsMode();
   const {
     deviceId,

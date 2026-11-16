@@ -25,11 +25,16 @@ interface PlayerContextType {
   isLyricsOpen: boolean;
   playbackMediaType: 'tape' | 'vinyl' | null;
   setPlaybackMediaType: (mediaType: 'tape' | 'vinyl' | null) => void;
+  playbackContext: string | null;
+  setPlaybackContext: (context: string | null) => void;
+  activeNavigationTab: string;
+  setActiveNavigationTab: (tab: string) => void;
   playTrack: (
     track: Track,
     newQueue?: Track[],
     isCrossfade?: boolean,
-    mediaType?: 'tape' | 'vinyl'
+    mediaType?: 'tape' | 'vinyl',
+    context?: string | null
   ) => Promise<void>;
   togglePlay: () => void;
   nextTrack: () => void;
@@ -73,6 +78,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isQueueOpen, setQueueOpen] = useState<boolean>(false);
   const [isLyricsOpen, setLyricsOpen] = useState<boolean>(false);
   const [playbackMediaType, setPlaybackMediaType] = useState<'tape' | 'vinyl' | null>(null);
+  const [playbackContext, setPlaybackContext] = useState<string | null>(null);
+  const [activeNavigationTab, setActiveNavigationTab] = useState<string>('home');
 
   // References to avoid stale closures in callbacks
   const queueRef = useRef<Track[]>(queue);
@@ -140,9 +147,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentTime, lyrics]);
 
   // Auto-activate cassette or vinyl (FullScreenPlayer in 'deck' view) after 2 seconds of active playback if enabled in settings
+  // REGLA: En favoritas no mostrar ni cinta ni vinilo aunque esté activada la opción de los dos segundos
   useEffect(() => {
     if (!isPlaying || !currentTrack) return;
     if (settings?.autoOpenPlayerDeck === false) return;
+
+    // Si estamos en la pestaña de favoritos o se está reproduciendo desde favoritos, NO mostrar ni cinta ni vinilo
+    if (activeNavigationTab === 'favorites' || playbackContext === 'favorites') {
+      return;
+    }
 
     const timer = setTimeout(() => {
       setFullScreenPlayerOpen(true);
@@ -150,19 +163,33 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isPlaying, currentTrack?.id, playTriggerCount, settings?.autoOpenPlayerDeck]);
+  }, [
+    isPlaying,
+    currentTrack?.id,
+    playTriggerCount,
+    settings?.autoOpenPlayerDeck,
+    activeNavigationTab,
+    playbackContext,
+  ]);
 
   const playTrack = async (
     track: Track,
     newQueue?: Track[],
     isCrossfade: boolean = false,
-    mediaType?: 'tape' | 'vinyl'
+    mediaType?: 'tape' | 'vinyl',
+    context?: string | null
   ) => {
     if (!isCrossfade) {
       setIsLoading(true);
     }
     setCurrentTrack(track);
     setPlayTriggerCount((c) => c + 1);
+
+    if (context !== undefined) {
+      setPlaybackContext(context);
+    } else if (newQueue) {
+      setPlaybackContext(null);
+    }
 
     if (mediaType) {
       setPlaybackMediaType(mediaType);
@@ -335,6 +362,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isLyricsOpen,
         playbackMediaType,
         setPlaybackMediaType,
+        playbackContext,
+        setPlaybackContext,
+        activeNavigationTab,
+        setActiveNavigationTab,
         playTrack,
         togglePlay,
         nextTrack: handleNextTrack,

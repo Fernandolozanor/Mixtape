@@ -445,7 +445,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             {likedTracks.length > 0 && !isEditingMode && (
               <button
                 onClick={() => {
-                  playTrack(likedTracks[0], likedTracks);
+                  playTrack(likedTracks[0], likedTracks, false, undefined, 'favorites');
                 }}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-white font-semibold shadow-lg transition theme-btn text-sm"
               >
@@ -582,7 +582,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               tracks={[]}
               currentTrack={currentTrack}
               isPlaying={isPlaying}
-              onPlayTrack={(track, queue) => playTrack(track, queue)}
+              onPlayTrack={(track, queue) => playTrack(track, queue, false, undefined, 'favorites')}
               onNavigateToSearch={onNavigateToSearch}
             />
             <div className="p-8 text-center text-zinc-500 glass-card rounded-3xl">
@@ -611,7 +611,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             tracks={filteredLikedTracks}
             currentTrack={currentTrack}
             isPlaying={isPlaying}
-            onPlayTrack={(track, queue) => playTrack(track, queue)}
+            onPlayTrack={(track, queue) => playTrack(track, queue, false, undefined, 'favorites')}
             onRemoveTrack={(id) => removeLikedTrack(id)}
             isEditingMode={isEditingMode}
             onNavigateToSearch={onNavigateToSearch}
@@ -627,7 +627,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 isCurrent={currentTrack?.id === track.id}
                 isPlaying={isPlaying}
                 onPlay={() => {
-                  playTrack(track, filteredLikedTracks);
+                  playTrack(track, filteredLikedTracks, false, undefined, 'favorites');
                 }}
                 onRemove={() => removeLikedTrack(track.id)}
                 isEditingMode={isEditingMode}
@@ -642,7 +642,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               return (
               <div
                 key={track.id}
-                onClick={() => !isEditingMode && playTrack(track, filteredLikedTracks)}
+                onClick={() => !isEditingMode && playTrack(track, filteredLikedTracks, false, undefined, 'favorites')}
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
                   isEditingMode ? 'cursor-default' : 'cursor-pointer'
                 } ${
