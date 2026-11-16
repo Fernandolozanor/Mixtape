@@ -450,13 +450,6 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         </div>
 
-        {/* Always-visible Compact Vintage Radio FM/AM Tuner Dial */}
-        <RadioTunerDial
-          isSearching={isSearching}
-          query={query}
-          hasResults={results.length > 0}
-        />
-
         {/* Immediate Search Input */}
         <div className="relative w-full min-w-0">
           <SearchIcon className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-amber-500 pointer-events-none" />
@@ -476,6 +469,13 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             {isSearching ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" /> : 'BUSCAR'}
           </button>
         </div>
+
+        {/* Always-visible Compact Vintage Radio FM/AM Tuner Dial */}
+        <RadioTunerDial
+          isSearching={isSearching}
+          query={query}
+          hasResults={results.length > 0}
+        />
 
         {/* Source Filter Switcher: All vs Audio de Fondo (Pantalla Apagada) vs YouTube */}
         <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs">
