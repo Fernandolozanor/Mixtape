@@ -422,68 +422,47 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
                     key={track.id}
                     type="button"
                     onClick={() => handleSelectTrack(track)}
-                    className={`group relative w-full h-full rounded sm:rounded-md transition-all duration-150 flex items-center justify-between px-1 sm:px-1.5 py-0.5 overflow-hidden text-left cursor-pointer border select-none ${
+                    className={`group relative w-full h-full rounded sm:rounded-md transition-all duration-150 flex flex-col justify-center px-1.5 sm:px-2 py-0.5 overflow-hidden text-left cursor-pointer border select-none ${
                       isCurrent
-                        ? 'bg-[#fffdec] border-amber-500 shadow-[0_0_12px_rgba(251,191,36,0.9),inset_0_0_6px_rgba(251,191,36,0.5)] scale-[1.02] z-10'
-                        : 'bg-[#faf4e1] hover:bg-[#fff9e8] border-[#a16207]/30 hover:border-amber-400/70 shadow-sm'
+                        ? 'bg-[#fffdec] border-amber-500 shadow-[0_0_12px_rgba(251,191,36,0.9),inset_0_0_6px_rgba(251,191,36,0.5)] scale-[1.02] z-10 ring-1 ring-amber-400'
+                        : 'bg-[#faf4e1] hover:bg-[#fff9e8] border-[#a16207]/30 hover:border-amber-400/70 shadow-xs'
                     }`}
                   >
-                    {/* Left code tag (e.g. A1, B2) */}
-                    <div className="flex items-center gap-1 min-w-0 mr-1">
-                      <span
-                        className={`text-[8px] sm:text-[9px] font-mono font-black px-1 py-0.2 rounded shrink-0 shadow-xs ${
-                          isCurrent
-                            ? 'bg-amber-500 text-black animate-pulse'
-                            : 'bg-red-700 group-hover:bg-red-600 text-white'
-                        }`}
+                    {/* Song Title (Large, bold, prominent) */}
+                    <span
+                      className={`font-black uppercase tracking-tight truncate w-full text-[9.5px] sm:text-[11.5px] md:text-[12.5px] leading-tight ${
+                        isCurrent
+                          ? 'text-amber-950 drop-shadow-[0_0_1px_rgba(251,191,36,0.5)]'
+                          : 'text-zinc-950 group-hover:text-black'
+                      }`}
+                      title={track.title}
+                    >
+                      {track.title}
+                    </span>
+
+                    {/* Artist (Small, underneath) */}
+                    <span
+                      className={`truncate w-full text-[7px] sm:text-[8px] md:text-[9.5px] leading-tight mt-0.5 font-medium ${
+                        isCurrent ? 'text-amber-800 font-semibold' : 'text-zinc-600'
+                      }`}
+                      title={track.artist}
+                    >
+                      {track.artist}
+                    </span>
+
+                    {/* Delete button in editing mode */}
+                    {isEditingMode && onRemoveTrack && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemoveTrack(track.id);
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded bg-red-600 hover:bg-red-500 text-white cursor-pointer z-20"
+                        title="Quitar de favoritos"
                       >
-                        {code}
-                      </span>
-
-                      {/* Song Title & Artist */}
-                      <div className="min-w-0 flex flex-col justify-center">
-                        <span
-                          className={`text-[8px] sm:text-[9.5px] font-black truncate leading-tight uppercase tracking-tight ${
-                            isCurrent ? 'text-amber-950' : 'text-zinc-900 group-hover:text-black'
-                          }`}
-                        >
-                          {track.title}
-                        </span>
-                        <span
-                          className={`text-[7px] sm:text-[8px] truncate leading-none ${
-                            isCurrent ? 'text-amber-800 font-semibold' : 'text-zinc-600'
-                          }`}
-                        >
-                          {track.artist}
-                        </span>
+                        <X className="w-2.5 h-2.5" />
                       </div>
-                    </div>
-
-                    {/* Right side: Animated Equalizer when playing or Delete in editing mode */}
-                    <div className="shrink-0 flex items-center">
-                      {isEditingMode && onRemoveTrack ? (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRemoveTrack(track.id);
-                          }}
-                          className="p-0.5 rounded bg-red-600 hover:bg-red-500 text-white cursor-pointer"
-                          title="Quitar de favoritos"
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </div>
-                      ) : isCurrent && isPlaying ? (
-                        <div className="flex items-end gap-0.5 h-3">
-                          <span className="w-0.5 bg-amber-600 rounded-full animate-bounce [animation-delay:0ms] h-full" />
-                          <span className="w-0.5 bg-amber-600 rounded-full animate-bounce [animation-delay:150ms] h-2/3" />
-                          <span className="w-0.5 bg-amber-600 rounded-full animate-bounce [animation-delay:300ms] h-full" />
-                        </div>
-                      ) : (
-                        <span className="text-[7px] font-mono text-zinc-400 group-hover:text-zinc-600">
-                          45★
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </button>
                 );
               }
@@ -496,14 +475,12 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
                     playJukeboxMechanicalClick();
                     if (onNavigateToSearch) onNavigateToSearch();
                   }}
-                  className="w-full h-full rounded sm:rounded-md bg-[#faf4e1]/75 border border-dashed border-[#a16207]/20 flex items-center justify-between px-1.5 py-0.5 text-zinc-400 hover:text-amber-800 hover:border-amber-400/50 hover:bg-[#fff9e8]/90 transition cursor-pointer select-none"
+                  className="w-full h-full rounded sm:rounded-md bg-[#faf4e1]/60 border border-dashed border-[#a16207]/20 flex flex-col justify-center px-1.5 sm:px-2 py-0.5 text-zinc-400/60 hover:text-amber-800 hover:border-amber-400/40 hover:bg-[#fff9e8]/80 transition cursor-pointer select-none"
                   title="Ranura libre • Haz clic para buscar canciones"
                 >
-                  <span className="text-[8px] font-mono text-zinc-400/70">{code}</span>
-                  <span className="text-[7px] sm:text-[8px] font-mono tracking-wider font-semibold opacity-70">
+                  <span className="text-[7.5px] sm:text-[8.5px] font-mono tracking-wider font-semibold truncate opacity-60">
                     — VACÍO —
                   </span>
-                  <span className="text-[8px] font-mono opacity-50">+</span>
                 </div>
               );
             })}
