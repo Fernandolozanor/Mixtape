@@ -33,12 +33,101 @@ class YouTubeReleaseService {
       // Ignored in static/production
     }
 
-    // 2. High-speed parallel race across verified CORS Piped endpoints with filter=music_albums
+    // 2. High-speed parallel extraction across official Channel Releases + Piped Music Albums
+    try {
+      const [fromChannel, fromPiped] = await Promise.all([
+        this.fetchChannelReleasesInvidious(term).catch(() => []),
+        this.fetchPipedMusicAlbums(term).catch(() => []),
+      ]);
+
+      const merged: YouTubeRelease[] = [];
+      const seenIds = new Set<string>();
+      const seenTitles = new Set<string>();
+
+      // Prioritize official artist channel releases (includes both albums and singles)
+      for (const item of [...fromChannel, ...fromPiped]) {
+        if (!item.id || seenIds.has(item.id)) continue;
+        const normTitle = (item.title || '')
+          .toLowerCase()
+          .replace(/[^\w\s]/gi, '')
+          .trim();
+        if (normTitle && seenTitles.has(normTitle)) continue;
+
+        seenIds.add(item.id);
+        if (normTitle) seenTitles.add(normTitle);
+        merged.push(item);
+      }
+
+      if (merged.length > 0) {
+        this.searchCache.set(cacheKey, merged);
+        merged.forEach((r) => this.releaseCache.set(r.id, r));
+        return merged;
+      }
+    } catch (e) {
+      console.warn('YouTube release search error:', e);
+    }
+
+    return [];
+  }
+
+  /**
+   * Search for artist channel and extract the complete discography from its /releases tab
+   */
+  private async fetchChannelReleasesInvidious(term: string): Promise<YouTubeRelease[]> {
+    const sUrl = `https://yt.chocolatemoo53.com/api/v1/search?q=${encodeURIComponent(term)}&type=channel`;
+    const sRes = await fetch(sUrl, { signal: AbortSignal.timeout(4500) });
+    if (!sRes.ok) throw new Error(`Channel search HTTP ${sRes.status}`);
+    const channels = await sRes.json();
+    if (!Array.isArray(channels) || channels.length === 0) return [];
+
+    const qNorm = term.toLowerCase().trim();
+    const best =
+      channels.find((c: any) => {
+        const a = (c.author || '').toLowerCase();
+        return (c.authorVerified && a.includes(qNorm)) || a === qNorm;
+      }) ||
+      channels.find((c: any) => (c.author || '').toLowerCase().includes(qNorm)) ||
+      channels[0];
+
+    if (!best || !best.authorId) return [];
+
+    const rUrl = `https://yt.chocolatemoo53.com/api/v1/channels/${best.authorId}/releases`;
+    const rRes = await fetch(rUrl, { signal: AbortSignal.timeout(5000) });
+    if (!rRes.ok) throw new Error(`Channel releases HTTP ${rRes.status}`);
+    const rData = await rRes.json();
+    const playlists = rData.playlists || [];
+
+    return playlists
+      .filter((p: any) => p.playlistId)
+      .map((p: any) => {
+        const title = (p.title || '').replace(/^Album\s*[-–:]\s*/i, '').trim();
+        const yearMatch = title.match(/[\(\[]\s*(\d{4})\s*[\)\]]/);
+        const count = typeof p.videoCount === 'number' ? p.videoCount : undefined;
+        let thumb = p.playlistThumbnail || `https://i.ytimg.com/vi/${p.playlistId}/hqdefault.jpg`;
+        if (thumb.includes('hqdefault.jpg')) {
+          thumb = thumb.replace('hqdefault.jpg', 'maxresdefault.jpg');
+        }
+
+        return {
+          id: p.playlistId,
+          title,
+          artist: p.author || best.author || term,
+          year: yearMatch ? yearMatch[1] : undefined,
+          thumbnail: thumb,
+          trackCount: count,
+          type: count === 1 ? 'single' : 'album',
+          url: `https://www.youtube.com/playlist?list=${p.playlistId}`,
+        };
+      });
+  }
+
+  /**
+   * Race Piped CORS instances with filter=music_albums
+   */
+  private async fetchPipedMusicAlbums(term: string): Promise<YouTubeRelease[]> {
     const pipedEndpoints = [
       `https://api.piped.private.coffee/search?q=${encodeURIComponent(term)}&filter=music_albums`,
       `https://pipedapi.ducks.party/search?q=${encodeURIComponent(term)}&filter=music_albums`,
-      `https://api.piped.private.coffee/search?q=${encodeURIComponent(term + ' album')}&filter=playlists`,
-      `https://pipedapi.ducks.party/search?q=${encodeURIComponent(term + ' album')}&filter=playlists`,
     ];
 
     const parsePipedAlbums = async (res: Response): Promise<YouTubeRelease[]> => {
@@ -54,14 +143,10 @@ class YouTubeReleaseService {
           : '';
         if (!listId) continue;
 
-        // Clean album name: remove "Album – ", "Album - ", etc.
         let cleanName = (it.name || '').replace(/^Album\s*[-–:]\s*/i, '').trim();
-
-        // Extract year if present in title (e.g. "Abbey Road (1969)" or "Thriller [1982]")
         const yearMatch = cleanName.match(/[\(\[]\s*(\d{4})\s*[\)\]]/);
         const year = yearMatch ? yearMatch[1] : undefined;
 
-        // High resolution square cover
         let thumb = it.thumbnail || '';
         if (thumb.includes('hqdefault.jpg')) {
           thumb = thumb.replace('hqdefault.jpg', 'maxresdefault.jpg');
@@ -74,57 +159,29 @@ class YouTubeReleaseService {
           year,
           thumbnail: thumb || `https://i.ytimg.com/vi/${listId}/hqdefault.jpg`,
           trackCount: it.videos > 0 ? it.videos : undefined,
-          type: listId.startsWith('OLAK5uy_') ? 'album' : 'album',
+          type: 'album',
           url: it.url,
         });
       }
 
       if (albums.length === 0) throw new Error('No albums parsed');
-
-      // Sort official releases (OLAK5uy_...) to the top
-      albums.sort((a, b) => {
-        const aIsOfficial = a.id.startsWith('OLAK5uy_') ? 1 : 0;
-        const bIsOfficial = b.id.startsWith('OLAK5uy_') ? 1 : 0;
-        return bIsOfficial - aIsOfficial;
-      });
-
       return albums;
     };
 
-    try {
-      const results = await Promise.any(
-        pipedEndpoints.map(async (url) => {
-          const controller = new AbortController();
-          const tid = setTimeout(() => controller.abort(), 6500);
-          try {
-            const res = await fetch(url, { signal: controller.signal });
-            clearTimeout(tid);
-            return await parsePipedAlbums(res);
-          } catch (e) {
-            clearTimeout(tid);
-            throw e;
-          }
-        })
-      );
-
-      if (Array.isArray(results) && results.length > 0) {
-        // Deduplicate by ID
-        const seen = new Set<string>();
-        const unique = results.filter((r) => {
-          if (seen.has(r.id)) return false;
-          seen.add(r.id);
-          return true;
-        });
-
-        this.searchCache.set(cacheKey, unique);
-        unique.forEach((r) => this.releaseCache.set(r.id, r));
-        return unique;
-      }
-    } catch (e) {
-      console.warn('YouTube release search error:', e);
-    }
-
-    return [];
+    return await Promise.any(
+      pipedEndpoints.map(async (url) => {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 5000);
+        try {
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(tid);
+          return await parsePipedAlbums(res);
+        } catch (e) {
+          clearTimeout(tid);
+          throw e;
+        }
+      })
+    );
   }
 
   /**
@@ -158,6 +215,7 @@ class YouTubeReleaseService {
 
     // 2. High-speed parallel race across verified Invidious playlist endpoints
     const invidiousInstances = [
+      'https://yt.chocolatemoo53.com',
       'https://inv.nadeko.net',
       'https://invidious.nerdvpn.de',
       'https://inv.tux.pizza',
