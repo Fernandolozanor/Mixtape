@@ -33,6 +33,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
   // Fluid velocity & momentum swipe gesture state
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [transitionDuration, setTransitionDuration] = useState(500);
   const dragStartX = useRef<number | null>(null);
   const dragStartY = useRef<number | null>(null);
   const lastX = useRef<number>(0);
@@ -55,9 +56,11 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
+        setTransitionDuration(450);
         setActiveIndex((prev) => Math.max(0, prev - 1));
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
+        setTransitionDuration(450);
         setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
       } else if (e.key === ' ' || e.key === 'Enter') {
         const activeVinyl = vinyls[activeIndex];
@@ -82,7 +85,8 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     if (now - lastWheelTime.current < 90) return;
     lastWheelTime.current = now;
 
-    const step = Math.abs(delta) > 120 ? 2 : 1;
+    const step = Math.abs(delta) > 120 ? 3 : Math.abs(delta) > 60 ? 2 : 1;
+    setTransitionDuration(500);
     if (delta > 0) {
       setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + step));
     } else {
@@ -120,9 +124,10 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
 
     const now = performance.now();
     const dt = now - lastTime.current;
-    if (dt > 10) {
+    if (dt > 8) {
       const instV = (e.clientX - lastX.current) / dt; // px / ms
-      velocity.current = velocity.current * 0.3 + instV * 0.7;
+      // Weighted moving average for instantaneous velocity
+      velocity.current = velocity.current * 0.25 + instV * 0.75;
       lastX.current = e.clientX;
       lastTime.current = now;
     }
@@ -138,23 +143,44 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     setIsDragging(false);
 
     const dx = dragOffset;
-    const v = velocity.current; // px per ms
+    const now = performance.now();
+    const timeSinceLastMove = now - lastTime.current;
+
+    // Decay velocity if held motionless before release
+    let v = velocity.current;
+    if (timeSinceLastMove > 75) {
+      v = 0;
+    }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    const stepWidth = isMobile ? 55 : 75;
+    const stepWidth = isMobile ? 50 : 70;
 
-    // Proportional displacement based on drag distance AND swipe speed (momentum)
+    const speed = Math.abs(v); // px per ms
     const distanceFraction = -dx / stepWidth;
-    const velocityContribution = -v * 2.2;
 
-    let totalJump = Math.round(distanceFraction + velocityContribution);
+    // Real physics momentum: higher speed yields non-linear kinetic inertia glide
+    const momentumMultiplier = isMobile ? 3.8 : 4.6;
+    const kineticBoost = speed > 0.5
+      ? Math.pow(speed, 1.35) * momentumMultiplier
+      : speed * momentumMultiplier;
+
+    const velocityJump = -Math.sign(v) * kineticBoost;
+    let totalJump = Math.round(distanceFraction + velocityJump);
 
     // Guaranteed minimum 1-step navigation for definite swipes
-    if (Math.abs(v) > 0.3 && totalJump === 0) {
+    if (speed > 0.22 && totalJump === 0) {
       totalJump = v < 0 ? 1 : -1;
-    } else if (Math.abs(dx) > 30 && totalJump === 0) {
+    } else if (Math.abs(dx) > 28 && totalJump === 0) {
       totalJump = dx < 0 ? 1 : -1;
     }
+
+    // Adaptive duration proportional to momentum & jump distance for authentic physical glide
+    const jumpDist = Math.abs(totalJump);
+    const durationMs = Math.min(
+      1400,
+      Math.max(450, Math.round(450 + jumpDist * 120 + speed * 160))
+    );
+    setTransitionDuration(durationMs);
 
     if (totalJump !== 0) {
       const nextIndex = Math.max(0, Math.min(vinyls.length - 1, activeIndex + totalJump));
@@ -237,6 +263,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              setTransitionDuration(450);
               setActiveIndex((prev) => Math.max(0, prev - 1));
             }}
             className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
@@ -252,6 +279,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
+              setTransitionDuration(450);
               setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
             }}
             className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
@@ -327,6 +355,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   if (isCenter) {
                     handlePlayActiveVinyl();
                   } else {
+                    setTransitionDuration(Math.min(850, 420 + Math.abs(idx - activeIndex) * 90));
                     setActiveIndex(idx);
                   }
                 }}
@@ -340,7 +369,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   transformStyle: 'preserve-3d',
                   transition: isDragging
                     ? 'none'
-                    : 'transform 500ms cubic-bezier(0.22, 1, 0.36, 1), opacity 500ms ease-out, filter 500ms ease-out',
+                    : `transform ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${Math.min(transitionDuration, 600)}ms ease-out, filter ${Math.min(transitionDuration, 600)}ms ease-out`,
                 }}
                 title={album.name}
               >
@@ -465,7 +494,10 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
           min={0}
           max={vinyls.length - 1}
           value={activeIndex}
-          onChange={(e) => setActiveIndex(parseInt(e.target.value, 10))}
+          onChange={(e) => {
+            setTransitionDuration(300);
+            setActiveIndex(parseInt(e.target.value, 10));
+          }}
           className="w-full accent-amber-400 h-1.5 bg-white/10 rounded-lg cursor-pointer"
         />
         <span className="text-[10px] font-mono text-zinc-500 font-bold shrink-0">
