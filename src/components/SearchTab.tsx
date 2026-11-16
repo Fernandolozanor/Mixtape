@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search as SearchIcon,
   Loader2,
@@ -100,6 +100,19 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const { playTrack, currentTrack } = usePlayer();
   const { isLiked, toggleLike, addMultipleToLiked, createPlaylist, addTracksToPlaylist } = useLibrary();
   const { currentTheme } = useTheme();
+
+  // Active radio tuning sound stop callback ref (plays until results are found)
+  const stopTuningRef = useRef<(() => void) | null>(null);
+
+  // Clean up any playing tuning sound if user navigates away or unmounts SearchTab
+  useEffect(() => {
+    return () => {
+      if (stopTuningRef.current) {
+        stopTuningRef.current();
+        stopTuningRef.current = null;
+      }
+    };
+  }, []);
 
   // Auto-dismiss album toast after 6 seconds
   useEffect(() => {
@@ -219,8 +232,17 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     const term = searchTerm.trim();
     if (!term) return;
 
+    if (stopTuningRef.current) {
+      stopTuningRef.current();
+      stopTuningRef.current = null;
+    }
+
     recommendationService.recordSearch(term);
-    const stopTuning = playRadioTuningSound(5.0, 0.35);
+    const searchStartTime = Date.now();
+    // Play authentic radio tuning sound looping until results are found (safety timeout 30s)
+    const stopTuning = playRadioTuningSound(30.0, 0.35);
+    stopTuningRef.current = stopTuning;
+
     setIsSearching(true);
     setIsSearchingReleases(true);
     setCurrentPage(1);
@@ -240,7 +262,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     } catch (e) {
       console.error('Search failed:', e);
     } finally {
-      stopTuning();
+      // Radio tuning sound plays continuously until results are found.
+      // If network returns in <450ms, keep for 450ms minimum so it's a pleasant acoustic chirp.
+      const elapsed = Date.now() - searchStartTime;
+      const minPlayTimeMs = 450;
+      if (elapsed < minPlayTimeMs) {
+        setTimeout(() => {
+          if (stopTuningRef.current === stopTuning) {
+            stopTuning();
+            stopTuningRef.current = null;
+          }
+        }, minPlayTimeMs - elapsed);
+      } else {
+        if (stopTuningRef.current === stopTuning) {
+          stopTuning();
+          stopTuningRef.current = null;
+        }
+      }
       setIsSearching(false);
       setIsSearchingReleases(false);
     }
@@ -248,8 +286,17 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
   const handleFetchMoreFromNetwork = async () => {
     if (isLoadingMore || !query.trim()) return;
-    const stopTuning = playRadioTuningSound(3.5, 0.3);
+
+    if (stopTuningRef.current) {
+      stopTuningRef.current();
+      stopTuningRef.current = null;
+    }
+
+    const searchStartTime = Date.now();
+    const stopTuning = playRadioTuningSound(30.0, 0.3);
+    stopTuningRef.current = stopTuning;
     setIsLoadingMore(true);
+
     try {
       const nextPage = currentPage + 1;
       const additionalTracks = await streamResolver.search(query, filterSource, nextPage);
@@ -265,7 +312,21 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     } catch (e) {
       console.error('Failed to load deep search results:', e);
     } finally {
-      stopTuning();
+      const elapsed = Date.now() - searchStartTime;
+      const minPlayTimeMs = 450;
+      if (elapsed < minPlayTimeMs) {
+        setTimeout(() => {
+          if (stopTuningRef.current === stopTuning) {
+            stopTuning();
+            stopTuningRef.current = null;
+          }
+        }, minPlayTimeMs - elapsed);
+      } else {
+        if (stopTuningRef.current === stopTuning) {
+          stopTuning();
+          stopTuningRef.current = null;
+        }
+      }
       setIsLoadingMore(false);
     }
   };

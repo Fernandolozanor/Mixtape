@@ -7,8 +7,35 @@
 
 let activeTuningAudio: HTMLAudioElement | null = null;
 let activeFadeInterval: any = null;
-
 let audioCtx: AudioContext | null = null;
+let isMuted: boolean = false;
+
+if (typeof window !== 'undefined') {
+  try {
+    const saved = localStorage.getItem('mixtape_radio_tuning_sound');
+    if (saved !== null) {
+      isMuted = saved === 'false';
+    }
+  } catch {}
+}
+
+export function isRadioSoundEnabled(): boolean {
+  return !isMuted;
+}
+
+export function setRadioSoundEnabled(enabled: boolean): void {
+  isMuted = !enabled;
+  try {
+    localStorage.setItem('mixtape_radio_tuning_sound', String(enabled));
+  } catch {}
+  if (isMuted && activeTuningAudio) {
+    try {
+      activeTuningAudio.pause();
+      activeTuningAudio.currentTime = 0;
+    } catch {}
+    activeTuningAudio = null;
+  }
+}
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -23,22 +50,22 @@ function getAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
-function playSynthesizedRadioTuning(durationSec: number = 0.9, volume: number = 0.25): () => void {
+function playSynthesizedRadioTuning(durationSec: number = 30.0, volume: number = 0.25): () => void {
+  if (isMuted) return () => {};
   const ctx = getAudioContext();
   if (!ctx) return () => {};
 
   try {
     const now = ctx.currentTime;
-    const dur = Math.max(0.4, Math.min(durationSec, 3.0));
+    const dur = Math.max(0.4, Math.min(durationSec, 30.0));
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0.001, now);
     masterGain.gain.linearRampToValueAtTime(volume * 0.45, now + 0.06);
-    masterGain.gain.setValueAtTime(volume * 0.45, now + dur - 0.12);
-    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
     masterGain.connect(ctx.destination);
 
-    const bufferSize = ctx.sampleRate * dur;
+    // 2-second looped noise buffer for minimal memory
+    const bufferSize = ctx.sampleRate * 2;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
     let lastOut = 0.0;
@@ -51,13 +78,14 @@ function playSynthesizedRadioTuning(durationSec: number = 0.9, volume: number = 
 
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = noiseBuffer;
+    noiseSource.loop = true;
 
     const bandpass = ctx.createBiquadFilter();
     bandpass.type = 'bandpass';
     bandpass.Q.setValueAtTime(2.8, now);
     bandpass.frequency.setValueAtTime(800, now);
-    bandpass.frequency.exponentialRampToValueAtTime(3200, now + dur * 0.5);
-    bandpass.frequency.exponentialRampToValueAtTime(1200, now + dur);
+    bandpass.frequency.exponentialRampToValueAtTime(3200, now + 1.2);
+    bandpass.frequency.exponentialRampToValueAtTime(1200, now + 2.5);
 
     noiseSource.connect(bandpass);
     bandpass.connect(masterGain);
@@ -67,12 +95,11 @@ function playSynthesizedRadioTuning(durationSec: number = 0.9, volume: number = 
 
     whistle.type = 'sine';
     whistle.frequency.setValueAtTime(1400, now);
-    whistle.frequency.exponentialRampToValueAtTime(3800, now + dur * 0.45);
-    whistle.frequency.exponentialRampToValueAtTime(600, now + dur * 0.85);
+    whistle.frequency.exponentialRampToValueAtTime(3800, now + 1.0);
+    whistle.frequency.exponentialRampToValueAtTime(600, now + 2.2);
 
     whistleGain.gain.setValueAtTime(0.001, now);
     whistleGain.gain.linearRampToValueAtTime(volume * 0.1, now + 0.1);
-    whistleGain.gain.exponentialRampToValueAtTime(0.0001, now + dur * 0.85);
 
     whistle.connect(whistleGain);
     whistleGain.connect(masterGain);
@@ -88,13 +115,13 @@ function playSynthesizedRadioTuning(durationSec: number = 0.9, volume: number = 
         const stopTime = ctx.currentTime;
         masterGain.gain.cancelScheduledValues(stopTime);
         masterGain.gain.setValueAtTime(masterGain.gain.value, stopTime);
-        masterGain.gain.exponentialRampToValueAtTime(0.0001, stopTime + 0.05);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, stopTime + 0.15);
         setTimeout(() => {
           try {
             noiseSource.stop();
             whistle.stop();
           } catch {}
-        }, 60);
+        }, 160);
       } catch {}
     };
   } catch {
@@ -104,10 +131,12 @@ function playSynthesizedRadioTuning(durationSec: number = 0.9, volume: number = 
 
 /**
  * Plays the authentic analog radio tuning sound effect (from YouTube LNCziHXp1BY).
- * Returns a smooth stop/fade-out callback to be called when search completes.
+ * Loops continuously during search, returning a smooth stop/fade-out callback
+ * to be invoked the moment search results are found.
  */
-export function playRadioTuningSound(maxDurationSec: number = 4.0, volume: number = 0.35): () => void {
+export function playRadioTuningSound(maxDurationSec: number = 30.0, volume: number = 0.35): () => void {
   if (typeof window === 'undefined') return () => {};
+  if (isMuted) return () => {};
 
   // Clean up any previously active tuning sound
   if (activeFadeInterval) {
@@ -125,10 +154,11 @@ export function playRadioTuningSound(maxDurationSec: number = 4.0, volume: numbe
   try {
     const audio = new Audio('./assets/radio-tuning.mp3');
     activeTuningAudio = audio;
+    audio.loop = true; // Loop continuously until search results arrive
     audio.volume = Math.max(0.05, Math.min(1, volume));
 
-    // Pick a random offset between 0 and 18s for variety across searches
-    const randomStart = Math.random() * 18;
+    // Pick a random offset between 0 and 15s for acoustic variety across searches
+    const randomStart = Math.random() * 15;
     audio.currentTime = randomStart;
 
     const playPromise = audio.play();
@@ -143,8 +173,8 @@ export function playRadioTuningSound(maxDurationSec: number = 4.0, volume: numbe
         activeFadeInterval = null;
       }
 
-      const fadeSteps = 10;
-      const stepTime = 20; // 200ms total smooth fade out
+      const fadeSteps = 9;
+      const stepTime = 20; // ~180ms total smooth fade out
       let currentStep = 0;
       const initialVol = audio.volume;
 

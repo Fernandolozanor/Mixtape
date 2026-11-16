@@ -1,6 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Radio, Volume2, VolumeX } from 'lucide-react';
-import { playRadioTuningSound } from '../utils/radioAudio';
+import {
+  playRadioTuningSound,
+  isRadioSoundEnabled,
+  setRadioSoundEnabled,
+} from '../utils/radioAudio';
 
 interface RadioTunerDialProps {
   isSearching: boolean;
@@ -19,8 +23,13 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
   const [needlePos, setNeedlePos] = useState<number>(37.5);
   const [isTuned, setIsTuned] = useState<boolean>(true);
   const [currentFreq, setCurrentFreq] = useState<string>('98.0');
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
-  const stopSoundRef = useRef<(() => void) | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isRadioSoundEnabled());
+
+  const handleToggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    setRadioSoundEnabled(next);
+  };
 
   // Exact geometric boundaries of the FM scale in SINTONIZADOR.jpg
   const MIN_SCALE_X = 18.0; // Directly at "88 MHz"
@@ -43,14 +52,10 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
     return { freqVal, pos };
   };
 
-  // Sweep and static sound during search
+  // Sweep needle animation loop during search (SearchTab controls the continuous radio audio)
   useEffect(() => {
     if (isSearching) {
       setIsTuned(false);
-
-      if (soundEnabled) {
-        stopSoundRef.current = playRadioTuningSound(1.2);
-      }
 
       // Sweep animation loop strictly within the FM dial scale (18% to 57%)
       let direction = 1;
@@ -73,10 +78,6 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
 
       return () => {
         clearInterval(interval);
-        if (stopSoundRef.current) {
-          stopSoundRef.current();
-          stopSoundRef.current = null;
-        }
       };
     } else if (hasResults && query.trim()) {
       // Search finished: lock onto station on the FM dial!
@@ -85,7 +86,7 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
       setCurrentFreq(freqVal);
       setIsTuned(true);
     }
-  }, [isSearching, hasResults, query, soundEnabled]);
+  }, [isSearching, hasResults, query]);
 
   const handleDialClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -151,7 +152,7 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
 
           {/* Sound mute toggle */}
           <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
+            onClick={handleToggleSound}
             className="text-zinc-500 hover:text-amber-400 transition p-1 shrink-0 active:scale-95"
             title={soundEnabled ? 'Silenciar sonido de sintonizador' : 'Activar sonido de sintonizador'}
           >
