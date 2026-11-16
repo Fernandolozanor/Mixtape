@@ -15,7 +15,9 @@ import {
   Camera,
   Radio,
   Sparkles,
+  ImageIcon,
 } from 'lucide-react';
+import jsQR from 'jsqr';
 import { useLibrary } from '../context/LibraryContext';
 import { syncService } from '../services/syncService';
 import { generateQrMatrix } from '../utils/qrCode';
@@ -51,6 +53,7 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
   const streamRef = useRef<MediaStream | null>(null);
   const scanIntervalRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const qrImageInputRef = useRef<HTMLInputElement | null>(null);
 
   const stopCamera = () => {
     if (scanIntervalRef.current) {
@@ -84,6 +87,16 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     };
   }, [isOpen]);
 
+  // Ensure active camera stream binds to video element when camera is open
+  useEffect(() => {
+    if (isCameraOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.setAttribute('playsinline', 'true');
+      videoRef.current.setAttribute('webkit-playsinline', 'true');
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isCameraOpen]);
+
   if (!isOpen) return null;
 
   const startCameraScanner = async () => {
@@ -92,52 +105,137 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setCameraError(
-        'Tu navegador no permite acceso directo a la cámara aquí. Escanea el QR con la app Cámara de tu teléfono o introduce el código TAPE-XXXX-XXXX abajo.'
+        'Este navegador o contexto no permite acceso a la cámara. Puedes subir una captura del QR con el botón de abajo o introducir el código TAPE-XXXX-XXXX.'
       );
       return;
     }
 
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+      // 1. Prefer back camera on mobile devices (ideal constraint won't throw on PCs with only webcams)
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
       });
-      streamRef.current = stream;
-      setIsCameraOpen(true);
-
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-      }, 100);
-
-      // Use native BarcodeDetector if available (Chrome Android, Safari iOS 17+, Edge, macOS)
-      const BarcodeDetectorClass = (window as any).BarcodeDetector;
-      if (BarcodeDetectorClass) {
-        const detector = new BarcodeDetectorClass({ formats: ['qr_code'] });
-        scanIntervalRef.current = window.setInterval(async () => {
-          if (!videoRef.current || videoRef.current.readyState < 2) return;
-          try {
-            const barcodes = await detector.detect(videoRef.current);
-            if (barcodes && barcodes.length > 0) {
-              const rawValue: string = barcodes[0].rawValue || '';
-              if (rawValue) {
-                handleScannedValue(rawValue);
-              }
-            }
-          } catch {}
-        }, 350);
-      } else {
-        setCameraError(
-          'Escanea el código QR directamente con la cámara nativa de tu móvil, o escribe el código TAPE-XXXX-XXXX debajo.'
-        );
-        stopCamera();
-      }
     } catch {
-      setCameraError(
-        'No se pudo acceder a la cámara. Puedes escanear el QR con la app Cámara normal de tu móvil o escribir el código TAPE-XXXX-XXXX.'
-      );
+      try {
+        // 2. Graceful fallback: any video camera / webcam available
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+      } catch (err: any) {
+        if (err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError') {
+          setCameraError(
+            'Permiso de cámara denegado. Permite el acceso a la cámara en los ajustes de tu navegador o escribe el código TAPE-XXXX-XXXX.'
+          );
+        } else if (err?.name === 'NotFoundError' || err?.name === 'DevicesNotFoundError') {
+          setCameraError('No se encontró ninguna cámara conectada en este equipo.');
+        } else if (err?.name === 'NotReadableError' || err?.name === 'TrackStartError') {
+          setCameraError('La cámara está siendo utilizada por otra aplicación.');
+        } else {
+          setCameraError(
+            'No se pudo abrir la cámara. Puedes subir una captura del QR con el botón de abajo o escribir el código TAPE-XXXX-XXXX.'
+          );
+        }
+        return;
+      }
     }
+
+    if (!stream) return;
+
+    streamRef.current = stream;
+    setIsCameraOpen(true);
+
+    // Setup canvas for universal jsQR decoding (works on iOS Safari, Android, Chrome PC, Firefox, Edge)
+    const scanCanvas = document.createElement('canvas');
+    const ctx = scanCanvas.getContext('2d', { willReadFrequently: true });
+
+    // Setup native detector if supported
+    const BarcodeDetectorClass = (window as any).BarcodeDetector;
+    let nativeDetector: any = null;
+    if (BarcodeDetectorClass) {
+      try {
+        nativeDetector = new BarcodeDetectorClass({ formats: ['qr_code'] });
+      } catch {}
+    }
+
+    scanIntervalRef.current = window.setInterval(async () => {
+      const video = videoRef.current;
+      if (!video || video.readyState < 2 || video.videoWidth === 0) return;
+
+      // 1. Try native detector if available
+      if (nativeDetector) {
+        try {
+          const barcodes = await nativeDetector.detect(video);
+          if (barcodes && barcodes.length > 0) {
+            const rawVal: string = barcodes[0].rawValue || '';
+            if (rawVal) {
+              handleScannedValue(rawVal);
+              return;
+            }
+          }
+        } catch {}
+      }
+
+      // 2. Universal jsQR fallback analysis (100% reliable everywhere)
+      if (ctx) {
+        try {
+          const w = video.videoWidth;
+          const h = video.videoHeight;
+          if (scanCanvas.width !== w || scanCanvas.height !== h) {
+            scanCanvas.width = w;
+            scanCanvas.height = h;
+          }
+          ctx.drawImage(video, 0, 0, w, h);
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const qrCode = jsQR(imgData.data, imgData.width, imgData.height, {
+            inversionAttempts: 'dontInvert',
+          });
+          if (qrCode && qrCode.data) {
+            handleScannedValue(qrCode.data);
+            return;
+          }
+        } catch {}
+      }
+    }, 250);
+  };
+
+  const handleDecodeQrFromImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setCameraError(null);
+    setFeedback(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, img.width, img.height);
+        const imageData = ctx.getImageData(0, 0, img.width, img.height);
+        const qr = jsQR(imageData.data, imageData.width, imageData.height);
+        if (qr && qr.data) {
+          handleScannedValue(qr.data);
+        } else {
+          setCameraError(
+            'No se detectó ningún código QR en la imagen seleccionada. Asegúrate de que el código QR sea legible.'
+          );
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleScannedValue = async (raw: string) => {
@@ -471,14 +569,32 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
 
               {/* Camera QR Scanner Toggle */}
               {!isCameraOpen ? (
-                <button
-                  type="button"
-                  onClick={startCameraScanner}
-                  className="w-full py-3 px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-stereo font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-98"
-                >
-                  <Camera className="w-4 h-4 text-emerald-400" />
-                  <span>Escanear QR con la Cámara</span>
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={startCameraScanner}
+                    className="py-3 px-4 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 font-stereo font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-98"
+                  >
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    <span>Abrir Cámara</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => qrImageInputRef.current?.click()}
+                    className="py-3 px-4 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 font-stereo font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-98"
+                  >
+                    <ImageIcon className="w-4 h-4 text-amber-400" />
+                    <span>Subir Foto del QR</span>
+                  </button>
+                  <input
+                    ref={qrImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleDecodeQrFromImage}
+                    className="hidden"
+                  />
+                </div>
               ) : (
                 <div className="space-y-2">
                   <div className="relative rounded-2xl overflow-hidden border-2 border-amber-400 bg-black aspect-video flex items-center justify-center">
@@ -487,9 +603,15 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                       className="w-full h-full object-cover"
                       playsInline
                       muted
+                      autoPlay
+                      onLoadedMetadata={(e) => {
+                        (e.target as HTMLVideoElement).play().catch(() => {});
+                      }}
                     />
                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                      <div className="w-40 h-40 border-2 border-amber-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
+                      <div className="w-40 h-40 border-2 border-amber-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.45)] relative">
+                        <div className="absolute inset-x-0 top-1/2 h-0.5 bg-amber-400 animate-pulse shadow-[0_0_8px_#fbbf24]" />
+                      </div>
                     </div>
                   </div>
                   <button
