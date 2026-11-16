@@ -1,5 +1,5 @@
-export const APP_VERSION = '2.6.1';
-export const APP_BUILD = '2026.11.16.3';
+export const APP_VERSION = '2.6.2';
+export const APP_BUILD = '2026.11.16.4';
 export const APP_RELEASE_NAME = 'Mixtape Hi-Fi Deck';
 
 /**
