@@ -182,26 +182,40 @@ export const SpotifyCsvTapeModal: React.FC<SpotifyCsvTapeModalProps> = ({
       });
 
       try {
-        // Query search resolver: 1st pass with "Title Artist"
-        const query1 = `${spTrack.title} ${spTrack.artist}`;
-        const searchMatches = await streamResolver.search(query1, 'youtube', 1);
+        const cleaned = cleanTitle(spTrack.title);
 
+        // Pass 1: Canonical Title + Artist (best accuracy on video platforms)
+        const query1 = `${cleaned || spTrack.title} ${spTrack.artist}`;
+        let searchMatches = await streamResolver.search(query1, 'youtube', 1);
         let matchResult = findStrictBestMatch(spTrack, searchMatches);
 
-        // 2nd pass: if no strict match found, try "Artist Title" with cleaned title
+        // Pass 2: Artist + Canonical Title
         if (!matchResult.matchedTrack) {
-          const query2 = `${spTrack.artist} ${cleanTitle(spTrack.title)}`;
+          const query2 = `${spTrack.artist} ${cleaned || spTrack.title}`;
           const altMatches = await streamResolver.search(query2, 'youtube', 1);
           matchResult = findStrictBestMatch(spTrack, altMatches);
+        }
+
+        // Pass 3: Title alone (evaluateTrackMatch strictly enforces artist confirmation)
+        if (!matchResult.matchedTrack && cleaned) {
+          const titleMatches = await streamResolver.search(cleaned, 'youtube', 1);
+          matchResult = findStrictBestMatch(spTrack, titleMatches);
+        }
+
+        // Pass 4: Comprehensive search across all providers (Audius / Local catalog / YouTube)
+        if (!matchResult.matchedTrack) {
+          const query4 = `${cleaned || spTrack.title} ${spTrack.artist}`;
+          const allMatches = await streamResolver.search(query4, 'all', 1);
+          matchResult = findStrictBestMatch(spTrack, allMatches);
         }
 
         if (matchResult.matchedTrack) {
           finalResolved.push(matchResult.matchedTrack);
         } else {
-          // STRICT RULE: Do not import anything if no exact match is confirmed
+          // STRICT RULE: Do not import anything if no verified match is confirmed
           unrecordedList.push({
             track: spTrack,
-            reason: matchResult.reason || 'Sin coincidencia exacta verificada',
+            reason: matchResult.reason || 'Sin coincidencia verificada',
           });
         }
       } catch (err) {

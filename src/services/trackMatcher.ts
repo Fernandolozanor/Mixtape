@@ -37,35 +37,38 @@ export function normalizeTrackText(text: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // remove diacritics / accents
     .replace(/&/g, ' and ')
-    .replace(/['’"`´]/g, '')
-    .replace(/[^\w\s]/g, ' ')
+    .replace(/['’"`´“”]/g, '')
+    .replace(/[–—−]/g, '-')
+    .replace(/[^\w\s-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
 /**
- * Strips metadata noise from track titles: (Official Video), [Remastered 2011], - 2021 Remaster, etc.
+ * Strips metadata noise from track titles: (Official Video), (2013 Remaster), [Remastered 2011], - 2021 Remaster, etc.
  */
 export function cleanTitle(title: string): string {
   if (!title) return '';
   let cleaned = title
-    // Remove parenthetical / bracketed metadata
+    .replace(/[–—−]/g, '-')
+    .replace(/["“”'’`´]/g, '')
+    // Remove parenthetical with keywords or 4-digit year anywhere inside
     .replace(
-      /\((?:official|music|video|audio|lyric|lyrics|visualizer|remaster|remastered|deluxe|anniversary|live|bonus|version|edit|mono|stereo|hd|4k|hq|extended|radio edit)[^)]*\)/gi,
+      /\([^(]*\b(?:remaster|remastered|\d{4}|mix|version|edit|live|deluxe|edition|anniversary|explicit|clean|audio|video|soundtrack|from|ost|theme|mono|stereo|feat|ft|featuring|with)\b[^)]*\)/gi,
       ''
     )
+    // Remove brackets with keywords or 4-digit year anywhere inside
     .replace(
-      /\[(?:official|music|video|audio|lyric|lyrics|visualizer|remaster|remastered|deluxe|anniversary|live|bonus|version|edit|mono|stereo|hd|4k|hq|extended|radio edit)[^\]]*\]/gi,
+      /\[[^[]*\b(?:remaster|remastered|\d{4}|mix|version|edit|live|deluxe|edition|anniversary|explicit|clean|audio|video|soundtrack|from|ost|theme|mono|stereo|feat|ft|featuring|with)\b[^\]]*\]/gi,
       ''
     )
-    // Remove trailing "- Remastered...", "- 2011 Remaster", "- Live at...", etc.
+    // Remove trailing dash metadata (remaster, soundtrack, live, radio edit, etc.)
     .replace(
-      /-\s*(?:remaster|remastered|\d{4}\s*remaster|deluxe|single version|radio edit|mono|stereo|live).*$/gi,
+      /\s*-\s*(?:from\s+.*|remaster|remastered|\d{4}\s*remaster|\d{4}\s*mix|deluxe|single\s*version|album\s*version|radio\s*edit|mono|stereo|live|anniversary|original|bonus).*$/gi,
       ''
     )
-    // Remove featured artists within parentheses
-    .replace(/\((?:feat\.?|ft\.?)[^)]*\)/gi, '')
-    .replace(/\[(?:feat\.?|ft\.?)[^\]]*\]/gi, '');
+    // Remove trailing dash feat metadata
+    .replace(/\s*-\s*(?:feat\.?|ft\.?|featuring|with)\s+.*$/gi, '');
 
   return normalizeTrackText(cleaned);
 }
@@ -78,11 +81,12 @@ export function extractArtists(artistStr: string): string[] {
   const parts = artistStr.split(/[,/&]|\bfeat\.?\b|\bft\.?\b|\band\b|\bx\b/i);
   return parts
     .map((p) => normalizeTrackText(p))
-    .filter((p) => p.length > 1);
+    .filter((p) => p.length > 0);
 }
 
 /**
- * Evaluates whether a candidate track is an exact and legitimate match for an expected Spotify track.
+ * Evaluates whether a candidate track is an authentic, legitimate match for an expected Spotify track.
+ * Ensures the maximum number of original tracks are matched without accepting covers, tutorials, or unrelated songs.
  */
 export function evaluateTrackMatch(
   expected: ParsedSpotifyTrack,
@@ -105,31 +109,64 @@ export function evaluateTrackMatch(
     }
   }
 
+  // Sanity duration bounds (prevent 20s previews or 2-hour full concerts)
+  if (expected.durationMs && expected.durationMs > 0 && candidate.duration) {
+    const expSec = Math.round(expected.durationMs / 1000);
+    const candSec = candidate.duration;
+    if (candSec < 35 && expSec > 60) {
+      return {
+        isMatch: false,
+        score: 0,
+        reason: 'Descartado: la pista encontrada es un adelanto o muestra corta (< 35s)',
+      };
+    }
+    if (candSec > 1200 && expSec < 500) {
+      return {
+        isMatch: false,
+        score: 0,
+        reason: 'Descartado: la pista encontrada es un concierto completo o álbum (> 20m)',
+      };
+    }
+  }
+
   // 2. Check Artist Match
   const expArtists = extractArtists(expected.artist);
   const primaryArtist = expArtists[0] || normalizeTrackText(expected.artist);
 
   let artistMatched = false;
+  let artistScore = 0;
+
   // Match in candidate artist field
-  if (normCandArtist && expArtists.some((a) => normCandArtist.includes(a) || a.includes(normCandArtist))) {
+  if (normCandArtist && expArtists.some((a) => a.length >= 2 && (normCandArtist.includes(a) || a.includes(normCandArtist)))) {
     artistMatched = true;
+    artistScore = 30;
   }
-  // Match in candidate title (very common on YouTube: "Artist - Song Title")
-  if (!artistMatched && expArtists.some((a) => normCandTitle.includes(a))) {
+  // Match in candidate title ("Artist - Song Title" format on YouTube)
+  if (!artistMatched && expArtists.some((a) => a.length >= 2 && normCandTitle.includes(a))) {
     artistMatched = true;
+    artistScore = 25;
   }
-  // If primary artist has multiple words, check if individual significant words match
+  // Match individual words of primary artist if >= 3 letters (e.g. "Red Hot Chili Peppers", "Guns N' Roses")
   if (!artistMatched && primaryArtist) {
     const artistWords = primaryArtist.split(' ').filter((w) => !STOPWORDS.has(w) && w.length >= 3);
     if (artistWords.length > 0 && artistWords.every((w) => normCandTitle.includes(w) || normCandArtist.includes(w))) {
       artistMatched = true;
+      artistScore = 20;
+    }
+  }
+  // Match for Topic channels or record labels (e.g., "Queen - Topic", "Warner Records", "VEVO")
+  if (!artistMatched && (normCandArtist.includes('topic') || normCandArtist.includes('vevo') || normCandArtist.includes('records'))) {
+    const artistWords = primaryArtist.split(' ').filter((w) => !STOPWORDS.has(w) && w.length >= 2);
+    if (artistWords.length > 0 && artistWords.some((w) => normCandTitle.includes(w))) {
+      artistMatched = true;
+      artistScore = 20;
     }
   }
 
   if (!artistMatched) {
     return {
       isMatch: false,
-      score: 10,
+      score: 0,
       reason: 'El artista no coincide con el resultado encontrado',
     };
   }
@@ -139,30 +176,26 @@ export function evaluateTrackMatch(
   let titleMatched = false;
 
   // Exact phrase match of cleaned title
-  if (cleanExpTitle.length > 0 && normCandTitle.includes(cleanExpTitle)) {
-    titleMatched = true;
-    titleScore = 50;
-  } else if (cleanExpTitle.length > 0 && cleanCandTitle.includes(cleanExpTitle)) {
+  if (cleanExpTitle.length > 0 && (normCandTitle.includes(cleanExpTitle) || cleanCandTitle.includes(cleanExpTitle))) {
     titleMatched = true;
     titleScore = 50;
   } else {
     // Significant words token match
     const expWords = cleanExpTitle.split(' ').filter((w) => !STOPWORDS.has(w) && w.length >= 2);
     if (expWords.length > 0) {
-      const matchedWords = expWords.filter((w) => normCandTitle.includes(w));
+      const matchedWords = expWords.filter((w) => {
+        const re = new RegExp(`\\b${w}\\b`, 'i');
+        return re.test(normCandTitle) || re.test(cleanCandTitle);
+      });
       const matchRatio = matchedWords.length / expWords.length;
 
-      // If title has 1 or 2 words, ALL must match with word boundary
+      // 1 or 2 word titles: all core words must match with word boundary
       if (expWords.length <= 2) {
-        const allBoundaryMatch = expWords.every((w) => {
-          const re = new RegExp(`\\b${w}\\b`, 'i');
-          return re.test(normCandTitle);
-        });
-        if (allBoundaryMatch) {
+        if (matchedWords.length === expWords.length) {
           titleMatched = true;
-          titleScore = 40;
+          titleScore = 50;
         }
-      } else if (matchRatio >= 0.75) {
+      } else if (matchRatio >= 0.65) {
         titleMatched = true;
         titleScore = Math.round(matchRatio * 45);
       }
@@ -172,70 +205,41 @@ export function evaluateTrackMatch(
   if (!titleMatched) {
     return {
       isMatch: false,
-      score: 25,
-      reason: 'El título de la canción no coincide exactamente',
+      score: 0,
+      reason: 'El título de la canción no coincide con el resultado',
     };
   }
 
-  // 4. Check Duration Match (if durationMs is present)
-  let durationScore = 20;
+  // When both Artist and Title are legitimately confirmed -> VALID MATCH!
+  let score = titleScore + artistScore;
+
+  // Duration proximity ranking bonus (promotes official album version over extended edits)
   if (expected.durationMs && expected.durationMs > 0 && candidate.duration) {
     const expSec = Math.round(expected.durationMs / 1000);
     const candSec = candidate.duration;
-
-    // Disqualify if candidate is a tiny preview (< 45s) or a giant full concert (> 20 min)
-    if (candSec < 45 && expSec > 75) {
-      return {
-        isMatch: false,
-        score: 10,
-        reason: 'Descartado: la pista encontrada es un adelanto o muestra corta (< 45s)',
-      };
-    }
-    if (candSec > 1200 && expSec < 600) {
-      return {
-        isMatch: false,
-        score: 10,
-        reason: 'Descartado: la pista encontrada es un concierto completo o álbum (> 20m)',
-      };
-    }
-
     const diff = Math.abs(candSec - expSec);
-    if (diff <= 15) {
-      durationScore = 25;
-    } else if (diff <= 35) {
-      durationScore = 20;
-    } else if (diff <= 65) {
-      durationScore = 15;
-    } else if (diff <= 95) {
-      durationScore = 10;
-    } else if (diff <= 125) {
-      durationScore = 5;
-    } else {
-      // Discard if duration differs by more than 2 minutes (unless title explicitly states live/extended)
-      return {
-        isMatch: false,
-        score: 30,
-        reason: `Duración no coincide con la original (${Math.round(candSec / 60)}m vs ${Math.round(expSec / 60)}m)`,
-      };
-    }
+    if (diff <= 15) score += 20;
+    else if (diff <= 40) score += 15;
+    else if (diff <= 80) score += 10;
+    else if (diff <= 150) score += 5;
+    else score -= 10; // mild penalty for large difference, but do NOT discard valid track
+  } else {
+    score += 10; // neutral duration score
   }
 
-  // 5. Credibility bonus for official channels / VEVO / Topics
-  let credibilityBonus = 0;
+  // Credibility bonus for official channels / VEVO / Topics
   if (
     normCandArtist.includes('vevo') ||
     normCandArtist.includes('official') ||
     normCandArtist.includes('topic')
   ) {
-    credibilityBonus = 5;
+    score += 10;
   }
 
-  const totalScore = titleScore + (artistMatched ? 25 : 0) + durationScore + credibilityBonus;
-
   return {
-    isMatch: totalScore >= 70,
-    score: totalScore,
-    reason: totalScore >= 70 ? 'Coincidencia exacta verificada' : 'Puntuación insuficiente para coincidencia exacta',
+    isMatch: true,
+    score,
+    reason: 'Coincidencia confirmada',
   };
 }
 
@@ -260,13 +264,13 @@ export function findStrictBestMatch(
     if (evalResult.isMatch && evalResult.score > bestScore) {
       bestScore = evalResult.score;
       bestCandidate = candidate;
-    } else if (!evalResult.isMatch) {
+    } else if (!evalResult.isMatch && bestScore === -1) {
       lastFailReason = evalResult.reason;
     }
   }
 
   if (bestCandidate) {
-    return { matchedTrack: bestCandidate, reason: 'Coincidencia exacta verificada' };
+    return { matchedTrack: bestCandidate, reason: 'Coincidencia verificada' };
   }
 
   return { matchedTrack: null, reason: lastFailReason };

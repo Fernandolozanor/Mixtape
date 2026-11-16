@@ -20,39 +20,20 @@ function youtubeSearchPlugin(): Plugin {
         }
 
         try {
-          // Generate rich multi-angle queries to eliminate any search limits
-          let searchTerms: string[] = [];
-          if (page === 1) {
-            searchTerms = [
-              query,
-              `${query} songs`,
-              `${query} greatest hits`,
-              `${query} official video`,
-              `${query} album full`,
-              `${query} audio`,
-              `${query} live`,
-              `${query} discography`,
-            ];
-          } else if (page === 2) {
-            searchTerms = [
-              `${query} concert`,
-              `${query} acoustic`,
-              `${query} remaster`,
-              `${query} session`,
-              `${query} remix`,
-              `${query} best tracks`,
-              `${query} lyrics`,
-              `${query} cover`,
-            ];
-          } else {
-            searchTerms = [
-              `${query} instrumental`,
-              `${query} unreleased`,
-              `${query} radio edit`,
-              `${query} live performance`,
-              `${query} compilation`,
-              `${query} extended mix`,
-            ];
+          // Generate tailored queries (focused for specific song/artist pairs, multi-angle for general queries)
+          const wordCount = query.trim().split(/\s+/).length;
+          let searchTerms: string[] = [query];
+          if (wordCount <= 2) {
+            if (page === 1) {
+              searchTerms.push(
+                `${query} songs`,
+                `${query} greatest hits`,
+                `${query} official video`,
+                `${query} audio`
+              );
+            } else if (page === 2) {
+              searchTerms.push(`${query} album`, `${query} live`, `${query} remaster`);
+            }
           }
 
           const map = new Map<string, any>();
@@ -114,10 +95,17 @@ function youtubeSearchPlugin(): Plugin {
                         v.thumbnail?.thumbnails?.[v.thumbnail.thumbnails.length - 1]?.url ||
                         `https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg`;
 
+                      const fullTitle = v.title?.runs
+                        ? v.title.runs.map((r: any) => r.text).join('')
+                        : v.title?.simpleText || '';
+                      const fullArtist = v.ownerText?.runs
+                        ? v.ownerText.runs.map((r: any) => r.text).join('')
+                        : v.ownerText?.simpleText || 'YouTube';
+
                       map.set(v.videoId, {
                         id: v.videoId,
-                        title: v.title?.runs?.[0]?.text || '',
-                        artist: v.ownerText?.runs?.[0]?.text || 'YouTube',
+                        title: fullTitle,
+                        artist: fullArtist,
                         album: 'YouTube Music',
                         duration: durSec,
                         thumbnail: thumb,
@@ -140,10 +128,17 @@ function youtubeSearchPlugin(): Plugin {
                           if (sParts.length === 2) sDurSec = sParts[0] * 60 + sParts[1];
                           else if (sParts.length === 3) sDurSec = sParts[0] * 3600 + sParts[1] * 60 + sParts[2];
 
+                          const svTitle = sv.title?.runs
+                            ? sv.title.runs.map((r: any) => r.text).join('')
+                            : sv.title?.simpleText || '';
+                          const svArtist = sv.ownerText?.runs
+                            ? sv.ownerText.runs.map((r: any) => r.text).join('')
+                            : sv.ownerText?.simpleText || 'YouTube';
+
                           map.set(sv.videoId, {
                             id: sv.videoId,
-                            title: sv.title?.runs?.[0]?.text || '',
-                            artist: sv.ownerText?.runs?.[0]?.text || 'YouTube',
+                            title: svTitle,
+                            artist: svArtist,
                             album: 'YouTube Music',
                             duration: sDurSec,
                             thumbnail: `https://i.ytimg.com/vi/${sv.videoId}/hqdefault.jpg`,

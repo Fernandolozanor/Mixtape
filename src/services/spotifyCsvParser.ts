@@ -134,10 +134,17 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
       (h === 'trackname' ||
         h === 'track' ||
         h === 'title' ||
+        h === 'name' ||
         h === 'song' ||
+        h === 'songname' ||
+        h === 'songtitle' ||
         h === 'cancion' ||
+        h === 'titulo' ||
         h === 'nombre' ||
-        h === 'titulodelacancion')
+        h === 'tracktitle' ||
+        h === 'track_name' ||
+        h === 'titulodelacancion' ||
+        h === 'nombredelacancion')
     ) {
       titleIdx = i;
     }
@@ -149,21 +156,25 @@ export function parseSpotifyCsv(content: string, fileName?: string): CsvParseRes
         h === 'artistname' ||
         h === 'artists' ||
         h === 'artist' ||
+        h === 'artist_name' ||
+        h === 'artist_names' ||
         h === 'artista' ||
         h === 'artistas' ||
         h === 'interprete' ||
-        h === 'performer')
+        h === 'autor' ||
+        h === 'performer' ||
+        h === 'creator')
     ) {
       artistIdx = i;
     }
 
     // Album Name
-    if (albumIdx === -1 && (h === 'albumname' || h === 'album' || h === 'albumtitle')) {
+    if (albumIdx === -1 && (h === 'albumname' || h === 'album' || h === 'albumtitle' || h.includes('album'))) {
       albumIdx = i;
     }
 
     // Duration (ms)
-    if (durationIdx === -1 && (h.includes('duration') || h.includes('duracion'))) {
+    if (durationIdx === -1 && (h.includes('duration') || h.includes('duracion') || h === 'time' || h === 'length')) {
       durationIdx = i;
     }
   }

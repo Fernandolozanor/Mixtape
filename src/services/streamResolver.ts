@@ -54,7 +54,7 @@ class StreamResolver {
       try {
         const res = await fetch(
           `/api/yt/search?q=${encodeURIComponent(term)}&page=${page}`,
-          { signal: AbortSignal.timeout(2000) }
+          { signal: AbortSignal.timeout(5000) }
         );
         if (res.ok) {
           const ytVideos = await res.json();
@@ -271,16 +271,16 @@ class StreamResolver {
 
     const endpoints = [
       {
-        url: `https://yt.chocolatemoo53.com/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=${page}`,
-        parser: invidiousParser,
+        url: `https://pipedapi.ducks.party/search?q=${encodeURIComponent(query)}&filter=all`,
+        parser: pipedParser,
       },
       {
         url: `https://api.piped.private.coffee/search?q=${encodeURIComponent(query)}&filter=all`,
         parser: pipedParser,
       },
       {
-        url: `https://pipedapi.ducks.party/search?q=${encodeURIComponent(query)}&filter=all`,
-        parser: pipedParser,
+        url: `https://yt.chocolatemoo53.com/api/v1/search?q=${encodeURIComponent(query)}&type=video&page=${page}`,
+        parser: invidiousParser,
       },
     ];
 
