@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Heart,
   Plus,
@@ -15,6 +15,10 @@ import {
   GripVertical,
   Settings,
   FileSpreadsheet,
+  Search,
+  X,
+  Mic2,
+  Music2,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
@@ -25,7 +29,107 @@ import { VinylRecordCard } from './VinylRecordCard';
 import { VinylCoverFlow } from './VinylCoverFlow';
 import { bpmService } from '../services/bpmService';
 import { SourceBadge } from './SourceBadge';
-import type { Playlist } from '../types/music';
+import type { Playlist, Track } from '../types/music';
+
+interface GenreDefinition {
+  id: string;
+  label: string;
+  icon: string;
+  keywords: string[];
+}
+
+export const LIBRARY_GENRES: GenreDefinition[] = [
+  {
+    id: 'rock',
+    label: 'Rock',
+    icon: '🎸',
+    keywords: [
+      'rock', 'queen', 'ac/dc', 'acdc', 'dire straits', 'stones', 'rolling', 'beatles',
+      'guns', 'nirvana', 'clash', 'police', 'u2', 'led zeppelin', 'the who', 'deep purple',
+      'aerosmith', 'pink floyd', 'radiohead', 'hendrix', 'doors', 'cream', 'creedence',
+      'scorpions', 'bon jovi', 'def leppard', 'kiss', 'van halen', 'clapton', 'zz top',
+      'springsteen', 'bowie', 'eagles', 'fleetwood', 'journey', 'toto', 'boston', 'foreigner'
+    ],
+  },
+  {
+    id: 'metal',
+    label: 'Metal',
+    icon: '⚡',
+    keywords: [
+      'metal', 'metallica', 'iron maiden', 'judas priest', 'black sabbath', 'ozzy',
+      'megadeth', 'slayer', 'pantera', 'heavy', 'dio', 'motorhead', 'slipknot',
+      'rammstein', 'avenged', 'system of a down', 'sepultura', 'anthrax', 'accept'
+    ],
+  },
+  {
+    id: 'pop',
+    label: 'Pop',
+    icon: '✨',
+    keywords: [
+      'pop', 'michael jackson', 'madonna', 'dua lipa', 'taylor swift', 'bruno mars',
+      'ed sheeran', 'billie eilish', 'ariana', 'katy perry', 'elton john', 'abba',
+      'george michael', 'wham', 'prince', 'whitney houston', 'phil collins', 'bee gees',
+      'cyndi lauper', 'rick astley', 'ricky martin', 'shakira'
+    ],
+  },
+  {
+    id: '80s',
+    label: '80s / Retro',
+    icon: '📻',
+    keywords: [
+      '80s', '80', 'ochenta', 'synth', 'retro', 'new wave', 'disco', 'depeche mode',
+      'duran duran', 'tears for fears', 'a-ha', 'aha', 'pet shop boys', 'spandau',
+      'human league', 'omd', 'eurythmics', 'simple minds', 'talk talk', 'inxs', '198'
+    ],
+  },
+  {
+    id: 'electronica',
+    label: 'Electrónica',
+    icon: '🎛️',
+    keywords: [
+      'electronic', 'electronica', 'electro', 'house', 'techno', 'edm', 'daft punk',
+      'avicii', 'calvin harris', 'tiesto', 'guetta', 'kraftwerk', 'prodigy', 'chemical brothers',
+      'fatboy slim', 'underworld', 'deadmau5', 'faithless', 'swedish house mafia', 'moby'
+    ],
+  },
+  {
+    id: 'indie',
+    label: 'Indie / Alt',
+    icon: '🎙️',
+    keywords: [
+      'indie', 'alternative', 'alternativo', 'arctic monkeys', 'the strokes', 'the killers',
+      'franz ferdinand', 'blur', 'oasis', 'pixies', 'smiths', 'cure', 'arcade fire', 'interpol',
+      'rem', 'smashing pumpkins', 'foals', 'muse'
+    ],
+  },
+  {
+    id: 'baladas',
+    label: 'Baladas',
+    icon: '🎹',
+    keywords: [
+      'balada', 'ballad', 'acustico', 'acoustic', 'unplugged', 'slow', 'piano',
+      'love song', 'romantic', 'adagio', 'adele', 'sam smith', 'norah jones', 'sinatras'
+    ],
+  },
+  {
+    id: 'espanol',
+    label: 'En Español',
+    icon: '🇪🇸',
+    keywords: [
+      'espanol', 'español', 'soda stereo', 'heroes del silencio', 'fito', 'charly garcia',
+      'calamaro', 'estopa', 'radio futura', 'alaska', 'mecano', 'los rodriguez', 'bunbury',
+      'jarabe de palo', 'la oreja de van gogh', 'el canto del loco', 'nacho vega', 'los secretos',
+      'duncan dhu', 'tequila', 'rosalia', 'triana', 'leiva', 'm-clan'
+    ],
+  },
+];
+
+const normalizeText = (str: string) =>
+  (str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 
 interface LibraryTabProps {
   openNewPlaylistModal: () => void;
@@ -64,11 +168,204 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const { playTrack, currentTrack, isPlaying } = usePlayer();
   const { currentTheme } = useTheme();
 
+  // Search and Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGenre, setSelectedGenre] = useState<string>('all');
+  const [selectedArtist, setSelectedArtist] = useState<string>('all');
+  const [showMatchingTracks, setShowMatchingTracks] = useState(true);
+
   // Favorites view mode: 'vinyl' (default 3D vinyl records) or 'list'
   const [favoritesViewMode, setFavoritesViewMode] = useState<'vinyl' | 'list'>('vinyl');
   // Library view mode: 'shelves' (Estanterías 3D de Cintas arriba y Vinilos Cover Flow abajo) vs 'lists'
   const [libraryViewMode, setLibraryViewMode] = useState<'shelves' | 'lists'>('shelves');
   const [listFilter, setListFilter] = useState<'all' | 'tapes' | 'vinyls'>('all');
+
+  // Helper to identify saved vinyl albums
+  const isVinylPlaylist = (p: Playlist) => {
+    return (
+      p.mediaType === 'vinyl' ||
+      p.description?.toLowerCase().includes('vinilo') ||
+      p.description?.toLowerCase().includes('lanzamiento oficial') ||
+      p.description?.toLowerCase().includes('álbum de vinilo')
+    );
+  };
+
+  // Dynamically extract all unique artists present across user playlists & tracks
+  const availableArtists = useMemo(() => {
+    const artistSet = new Set<string>();
+    for (const p of playlists) {
+      if (p.artist && p.artist.trim()) {
+        artistSet.add(p.artist.trim());
+      }
+      for (const t of p.tracks) {
+        if (t.artist && t.artist.trim()) {
+          const parts = t.artist.split(/[,/]|feat\.?|ft\.?/i);
+          for (const part of parts) {
+            const clean = part.trim();
+            if (clean.length > 1) artistSet.add(clean);
+          }
+        }
+      }
+    }
+    for (const t of likedTracks) {
+      if (t.artist && t.artist.trim()) {
+        const parts = t.artist.split(/[,/]|feat\.?|ft\.?/i);
+        for (const part of parts) {
+          const clean = part.trim();
+          if (clean.length > 1) artistSet.add(clean);
+        }
+      }
+    }
+    return Array.from(artistSet).sort((a, b) => a.localeCompare(b));
+  }, [playlists, likedTracks]);
+
+  const matchesPlaylistFilter = (playlist: Playlist): boolean => {
+    const normQuery = normalizeText(searchQuery);
+
+    // 1. Artist filter (if selected)
+    if (selectedArtist !== 'all') {
+      const normArtist = normalizeText(selectedArtist);
+      const playlistArtistMatch = normalizeText(playlist.artist || '').includes(normArtist);
+      const tracksArtistMatch = playlist.tracks.some((t) =>
+        normalizeText(t.artist).includes(normArtist)
+      );
+      if (!playlistArtistMatch && !tracksArtistMatch) {
+        return false;
+      }
+    }
+
+    // 2. Genre filter (if selected)
+    if (selectedGenre !== 'all') {
+      const genreDef = LIBRARY_GENRES.find((g) => g.id === selectedGenre);
+      if (genreDef) {
+        const fullText = normalizeText(
+          `${playlist.name} ${playlist.artist || ''} ${playlist.description || ''} ${playlist.year || ''} ${playlist.tracks.map((t) => `${t.title} ${t.artist} ${t.album || ''}`).join(' ')}`
+        );
+        const matches = genreDef.keywords.some((kw) => fullText.includes(kw));
+        if (!matches) {
+          return false;
+        }
+      }
+    }
+
+    // 3. Search query string (if typed)
+    if (normQuery) {
+      const terms = normQuery.split(/\s+/).filter(Boolean);
+      const fullText = normalizeText(
+        `${playlist.name} ${playlist.artist || ''} ${playlist.description || ''} ${playlist.year || ''} ${playlist.tracks.map((t) => `${t.title} ${t.artist} ${t.album || ''}`).join(' ')}`
+      );
+      const matchesAll = terms.every((term) => fullText.includes(term));
+      if (!matchesAll) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  const hasActiveFilter = Boolean(
+    searchQuery.trim() || selectedGenre !== 'all' || selectedArtist !== 'all'
+  );
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedGenre('all');
+    setSelectedArtist('all');
+  };
+
+  const tapePlaylists = useMemo(
+    () => playlists.filter((p) => !isVinylPlaylist(p) && matchesPlaylistFilter(p)),
+    [playlists, searchQuery, selectedGenre, selectedArtist]
+  );
+
+  const vinylPlaylists = useMemo(
+    () => playlists.filter((p) => isVinylPlaylist(p) && matchesPlaylistFilter(p)),
+    [playlists, searchQuery, selectedGenre, selectedArtist]
+  );
+
+  // Individual track matches across all playlists when search/filters are active
+  const matchingTracks = useMemo(() => {
+    if (!hasActiveFilter) return [];
+
+    const normQuery = normalizeText(searchQuery);
+    const results: Array<{
+      track: Track;
+      playlistName: string;
+      playlistId: string;
+      mediaType: 'tape' | 'vinyl';
+    }> = [];
+    const seenIds = new Set<string>();
+
+    for (const p of playlists) {
+      const pMediaType: 'tape' | 'vinyl' = isVinylPlaylist(p) ? 'vinyl' : 'tape';
+      for (const t of p.tracks) {
+        if (seenIds.has(t.id)) continue;
+
+        let ok = true;
+
+        if (selectedArtist !== 'all') {
+          const normArtist = normalizeText(selectedArtist);
+          if (!normalizeText(t.artist).includes(normArtist)) ok = false;
+        }
+
+        if (ok && selectedGenre !== 'all') {
+          const genreDef = LIBRARY_GENRES.find((g) => g.id === selectedGenre);
+          if (genreDef) {
+            const trackText = normalizeText(`${t.title} ${t.artist} ${t.album || ''} ${p.name}`);
+            if (!genreDef.keywords.some((kw) => trackText.includes(kw))) ok = false;
+          }
+        }
+
+        if (ok && normQuery) {
+          const terms = normQuery.split(/\s+/).filter(Boolean);
+          const trackText = normalizeText(`${t.title} ${t.artist} ${t.album || ''} ${p.name}`);
+          if (!terms.every((term) => trackText.includes(term))) ok = false;
+        }
+
+        if (ok) {
+          seenIds.add(t.id);
+          results.push({
+            track: t,
+            playlistName: p.name,
+            playlistId: p.id,
+            mediaType: pMediaType,
+          });
+          if (results.length >= 24) break;
+        }
+      }
+      if (results.length >= 24) break;
+    }
+
+    return results;
+  }, [playlists, hasActiveFilter, searchQuery, selectedGenre, selectedArtist]);
+
+  // Filtered favorite tracks for the Favorites view
+  const filteredLikedTracks = useMemo(() => {
+    return likedTracks.filter((track) => {
+      const normQuery = normalizeText(searchQuery);
+
+      if (selectedArtist !== 'all') {
+        const normArtist = normalizeText(selectedArtist);
+        if (!normalizeText(track.artist).includes(normArtist)) return false;
+      }
+
+      if (selectedGenre !== 'all') {
+        const genreDef = LIBRARY_GENRES.find((g) => g.id === selectedGenre);
+        if (genreDef) {
+          const trackText = normalizeText(`${track.title} ${track.artist} ${track.album || ''}`);
+          if (!genreDef.keywords.some((kw) => trackText.includes(kw))) return false;
+        }
+      }
+
+      if (normQuery) {
+        const terms = normQuery.split(/\s+/).filter(Boolean);
+        const trackText = normalizeText(`${track.title} ${track.artist} ${track.album || ''}`);
+        if (!terms.every((term) => trackText.includes(term))) return false;
+      }
+
+      return true;
+    });
+  }, [likedTracks, searchQuery, selectedGenre, selectedArtist]);
 
   const handlePlayPlaylistFromRack = (playlist: Playlist) => {
     if (playlist.tracks.length > 0) {
@@ -216,16 +513,57 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         </div>
 
+        {/* Search input in Favorites view */}
+        {likedTracks.length > 0 && (
+          <div className="flex items-center gap-2.5 bg-black/60 border border-white/10 rounded-2xl px-3.5 py-2 shadow-inner">
+            <Search className="w-4 h-4 text-amber-400 shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar en tus favoritos por título, artista o género..."
+              className="w-full bg-transparent text-white font-mono text-xs focus:outline-none placeholder:text-zinc-500"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="p-1 rounded-full text-zinc-400 hover:text-white transition cursor-pointer"
+                title="Borrar búsqueda"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {searchQuery && (
+              <span className="text-[10px] font-mono text-amber-300 font-bold shrink-0">
+                {filteredLikedTracks.length} de {likedTracks.length}
+              </span>
+            )}
+          </div>
+        )}
+
         {likedTracks.length === 0 ? (
           <div className="p-12 text-center text-zinc-500 glass-card rounded-3xl">
             <Heart className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="text-lg font-medium text-white">No tienes canciones favoritas aún</p>
             <p className="text-sm">Toca el icono de corazón en cualquier canción para guardarla aquí.</p>
           </div>
+        ) : filteredLikedTracks.length === 0 ? (
+          <div className="p-8 text-center text-zinc-400 glass-card rounded-3xl space-y-2">
+            <p className="font-bold text-white text-base">No hay canciones que coincidan</p>
+            <p className="text-xs font-mono">No se encontraron favoritos con "{searchQuery}".</p>
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="mt-2 px-4 py-1.5 rounded-xl bg-amber-400 text-black font-bold text-xs"
+            >
+              Borrar filtro
+            </button>
+          </div>
         ) : favoritesViewMode === 'vinyl' ? (
           /* 3D Vinyl Records Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 pt-2">
-            {likedTracks.map((track, idx) => (
+            {filteredLikedTracks.map((track, idx) => (
               <VinylRecordCard
                 key={track.id}
                 track={track}
@@ -233,7 +571,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 isCurrent={currentTrack?.id === track.id}
                 isPlaying={isPlaying}
                 onPlay={() => {
-                  playTrack(track, likedTracks);
+                  playTrack(track, filteredLikedTracks);
                 }}
                 onRemove={() => removeLikedTrack(track.id)}
                 isEditingMode={isEditingMode}
@@ -242,13 +580,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {likedTracks.map((track, idx) => {
+            {filteredLikedTracks.map((track, idx) => {
               const bpm = bpmService.getTrackBpm(track);
               const tier = bpmService.getRpmTier(bpm);
               return (
               <div
                 key={track.id}
-                onClick={() => !isEditingMode && playTrack(track, likedTracks)}
+                onClick={() => !isEditingMode && playTrack(track, filteredLikedTracks)}
                 className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
                   isEditingMode ? 'cursor-default' : 'cursor-pointer'
                 } ${
@@ -633,18 +971,6 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     );
   }
 
-  const isVinylPlaylist = (p: Playlist) => {
-    return (
-      p.mediaType === 'vinyl' ||
-      p.description?.toLowerCase().includes('vinilo') ||
-      p.description?.toLowerCase().includes('lanzamiento oficial') ||
-      p.description?.toLowerCase().includes('álbum de vinilo')
-    );
-  };
-
-  const tapePlaylists = playlists.filter((p) => !isVinylPlaylist(p));
-  const vinylPlaylists = playlists.filter((p) => isVinylPlaylist(p));
-
   const handleLoadDemoVinyls = () => {
     const demos = [
       {
@@ -746,7 +1072,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       ? tapePlaylists
       : listFilter === 'vinyls'
       ? vinylPlaylists
-      : playlists;
+      : [...tapePlaylists, ...vinylPlaylists];
 
   return (
     <div className="space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48 select-none">
@@ -837,6 +1163,192 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </div>
       </div>
 
+      {/* ==============================================================
+          BARRA DE BÚSQUEDA Y FILTRADO AVANZADO (ARTISTAS, GÉNEROS, ETC.)
+         ============================================================== */}
+      <div className="rounded-2xl bg-black/60 border border-white/10 p-3 sm:p-4 space-y-3 shadow-xl backdrop-blur-md">
+        {/* Fila 1: Caja de búsqueda con icono, input, clear button y contador */}
+        <div className="flex items-center gap-2.5 bg-zinc-900/90 border border-white/10 focus-within:border-amber-400 rounded-xl px-3 py-2 transition shadow-inner">
+          <Search className="w-4 h-4 text-amber-400 shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por artista, género (rock, pop, metal...), disco, cinta o canción..."
+            className="w-full bg-transparent text-white font-mono text-xs sm:text-sm focus:outline-none placeholder:text-zinc-500"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              title="Borrar texto"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {hasActiveFilter && (
+            <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 px-2 py-0.5 rounded-full shrink-0">
+              {tapePlaylists.length + vinylPlaylists.length} coincidencia(s)
+            </span>
+          )}
+        </div>
+
+        {/* Fila 2: Filtros rápidos por género musical y selector de artistas */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {/* Pills de Género */}
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 no-scrollbar flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={() => setSelectedGenre('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition shrink-0 cursor-pointer ${
+                selectedGenre === 'all'
+                  ? 'bg-amber-400 text-black shadow-md'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5'
+              }`}
+            >
+              Todos los géneros
+            </button>
+            {LIBRARY_GENRES.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setSelectedGenre(selectedGenre === g.id ? 'all' : g.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition shrink-0 flex items-center gap-1 cursor-pointer ${
+                  selectedGenre === g.id
+                    ? 'bg-amber-400 text-black shadow-md'
+                    : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/5'
+                }`}
+              >
+                <span>{g.icon}</span>
+                <span>{g.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Selector de Artistas */}
+          {availableArtists.length > 0 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-1">
+                <Mic2 className="w-3 h-3 text-amber-400" />
+                <span className="hidden sm:inline">Artista:</span>
+              </span>
+              <select
+                value={selectedArtist}
+                onChange={(e) => setSelectedArtist(e.target.value)}
+                className="bg-zinc-900 border border-white/15 text-zinc-200 text-xs font-mono font-bold rounded-xl px-2.5 py-1.5 focus:border-amber-400 focus:outline-none cursor-pointer max-w-[160px] sm:max-w-[200px] truncate"
+              >
+                <option value="all">Todos los artistas ({availableArtists.length})</option>
+                {availableArtists.map((artist) => (
+                  <option key={artist} value={artist}>
+                    {artist}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Fila 3: Indicador de filtro activo con botón de reset */}
+        {hasActiveFilter && (
+          <div className="flex items-center justify-between pt-1 border-t border-white/10 text-xs font-mono">
+            <div className="flex items-center gap-2 flex-wrap text-zinc-400">
+              <span>Filtrado por:</span>
+              {searchQuery && (
+                <span className="px-2 py-0.5 rounded bg-white/10 text-white font-bold">
+                  "{searchQuery}"
+                </span>
+              )}
+              {selectedGenre !== 'all' && (
+                <span className="px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 font-bold border border-amber-400/30">
+                  Género: {LIBRARY_GENRES.find((g) => g.id === selectedGenre)?.label}
+                </span>
+              )}
+              {selectedArtist !== 'all' && (
+                <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                  Artista: {selectedArtist}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="text-amber-400 hover:text-amber-300 underline font-bold flex items-center gap-1 transition cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* CANCIONES COINCIDENTES ENCONTRADAS (SI EL FILTRO ESTÁ ACTIVO) */}
+      {hasActiveFilter && matchingTracks.length > 0 && (
+        <div className="rounded-2xl bg-black/40 border border-amber-500/30 p-3 sm:p-4 space-y-2.5 animate-in fade-in">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Music2 className="w-4 h-4 text-amber-400" />
+              <h3 className="text-xs sm:text-sm font-bold font-mono text-white">
+                Canciones coincidentes en tus discos y cintas ({matchingTracks.length}):
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowMatchingTracks(!showMatchingTracks)}
+              className="text-xs font-mono text-amber-400 hover:underline cursor-pointer"
+            >
+              {showMatchingTracks ? 'Ocultar' : 'Mostrar'}
+            </button>
+          </div>
+
+          {showMatchingTracks && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+              {matchingTracks.map(({ track, playlistName, mediaType }, idx) => (
+                <div
+                  key={`${track.id}_${idx}`}
+                  onClick={() => playTrack(track, undefined, false, mediaType)}
+                  className="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-amber-500/30 transition cursor-pointer group"
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-xs font-bold text-white truncate group-hover:text-amber-300">
+                      {track.title}
+                    </p>
+                    <p className="text-[10px] text-zinc-400 truncate">
+                      {track.artist}
+                    </p>
+                    <span className="inline-block text-[9px] font-mono text-amber-400/80 truncate">
+                      {mediaType === 'vinyl' ? '💽 ' : '📼 '} {playlistName}
+                    </span>
+                  </div>
+
+                  <div className="w-7 h-7 rounded-lg bg-amber-400 text-black flex items-center justify-center shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-105 transition shadow">
+                    <Play className="w-3.5 h-3.5 fill-black ml-0.5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ESTADO VACÍO CUANDO NO HAY COINCIDENCIAS */}
+      {hasActiveFilter && tapePlaylists.length === 0 && vinylPlaylists.length === 0 && (
+        <div className="p-8 text-center bg-black/40 border border-white/10 rounded-2xl space-y-2 animate-in fade-in">
+          <p className="font-rock text-lg text-white">NO SE ENCONTRARON DISCOS NI CINTAS</p>
+          <p className="text-xs text-zinc-400 font-mono">
+            No hay ningún álbum ni cinta que coincida con tus filtros actuales.
+          </p>
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="mt-2 px-4 py-2 rounded-xl bg-amber-400 text-black font-bold text-xs hover:bg-amber-300 transition cursor-pointer"
+          >
+            Limpiar filtros de búsqueda
+          </button>
+        </div>
+      )}
+
       {libraryViewMode === 'shelves' ? (
         <div className="space-y-12 animate-in fade-in">
           {/* 1. SECCIÓN SUPERIOR: ESTANTERÍA DE CINTAS (LISTAS & MIXTAPES) */}
@@ -925,7 +1437,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                Todos ({playlists.length})
+                Todos ({tapePlaylists.length + vinylPlaylists.length})
               </button>
               <button
                 type="button"
