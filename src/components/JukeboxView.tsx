@@ -602,16 +602,29 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
         >
           {isPlaying ? (
             <div className="relative flex items-center justify-center w-full h-full">
-              {/* Spinning Mini 45 RPM Vinyl */}
+              {/* Spinning Mini 45 RPM Vinyl with Album Cover Center Label */}
               <div
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-zinc-900 bg-zinc-950 flex items-center justify-center shadow-md animate-spin"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-zinc-900 bg-zinc-950 flex items-center justify-center shadow-md animate-spin relative overflow-hidden"
                 style={{
                   animationDuration: '1.8s',
                   background:
-                    'radial-gradient(circle, #f59e0b 0%, #d97706 25%, #18181b 30%, #09090b 100%)',
+                    'radial-gradient(circle, #27272a 0%, #18181b 45%, #09090b 70%, #000 100%)',
                 }}
               >
-                <div className="w-2.5 h-2.5 rounded-full bg-zinc-900 border border-white/40" />
+                {/* Center Label with Album Cover */}
+                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full overflow-hidden border border-zinc-700 relative z-10 shadow-inner">
+                  {currentTrack?.thumbnail ? (
+                    <img
+                      src={currentTrack.thumbnail}
+                      alt="Etiqueta Vinilo"
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-amber-500" />
+                  )}
+                  {/* Spindle hole */}
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-black border border-white/40" />
+                </div>
               </div>
               {/* Warm interior spotlight */}
               <div className="absolute inset-0 bg-amber-500/10 mix-blend-screen pointer-events-none" />

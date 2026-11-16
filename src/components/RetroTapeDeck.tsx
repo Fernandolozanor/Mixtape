@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useId, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -513,37 +513,8 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
    * Curves the complete song title circularly along the upper arc of the label,
    * fitting even long song titles without clipping, rotating at exact 33⅓ RPM.
    */
-  const labelUniqueId = useId().replace(/:/g, '');
-
-  const renderSpinningVinylLabel = (size: 'sm' | 'md' | 'lg') => {
+  const renderSpinningVinylLabel = (_size: 'sm' | 'md' | 'lg') => {
     const titleText = (writtenTitle || currentTrack?.title || 'VINILO MASTER').trim().toUpperCase();
-    const artistText = (writtenArtist || currentTrack?.artist || 'COLECCIÓN EXCLUSIVA').trim().toUpperCase();
-
-    const titleArcId = `titleArc-${labelUniqueId}-${size}`;
-    const artistArcId = `artistArc-${labelUniqueId}-${size}`;
-
-    // Dynamic font sizing proportional to string length so complete title fits comfortably
-    const titleLen = titleText.length;
-    const titleFontSize =
-      titleLen <= 16
-        ? 12
-        : titleLen <= 26
-        ? 10.5
-        : titleLen <= 38
-        ? 9
-        : titleLen <= 52
-        ? 7.8
-        : 6.8;
-
-    const artistLen = artistText.length;
-    const artistFontSize =
-      artistLen <= 14
-        ? 10
-        : artistLen <= 24
-        ? 8.5
-        : artistLen <= 36
-        ? 7.2
-        : 6.2;
 
     return (
       <div
@@ -558,129 +529,39 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
       >
         {/* Rotating Circular Vinyl Label: Exact 33⅓ RPM speed scaled by pitch playbackRate */}
         <div
-          className="w-full h-full rounded-full relative overflow-hidden will-change-transform"
+          className="w-full h-full rounded-full relative overflow-hidden will-change-transform shadow-[inset_0_0_8px_rgba(0,0,0,0.8),0_0_10px_rgba(0,0,0,0.7)] border border-zinc-700 bg-zinc-950"
           style={{
             animation: `vinyl-spin ${(1.8 / (playbackRate || 1)).toFixed(2)}s linear infinite`,
             animationPlayState: isPlaying ? 'running' : 'paused',
             transformOrigin: 'center center',
           }}
         >
-          <svg
-            viewBox="0 0 200 200"
-            className="w-full h-full"
-            style={{
-              mixBlendMode: 'multiply',
-              filter: 'drop-shadow(0 0 0.5px rgba(0,0,0,0.4))',
-            }}
-          >
-            <defs>
-              {/* Upper Circular Arc for Title (spans 260 deg clockwise, centered at top apex) */}
-              <path
-                id={titleArcId}
-                d="M 47.9,143.7 A 68,68 0 1,1 152.1,143.7"
-                fill="none"
-              />
-              {/* Lower Circular Arc for Artist (spans 100 deg, centered at bottom apex) */}
-              <path
-                id={artistArcId}
-                d="M 47.9,143.7 A 68,68 0 0,0 152.1,143.7"
-                fill="none"
-              />
-            </defs>
-
-            {/* Concentric authentic record label grooves */}
-            <circle
-              cx="100"
-              cy="100"
-              r="96"
-              fill="none"
-              stroke="#52525b"
-              strokeWidth="1.5"
-              strokeOpacity="0.4"
+          {/* Album Cover Artwork as the Center Label */}
+          {currentTrack?.thumbnail ? (
+            <img
+              src={currentTrack.thumbnail}
+              alt={titleText}
+              className="w-full h-full object-cover rounded-full select-none pointer-events-none"
             />
-            <circle
-              cx="100"
-              cy="100"
-              r="92"
-              fill="none"
-              stroke="#71717a"
-              strokeWidth="0.8"
-              strokeOpacity="0.3"
-            />
-            <circle
-              cx="100"
-              cy="100"
-              r="34"
-              fill="none"
-              stroke="#a1a1aa"
-              strokeWidth="0.8"
-              strokeOpacity="0.35"
-            />
+          ) : (
+            <div className="w-full h-full bg-[#f4f3ef] flex items-center justify-center text-[8px] font-bold text-zinc-900">
+              {titleText}
+            </div>
+          )}
 
-            {/* Circular Song Title curved along the upper arc */}
-            <text
-              fontFamily="Georgia, 'Times New Roman', serif"
-              fontSize={titleFontSize}
-              fontWeight="bold"
-              fill="#09090b"
-              letterSpacing={titleLen > 40 ? '0.4' : '0.8'}
-            >
-              <textPath href={`#${titleArcId}`} startOffset="50%" textAnchor="middle">
-                {titleText}
-              </textPath>
-            </text>
+          {/* Concentric authentic record label grooves */}
+          <div className="absolute inset-0 rounded-full border-2 border-black/35 pointer-events-none" />
+          <div className="absolute inset-[15%] rounded-full border border-white/20 pointer-events-none" />
 
-            {/* Technical Silkscreen Markings above & below spindle */}
-            <text
-              x="100"
-              y="85"
-              textAnchor="middle"
-              fontFamily="monospace"
-              fontSize="6.5"
-              fontWeight="bold"
-              fill="#52525b"
-              letterSpacing="1.5"
-            >
-              STEREO • {(currentTrack?.source || 'YOUTUBE').toUpperCase()}
-            </text>
+          {/* Central brass spindle grommet & hole */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-zinc-950 border-2 border-amber-600 shadow-inner z-20 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-black border border-zinc-800" />
+          </div>
 
-            {/* Spindle hole grommet in the exact center */}
-            <circle
-              cx="100"
-              cy="100"
-              r="8.5"
-              fill="#09090b"
-              stroke="#d97706"
-              strokeWidth="2.2"
-            />
-            <circle cx="100" cy="100" r="3.5" fill="#000000" />
-
-            <text
-              x="100"
-              y="118"
-              textAnchor="middle"
-              fontFamily="monospace"
-              fontSize="5.8"
-              fontWeight="bold"
-              fill="#71717a"
-              letterSpacing="1"
-            >
-              33⅓ RPM • LP
-            </text>
-
-            {/* Circular Artist Name curved along the lower arc */}
-            <text
-              fontFamily="ui-sans-serif, system-ui, sans-serif"
-              fontSize={artistFontSize}
-              fontWeight="bold"
-              fill="#991b1b"
-              letterSpacing="0.8"
-            >
-              <textPath href={`#${artistArcId}`} startOffset="50%" textAnchor="middle">
-                {artistText}
-              </textPath>
-            </text>
-          </svg>
+          {/* Micro 33⅓ RPM badge */}
+          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.2 rounded-full bg-black/80 backdrop-blur-[1px] border border-white/20 text-[6px] font-mono font-bold text-amber-300 uppercase tracking-widest pointer-events-none select-none">
+            33⅓ RPM
+          </div>
         </div>
       </div>
     );

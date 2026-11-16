@@ -318,12 +318,21 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                         alt="Vinyl Record"
                         className="w-full h-full object-cover rounded-full pointer-events-none select-none"
                       />
-                      {/* Center Spindle Label */}
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[34%] h-[34%] rounded-full bg-[#f6f5f0] border border-zinc-400 flex flex-col items-center justify-center p-1 text-center shadow-inner">
-                        <div className="w-2.5 h-2.5 rounded-full bg-zinc-950 border border-zinc-700 shadow-inner mb-0.5" />
-                        <span className="text-[6.5px] font-mono-retro font-black uppercase text-zinc-700 leading-none truncate max-w-full">
-                          LP 33⅓
-                        </span>
+                      {/* Center Spindle Label with Album Cover Artwork */}
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full overflow-hidden border-2 border-zinc-800 shadow-[inset_0_0_8px_rgba(0,0,0,0.8),0_0_8px_rgba(0,0,0,0.6)] bg-zinc-950 pointer-events-none select-none">
+                        <img
+                          src={coverImage}
+                          alt={album.name}
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                        {/* Concentric label grooved rings overlay */}
+                        <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+                        <div className="absolute inset-[15%] rounded-full border border-black/30 pointer-events-none" />
+
+                        {/* Center Spindle Hole with brass grommet */}
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-zinc-950 border-2 border-amber-600 shadow-inner z-20 flex items-center justify-center">
+                          <div className="w-0.5 h-0.5 rounded-full bg-black" />
+                        </div>
                       </div>
                     </div>
                   </div>

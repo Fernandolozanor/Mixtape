@@ -77,37 +77,30 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
               }`}
             />
 
-            {/* White Circular Center Label with printed song title & artist */}
+            {/* Circular Center Label with Album Cover Artwork */}
             <div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[34%] h-[34%] rounded-full flex flex-col items-center justify-center text-center px-1.5 overflow-hidden pointer-events-none select-none z-10 bg-[#f4f3ef] shadow-inner border border-zinc-400/40"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full overflow-hidden pointer-events-none select-none z-10 border-2 border-zinc-800 shadow-[inset_0_0_8px_rgba(0,0,0,0.7),0_0_10px_rgba(0,0,0,0.5)] bg-zinc-950"
             >
-              {/* Spindle hole in center */}
-              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-zinc-950 border border-zinc-700 shadow-inner z-20" />
+              {track.thumbnail ? (
+                <img
+                  src={track.thumbnail}
+                  alt={track.title}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#f4f3ef] flex flex-col items-center justify-center p-1 text-center">
+                  <span className="text-[7.5px] font-bold text-zinc-800 line-clamp-1">{track.title}</span>
+                </div>
+              )}
 
-              {/* Label Top Header */}
-              <span className="text-[6.5px] sm:text-[7.5px] font-mono-retro font-extrabold tracking-widest text-zinc-600 uppercase leading-none truncate max-w-full mb-0.5">
-                STEREO • 33⅓
-              </span>
+              {/* Concentric vinyl label grooved rings overlay */}
+              <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+              <div className="absolute inset-[15%] rounded-full border border-black/35 pointer-events-none" />
 
-              {/* Song Title printed on center label */}
-              <p
-                className="text-[7.5px] sm:text-[9px] font-bold font-serif text-zinc-950 leading-[1.05] line-clamp-2 px-1 max-w-full"
-                style={{
-                  fontFamily: 'Georgia, "Times New Roman", serif',
-                  textShadow: '0 0 1px rgba(0,0,0,0.15)',
-                }}
-                title={track.title}
-              >
-                {track.title}
-              </p>
-
-              {/* Artist Name & Source Stamp */}
-              <p className="text-[6.5px] sm:text-[7.5px] font-mono font-bold text-zinc-700 truncate max-w-full px-1 mt-0.5">
-                {track.artist}
-              </p>
-              <span className="text-[5.5px] sm:text-[6px] font-mono uppercase font-black tracking-widest text-red-700/80 mt-0.5">
-                {(track.source || 'YouTube')}
-              </span>
+              {/* Central Spindle Hole with brass grommet */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-zinc-950 border-2 border-amber-600 shadow-inner z-20 flex items-center justify-center">
+                <div className="w-1 h-1 rounded-full bg-black border border-zinc-700" />
+              </div>
             </div>
           </div>
         </div>
