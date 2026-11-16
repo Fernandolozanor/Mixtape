@@ -20,7 +20,6 @@ import { KidsModeModal } from './components/KidsModeModal';
 import { ParentalExitModal } from './components/ParentalExitModal';
 import { AccessGateModal } from './components/AccessGateModal';
 import { AdminLicenseModal } from './components/AdminLicenseModal';
-import { RetroTapeDeck } from './components/RetroTapeDeck';
 import { ReggaetonPrankModal } from './components/ReggaetonPrankModal';
 import { SpotifyCsvTapeModal } from './components/SpotifyCsvTapeModal';
 import { isReggaetonTag, shouldTriggerReggaetonJoke } from './services/prankService';
@@ -215,12 +214,6 @@ const AppContent: React.FC = () => {
           </div>
         ) : null}
 
-        {/* Subtle Ambient 80s Rock Tape on the right lateral side (Large screens, hidden in Kids Mode) */}
-        {!isKidsMode && (
-          <div className="fixed right-8 bottom-28 pointer-events-none opacity-25 hover:opacity-45 transition-opacity hidden xl:block z-0">
-            <RetroTapeDeck variant="ambient-lateral" />
-          </div>
-        )}
 
         {isKidsMode ? (
           <KidsTab onOpenExitModal={() => setIsParentalExitOpen(true)} />
