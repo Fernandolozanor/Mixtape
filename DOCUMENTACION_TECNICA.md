@@ -161,8 +161,12 @@ Implementado en `VinylCoverFlow.tsx` y `VinylRecordCard.tsx`:
 * **Modo Ampliado de Parrilla de Etiquetas (*Zoom Rack*):**
   * Botón dedicado "Ampliar" en la barra de herramientas y en el visor de cristal de la gramola.
   * Abre una parrilla en alta definición a pantalla completa donde leer cómodamente títulos y artistas completos en formato cartel retro de gran tamaño con selector interactivo y navegación por páginas.
-* **Mecanismo de Monedas y Créditos de 25¢:**
-  * Ranura interactiva con sonido físico de inserción de moneda (`playJukeboxCoinDrop`), aviso temático y persistencia multi-dispositivo en tiempo real vía código QR (`mixtape_jukebox_credits`).
+* **Máxima Optimización de Espacio Vertical (Sección Favoritos):**
+  * **Eliminación del Mecanismo de Monedas:** Se retiraron por completo los elementos de monedas y créditos para simplificar la interfaz y evitar elementos no musicales.
+  * **Cabecera Ultra-Compacta:** En modo Jukebox, la cabecera pasa de ocupar 140 px a una barra estilizada de solo 38 px con selector de vistas integrado (`Jukebox | Vinilos | Lista`).
+  * **Barra de Control Unificada:** Se fusionaron los controles superiores e inferiores en una única barra compacta que incluye reproducción, modo aleatorio, paginador (`Pág. X/Y`) y botón de ampliación.
+  * **Ajuste Automático a la Pantalla (`calc(100dvh - 150px)`):** La máquina se escala automáticamente para verse íntegra en cualquier móvil sin necesidad de hacer scroll vertical.
+  * **Búsqueda Colapsable:** La barra de búsqueda permanece recogida mediante un icono en la cabecera, liberando otros 50 px de espacio útil.
 
 ---
 

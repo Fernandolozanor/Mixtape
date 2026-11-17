@@ -177,6 +177,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
   // Search and Filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFavoritesSearch, setShowFavoritesSearch] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [selectedArtist, setSelectedArtist] = useState<string>('all');
   const [showMatchingTracks, setShowMatchingTracks] = useState(true);
@@ -459,140 +460,239 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
   // 1. Favorites view
   if (isFavoritesView) {
+    const isJukebox = favoritesViewMode === 'jukebox';
+
     return (
-      <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div
-              className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg shrink-0"
-              style={{
-                background: currentTheme.gradient,
-                boxShadow: `0 8px 24px rgba(${currentTheme.rgb}, 0.35)`,
-              }}
-            >
-              <Heart className="w-10 h-10 fill-white text-white" />
-            </div>
-            <div>
-              <p
-                className="text-xs uppercase font-bold tracking-wider"
-                style={{ color: currentTheme.accent }}
-              >
-                Gramola Clásica • Hit Parade
-              </p>
-              <h1 className="text-3xl font-extrabold text-white">Jukebox de Favoritos</h1>
-              <p className="text-sm text-zinc-400">{likedTracks.length} canciones en la máquina</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {likedTracks.length > 0 && !isEditingMode && (
-              <button
-                onClick={() => {
-                  playTrack(likedTracks[0], likedTracks, false, undefined, 'favorites');
+      <div
+        className={`w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden ${
+          isJukebox
+            ? 'space-y-1.5 sm:space-y-2.5 pb-20 sm:pb-28'
+            : 'space-y-5 sm:space-y-6 pb-40 sm:pb-48'
+        }`}
+      >
+        {/* Header: Ultra-compact when in Jukebox mode to gain maximum vertical space */}
+        {isJukebox ? (
+          <div className="flex items-center justify-between gap-2 bg-black/50 px-3 py-1.5 rounded-2xl border border-white/10 shadow-md">
+            <div className="flex items-center gap-2 min-w-0">
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md shrink-0"
+                style={{
+                  background: currentTheme.gradient,
+                  boxShadow: `0 4px 12px rgba(${currentTheme.rgb}, 0.3)`,
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-white font-semibold shadow-lg transition theme-btn text-sm"
               >
-                <Play className="w-4 h-4 fill-white" />
-                <span>Reproducir Todo</span>
-              </button>
-            )}
-
-            {/* View switcher: Jukebox vs Vinilos vs Lista */}
-            {likedTracks.length > 0 && (
-              <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/10 shadow-inner">
-                <button
-                  onClick={() => handleSelectFavoritesViewMode('jukebox')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    favoritesViewMode === 'jukebox'
-                      ? 'bg-amber-400 text-black shadow-md font-bold'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                  title="Vista Gramola Jukebox 80s"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Jukebox</span>
-                </button>
-                <button
-                  onClick={() => handleSelectFavoritesViewMode('vinyl')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    favoritesViewMode === 'vinyl'
-                      ? 'bg-amber-400 text-black shadow-md font-bold'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                  title="Vista Discos de Vinilo"
-                >
-                  <Disc3 className="w-3.5 h-3.5" />
-                  <span>Vinilos</span>
-                </button>
-                <button
-                  onClick={() => handleSelectFavoritesViewMode('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-                    favoritesViewMode === 'list'
-                      ? 'bg-amber-400 text-black shadow-md font-bold'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                  title="Vista Lista de Canciones"
-                >
-                  <List className="w-3.5 h-3.5" />
-                  <span>Lista</span>
-                </button>
+                <Heart className="w-4 h-4 fill-white text-white" />
               </div>
-            )}
+              <div className="min-w-0">
+                <h1 className="text-sm font-extrabold text-white truncate leading-tight">
+                  Jukebox de Favoritos
+                </h1>
+                <p className="text-[10px] text-zinc-400 font-mono leading-none">
+                  {likedTracks.length} canciones
+                </p>
+              </div>
+            </div>
 
-            {likedTracks.length > 0 && (
-              <button
-                onClick={() => setIsEditingMode(!isEditingMode)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-semibold transition border ${
-                  isEditingMode
-                    ? 'bg-white text-black border-white shadow-md'
-                    : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
-                }`}
-              >
-                {isEditingMode ? (
-                  <>
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Listo</span>
-                  </>
-                ) : (
-                  <>
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Editar / Borrar</span>
-                  </>
-                )}
-              </button>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Search toggle icon button */}
+              {likedTracks.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowFavoritesSearch(!showFavoritesSearch)}
+                  className={`p-1.5 rounded-xl border text-xs transition cursor-pointer ${
+                    showFavoritesSearch || searchQuery
+                      ? 'bg-amber-400 text-black border-amber-400 shadow'
+                      : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10'
+                  }`}
+                  title="Buscar en favoritos"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                </button>
+              )}
 
-            {openSettingsModal && (
-              <button
-                onClick={openSettingsModal}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition cursor-pointer"
-                title="Abrir Ajustes"
-              >
-                <Settings className="w-3.5 h-3.5 text-amber-400" />
-                <span>Ajustes</span>
-              </button>
-            )}
+              {/* View switcher: Jukebox vs Vinilos vs Lista */}
+              {likedTracks.length > 0 && (
+                <div className="flex items-center bg-black/60 p-0.5 rounded-xl border border-white/10 shadow-inner">
+                  <button
+                    onClick={() => handleSelectFavoritesViewMode('jukebox')}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-400 text-black shadow cursor-pointer"
+                    title="Vista Gramola Jukebox"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span className="hidden xs:inline">Jukebox</span>
+                  </button>
+                  <button
+                    onClick={() => handleSelectFavoritesViewMode('vinyl')}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition cursor-pointer"
+                    title="Vista Discos de Vinilo"
+                  >
+                    <Disc3 className="w-3 h-3" />
+                    <span className="hidden xs:inline">Vinilos</span>
+                  </button>
+                  <button
+                    onClick={() => handleSelectFavoritesViewMode('list')}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition cursor-pointer"
+                    title="Vista Lista de Canciones"
+                  >
+                    <List className="w-3 h-3" />
+                    <span className="hidden xs:inline">Lista</span>
+                  </button>
+                </div>
+              )}
 
-            {isEditingMode && likedTracks.length > 0 && (
-              <button
-                onClick={() => {
-                  if (confirm('¿Vaciar toda la lista de canciones favoritas?')) {
-                    clearLikedTracks();
-                    setIsEditingMode(false);
-                  }
-                }}
-                className="px-3.5 py-2 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition border border-red-500/20"
-                title="Vaciar favoritos"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+              {/* Edit / Delete mode toggle */}
+              {likedTracks.length > 0 && (
+                <button
+                  onClick={() => setIsEditingMode(!isEditingMode)}
+                  className={`p-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+                    isEditingMode
+                      ? 'bg-white text-black border-white shadow'
+                      : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                  }`}
+                  title="Editar / Borrar canciones de favoritos"
+                >
+                  {isEditingMode ? <Check className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
+                </button>
+              )}
+
+              {/* Settings button */}
+              {openSettingsModal && (
+                <button
+                  onClick={openSettingsModal}
+                  className="p-1.5 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition cursor-pointer"
+                  title="Abrir Ajustes"
+                >
+                  <Settings className="w-3.5 h-3.5 text-amber-400" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Standard Header for Vinyl Grid and List View */
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shadow-lg shrink-0"
+                style={{
+                  background: currentTheme.gradient,
+                  boxShadow: `0 8px 24px rgba(${currentTheme.rgb}, 0.35)`,
+                }}
+              >
+                <Heart className="w-8 h-8 sm:w-10 sm:h-10 fill-white text-white" />
+              </div>
+              <div>
+                <p
+                  className="text-xs uppercase font-bold tracking-wider"
+                  style={{ color: currentTheme.accent }}
+                >
+                  Colección de Favoritos
+                </p>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Tus Favoritos</h1>
+                <p className="text-xs sm:text-sm text-zinc-400">{likedTracks.length} canciones guardadas</p>
+              </div>
+            </div>
 
-        {/* Search input in Favorites view */}
-        {likedTracks.length > 0 && (
-          <div className="flex items-center gap-2.5 bg-black/60 border border-white/10 rounded-2xl px-3.5 py-2 shadow-inner">
+            <div className="flex flex-wrap items-center gap-2">
+              {likedTracks.length > 0 && !isEditingMode && (
+                <button
+                  onClick={() => {
+                    playTrack(likedTracks[0], likedTracks, false, undefined, 'favorites');
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-white font-semibold shadow-lg transition theme-btn text-sm"
+                >
+                  <Play className="w-4 h-4 fill-white" />
+                  <span>Reproducir Todo</span>
+                </button>
+              )}
+
+              {likedTracks.length > 0 && (
+                <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/10 shadow-inner">
+                  <button
+                    onClick={() => handleSelectFavoritesViewMode('jukebox')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Jukebox</span>
+                  </button>
+                  <button
+                    onClick={() => handleSelectFavoritesViewMode('vinyl')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      favoritesViewMode === 'vinyl'
+                        ? 'bg-amber-400 text-black shadow-md font-bold'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <Disc3 className="w-3.5 h-3.5" />
+                    <span>Vinilos</span>
+                  </button>
+                  <button
+                    onClick={() => handleSelectFavoritesViewMode('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      favoritesViewMode === 'list'
+                        ? 'bg-amber-400 text-black shadow-md font-bold'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <List className="w-3.5 h-3.5" />
+                    <span>Lista</span>
+                  </button>
+                </div>
+              )}
+
+              {likedTracks.length > 0 && (
+                <button
+                  onClick={() => setIsEditingMode(!isEditingMode)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-semibold transition border ${
+                    isEditingMode
+                      ? 'bg-white text-black border-white shadow-md'
+                      : 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                  }`}
+                >
+                  {isEditingMode ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Listo</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Editar / Borrar</span>
+                    </>
+                  )}
+                </button>
+              )}
+
+              {isEditingMode && likedTracks.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (confirm('¿Vaciar toda la lista de canciones favoritas?')) {
+                      clearLikedTracks();
+                      setIsEditingMode(false);
+                    }
+                  }}
+                  className="px-3.5 py-2 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold transition border border-red-500/20 cursor-pointer"
+                  title="Vaciar favoritos"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {openSettingsModal && (
+                <button
+                  onClick={openSettingsModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition cursor-pointer"
+                >
+                  <Settings className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Ajustes</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Collapsible / Active Search Bar in Favorites */}
+        {likedTracks.length > 0 && (!isJukebox || showFavoritesSearch || searchQuery) && (
+          <div className="flex items-center gap-2.5 bg-black/60 border border-white/10 rounded-2xl px-3.5 py-1.5 sm:py-2 shadow-inner">
             <Search className="w-4 h-4 text-amber-400 shrink-0" />
             <input
               type="text"
@@ -600,6 +700,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar en tus favoritos por título, artista o género..."
               className="w-full bg-transparent text-white font-mono text-xs focus:outline-none placeholder:text-zinc-500"
+              autoFocus={showFavoritesSearch && !searchQuery}
             />
             {searchQuery && (
               <button

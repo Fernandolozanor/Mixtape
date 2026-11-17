@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import type { Track } from '../types/music';
-import { playJukeboxMechanicalClick, playJukeboxCoinDrop } from '../utils/jukeboxAudio';
+import { playJukeboxMechanicalClick } from '../utils/jukeboxAudio';
 
 interface JukeboxViewProps {
   tracks: Track[];
@@ -62,22 +62,7 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
 
   const [currentPage, setCurrentPage] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [credits, setCredits] = useState(() => {
-    const s = localStorage.getItem('mixtape_jukebox_credits');
-    return s ? parseInt(s, 10) : 2;
-  });
-  const [coinMessage, setCoinMessage] = useState<string | null>(null);
   const [pressedKey, setPressedKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    const handleRemoteSettings = (e: any) => {
-      if (e.detail?.jukeboxCredits !== undefined) {
-        setCredits(e.detail.jukeboxCredits);
-      }
-    };
-    window.addEventListener('mixtape:remote-settings-sync', handleRemoteSettings);
-    return () => window.removeEventListener('mixtape:remote-settings-sync', handleRemoteSettings);
-  }, []);
 
   // Close zoomed title strip rack on Escape key
   useEffect(() => {
@@ -141,18 +126,6 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
   const handleSelectTrack = (track: Track) => {
     playJukeboxMechanicalClick();
     onPlayTrack(track, tracks);
-  };
-
-  // Handle coin insert easter egg
-  const handleInsertCoin = () => {
-    playJukeboxCoinDrop();
-    setCredits((prev) => {
-      const next = prev + 1;
-      localStorage.setItem('mixtape_jukebox_credits', String(next));
-      return next;
-    });
-    setCoinMessage('★ 25¢ INSERTADO • +1 CRÉDITO ★');
-    setTimeout(() => setCoinMessage(null), 2500);
   };
 
   // Keypad press handler
@@ -332,13 +305,13 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
 
   return (
     <div className="w-full flex flex-col items-center">
-      {/* Jukebox Quick Toolbar */}
-      <div className="w-full max-w-2xl flex flex-wrap items-center justify-between gap-2.5 px-3 py-2 mb-3 bg-black/60 rounded-2xl border border-white/10 shadow-lg font-mono text-xs">
-        <div className="flex items-center gap-2">
+      {/* Single Ultra-Compact Jukebox Controller Bar (Gains maximum vertical space) */}
+      <div className="w-full max-w-lg flex items-center justify-between gap-1.5 px-3 py-1.5 mb-1 bg-black/75 backdrop-blur-md rounded-2xl border border-white/10 shadow-lg font-mono text-xs select-none">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={handlePlayToggle}
-            className={`px-3.5 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shadow-md transition active:scale-95 cursor-pointer ${
+            className={`px-3 py-1 rounded-xl font-bold flex items-center gap-1.5 shadow transition active:scale-95 cursor-pointer text-xs ${
               isPlaying
                 ? 'bg-amber-400 text-black shadow-amber-500/30'
                 : 'bg-white/10 text-white hover:bg-white/20'
@@ -361,48 +334,62 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
             type="button"
             onClick={handleShufflePlay}
             disabled={tracks.length === 0}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
+            className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition active:scale-95 flex items-center gap-1 cursor-pointer disabled:opacity-40"
             title="Reproducción aleatoria"
           >
             <Shuffle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Aleatorio</span>
+            <span className="hidden sm:inline text-xs">Aleatorio</span>
           </button>
         </div>
 
-        {/* Coin & Credit status */}
-        <div className="flex items-center gap-2">
-          <div
-            onClick={handleInsertCoin}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer hover:bg-amber-500/25 transition select-none active:scale-95"
-            title="Haz clic para echar una moneda de 25¢"
-          >
-            <span className="text-[11px] font-bold">🪙 25¢</span>
-            <span className="text-[10px] text-zinc-400 hidden sm:inline">•</span>
-            <span className="text-[10px] font-bold text-amber-400">{credits} CRÉDITOS</span>
+        {/* Integrated Compact Page Flipper */}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-xl border border-white/5">
+            <button
+              type="button"
+              onClick={() => {
+                playJukeboxMechanicalClick();
+                setCurrentPage((p) => Math.max(0, p - 1));
+              }}
+              disabled={currentPage === 0}
+              className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 cursor-pointer active:scale-90"
+              title="Página anterior"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-[10px] font-bold text-amber-400 font-mono tracking-wider">
+              {currentPage + 1}/{totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                playJukeboxMechanicalClick();
+                setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
+              }}
+              disabled={currentPage >= totalPages - 1}
+              className="p-1 text-zinc-400 hover:text-white disabled:opacity-20 cursor-pointer active:scale-90"
+              title="Página siguiente"
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
+        )}
 
-          {/* Full-view Title Strip Rack Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsZoomed(true)}
-            className="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 font-mono text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm"
-            title="Ver la parrilla completa de etiquetas en grande"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-            <span className="text-[10.5px] font-bold">Ampliar</span>
-          </button>
-        </div>
+        {/* Full-view Title Strip Rack Toggle */}
+        <button
+          type="button"
+          onClick={() => setIsZoomed(true)}
+          className="px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 font-mono text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm"
+          title="Ver la parrilla completa de etiquetas en grande"
+        >
+          <ZoomIn className="w-3.5 h-3.5" />
+          <span className="text-[11px] font-bold">Ampliar</span>
+        </button>
       </div>
 
-      {coinMessage && (
-        <div className="mb-2 px-3 py-1 rounded-xl bg-amber-400 text-black font-mono font-bold text-xs tracking-wider animate-bounce shadow-lg">
-          {coinMessage}
-        </div>
-      )}
-
-      {/* JUKEBOX MACHINE WRAPPER */}
+      {/* JUKEBOX MACHINE WRAPPER (Auto-scales to viewport height so full machine is visible without scrolling) */}
       <div
-        className="relative w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 border border-white/10 z-10"
+        className="relative w-auto max-w-sm sm:max-w-md md:max-w-lg max-h-[calc(100dvh-150px)] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 border border-white/10 z-10 mx-auto"
         style={{
           aspectRatio: '1696 / 2528',
           boxShadow: isPlaying
@@ -616,25 +603,6 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
           </div>
         </div>
 
-        {/* COIN SLOT (25¢ Coin Mechanism) */}
-        <div
-          onClick={handleInsertCoin}
-          className="absolute z-30 cursor-pointer group"
-          style={{
-            top: '55.2%',
-            left: '56.8%',
-            width: '7.8%',
-            height: '8.3%',
-          }}
-          title="Ranura de 25¢ • Haz clic para echar una moneda"
-        >
-          <div className="w-full h-full rounded border border-transparent group-hover:border-amber-400/50 group-hover:bg-amber-400/10 transition flex items-center justify-center">
-            <span className="opacity-0 group-hover:opacity-100 text-[8px] font-mono font-black text-amber-300 drop-shadow">
-              25¢
-            </span>
-          </div>
-        </div>
-
         {/* RECORD MECHANISM INSPECTION WINDOW (Displays spinning vinyl when playing) */}
         <div
           className="absolute z-30 overflow-hidden flex items-center justify-center pointer-events-none"
@@ -681,49 +649,6 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
           )}
         </div>
       </div>
-
-      {/* JUKEBOX PAGE FLIPPER & CONTROLS */}
-      <div className="w-full max-w-2xl mt-3 flex items-center justify-between gap-3 px-4 py-2.5 bg-black/70 rounded-2xl border border-white/10 shadow-lg font-mono text-xs">
-        <button
-          type="button"
-          onClick={() => {
-            playJukeboxMechanicalClick();
-            setCurrentPage((p) => Math.max(0, p - 1));
-          }}
-          disabled={currentPage === 0}
-          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white flex items-center gap-1 transition active:scale-95 cursor-pointer"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Pág. Anterior</span>
-        </button>
-
-        <div className="flex flex-col items-center">
-          <span className="font-bold text-amber-400 tracking-wider">
-            PÁGINA {currentPage + 1} DE {totalPages}
-          </span>
-          <span className="text-[10px] text-zinc-400">
-            {tracks.length} {tracks.length === 1 ? 'favorita' : 'favoritas en la gramola'}
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            playJukeboxMechanicalClick();
-            setCurrentPage((p) => Math.min(totalPages - 1, p + 1));
-          }}
-          disabled={currentPage >= totalPages - 1}
-          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-white flex items-center gap-1 transition active:scale-95 cursor-pointer"
-        >
-          <span className="hidden sm:inline">Pág. Siguiente</span>
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Tip helper */}
-      <p className="text-[11px] font-mono text-zinc-500 mt-2 text-center">
-        💡 Toca cualquier etiqueta para hacer sonar la canción • Usa "Ampliar" para ver todas las etiquetas en grande
-      </p>
 
       {/* FULLSCREEN TITLE STRIPS RACK MODAL (Authentic Vintage Jukebox Display) */}
       {isZoomed && (
