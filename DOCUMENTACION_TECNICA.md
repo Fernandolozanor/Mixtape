@@ -127,14 +127,17 @@ flowchart TD
 
 Implementado en `VinylCoverFlow.tsx` y `VinylRecordCard.tsx`:
 
-### 4.1. Inercia Cinemática Sin Límites (Recorrido de Colección Completa)
-* **Eliminación de Topes Artificiales:** La inercia escala dinámicamente según la velocidad del gesto hasta abarcar la totalidad de la colección (`vinyls.length - 1`).
+### 4.1. Inercia Cinemática Fluida a 60/120 FPS (Sin Trompicones)
+* **Eliminación de Saltos y Trompicones:**
+  * **Interpolación $C^1$ Continua en Profundidad Z:** Se unificó la función matemática de `translateZ` eliminando la discontinuidad de 65 píxeles que ocurría al aproximarse a `offset = 0`.
+  * **Reemplazo de Filtros CSS por Capas Aceleradas:** Se erradicó el uso de `filter: brightness()` en favor de una superposición oscura con `opacity` (`bg-black`), ejecutada íntegramente por el compositor GPU (0 re-rasterizaciones en CPU).
+  * **Muestreo Throttled por `requestAnimationFrame`:** El puntero y eventos táctiles actualizan el estado React a la frecuencia nativa de refresco de pantalla (60/120 Hz) sin provocar ciclos redundantes de render.
+  * **Culling Inteligente de Reflejos y Discos Ocultos:** Los reflejos con máscara degradada se renderizan exclusivamente en los 3 discos centrales (`absOffset <= 2.2`), y los componentes internos del vinilo físico solo se montan en el área activa (`absOffset < 1.0`).
 * **Fórmula de Impulso Dinámico:**
-  $$\text{totalJump} = \text{round}\left(-\frac{\Delta x}{\text{step}} - \text{sign}(v) \cdot \left(v^{1.3} \cdot k_{\text{base}} + \left(\frac{v - v_0}{\Delta v}\right)^{1.35} \cdot N_{\text{total}}\right)\right)$$
+  $$\text{totalJump} = \text{round}\left(-\frac{\Delta x}{\text{step}} - \text{sign}(v) \cdot \left(v^{1.25} \cdot k_{\text{base}} + \left(\frac{v - v_0}{\Delta v}\right)^{1.3} \cdot N_{\text{total}}\right)\right)$$
   * Un deslizamiento suave avanza 1 o 2 discos.
-  * Un golpe de dedo (*flick*) suficientemente enérgico ($v > 1.2\text{ px/ms}$ escalando hasta $2.3\text{ px/ms}$) recorre la colección de extremo a extremo en un solo movimiento.
-* **Curva de Deslizamiento Libre y Amortiguación:** Utiliza la curva quintic `cubic-bezier(0.16, 1, 0.3, 1)` con duración adaptativa (hasta **1.85 segundos**), simulando un plato analógico de baja fricción que desacelera con elegancia.
-* **Escenario 3D Continuo en el DOM:** Toda la hilera de vinilos permanece viva en el espacio tridimensional con reflejos especulares de espejo en el suelo brillante, permitiendo ver rotar los discos sin saltos ni cortes.
+  * Un golpe de dedo (*flick*) suficientemente enérgico ($v > 1.1\text{ px/ms}$ escalando hasta $2.2\text{ px/ms}$) recorre la colección completa de extremo a extremo de forma completamente sedosa.
+* **Curva de Deslizamiento Suave (Quintic Ease-Out):** Utiliza la curva `cubic-bezier(0.22, 1, 0.36, 1)` con duración adaptativa calibrada (de 480 ms a 1.25 segundos), frenando de manera orgánica sin tirones ni deceleraciones bruscas al final.
 
 ### 4.2. Inclinación Lateral y 3 Discos Visibles por Flanco
 * **Inclinación Aumentada:** El ángulo de rotación lateral se sitúa en **$70^\circ$ en móviles y $73^\circ$ en ordenadores**, emulando el ángulo de perspectiva del Cover Flow clásico.

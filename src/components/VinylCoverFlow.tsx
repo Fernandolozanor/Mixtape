@@ -32,14 +32,26 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
 
   // Fluid velocity & momentum swipe gesture state
   const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
   const [dragOffset, setDragOffset] = useState(0);
-  const [transitionDuration, setTransitionDuration] = useState(500);
+  const currentDragOffset = useRef(0);
+  const [transitionDuration, setTransitionDuration] = useState(480);
   const dragStartX = useRef<number | null>(null);
   const dragStartY = useRef<number | null>(null);
   const lastX = useRef<number>(0);
   const lastTime = useRef<number>(0);
   const velocity = useRef<number>(0);
+  const rafId = useRef<number | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
+
+  // Clean up animation frames on unmount
+  useEffect(() => {
+    return () => {
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+      }
+    };
+  }, []);
 
   // Keep activeIndex within bounds if vinyls length changes
   useEffect(() => {
@@ -56,11 +68,11 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setTransitionDuration(600);
+        setTransitionDuration(480);
         setActiveIndex((prev) => Math.max(0, prev - 1));
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setTransitionDuration(600);
+        setTransitionDuration(480);
         setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
       } else if (e.key === ' ' || e.key === 'Enter') {
         const activeVinyl = vinyls[activeIndex];
@@ -86,7 +98,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     lastWheelTime.current = now;
 
     const step = Math.abs(delta) > 120 ? 3 : Math.abs(delta) > 60 ? 2 : 1;
-    setTransitionDuration(500);
+    setTransitionDuration(450);
     if (delta > 0) {
       setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + step));
     } else {
@@ -94,17 +106,19 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     }
   };
 
-  // High-performance pointer / touch swipe gestures with velocity & inertia
+  // High-performance pointer / touch swipe gestures with velocity & inertia (throttled via RAF)
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     if (['BUTTON', 'A', 'INPUT'].includes((e.target as HTMLElement).tagName)) return;
 
+    isDraggingRef.current = true;
     setIsDragging(true);
     dragStartX.current = e.clientX;
     dragStartY.current = e.clientY;
     lastX.current = e.clientX;
     lastTime.current = performance.now();
     velocity.current = 0;
+    currentDragOffset.current = 0;
     setDragOffset(0);
 
     try {
@@ -113,7 +127,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || dragStartX.current === null) return;
+    if (!isDraggingRef.current || dragStartX.current === null) return;
     const dx = e.clientX - dragStartX.current;
     const dy = e.clientY - (dragStartY.current ?? e.clientY);
 
@@ -126,23 +140,35 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     const dt = now - lastTime.current;
     if (dt > 8) {
       const instV = (e.clientX - lastX.current) / dt; // px / ms
-      // Weighted moving average for instantaneous velocity
-      velocity.current = velocity.current * 0.25 + instV * 0.75;
+      // Responsive low-pass filter for instantaneous velocity
+      velocity.current = velocity.current * 0.3 + instV * 0.7;
       lastX.current = e.clientX;
       lastTime.current = now;
     }
 
-    setDragOffset(dx);
+    currentDragOffset.current = dx;
+    if (rafId.current === null) {
+      rafId.current = requestAnimationFrame(() => {
+        setDragOffset(currentDragOffset.current);
+        rafId.current = null;
+      });
+    }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = null;
+    }
+
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {}
     setIsDragging(false);
 
-    const dx = dragOffset;
+    const dx = currentDragOffset.current;
     const now = performance.now();
     const timeSinceLastMove = now - lastTime.current;
 
@@ -153,7 +179,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    const dragStep = isMobile ? 65 : 85;
+    const dragStep = isMobile ? 68 : 90;
     const dragJump = -dx / dragStep;
     const speed = Math.abs(v); // px per ms
 
@@ -165,14 +191,14 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     let totalJump = 0;
     if (speed > 0.16) {
       // Natural base momentum for standard swipes
-      const baseMomentum = Math.pow(speed, 1.3) * (isMobile ? 3.2 : 4.0);
+      const baseMomentum = Math.pow(speed, 1.25) * (isMobile ? 3.2 : 3.9);
 
-      // Traversal boost that activates on faster flicks (speed > 1.2 px/ms)
-      // reaching full collection span at speed ~2.3 - 2.5 px/ms
+      // Traversal boost that activates on faster flicks (speed > 1.1 px/ms)
+      // reaching full collection span at speed ~2.2 - 2.4 px/ms
       let collectionTraverseBoost = 0;
-      if (speed > 1.2) {
-        const intensity = Math.min(1, (speed - 1.2) / 1.15);
-        collectionTraverseBoost = Math.pow(intensity, 1.35) * maxPossibleJump;
+      if (speed > 1.1) {
+        const intensity = Math.min(1, (speed - 1.1) / 1.1);
+        collectionTraverseBoost = Math.pow(intensity, 1.3) * maxPossibleJump;
       }
 
       const rawJump = dragJump + (-Math.sign(v) * (baseMomentum + collectionTraverseBoost));
@@ -192,8 +218,8 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     // Dynamic glide duration that scales gracefully with distance and momentum
     const jumpDist = Math.abs(totalJump);
     const durationMs = jumpDist <= 1
-      ? 600
-      : Math.min(1850, Math.round(580 + jumpDist * 65 + speed * 110));
+      ? 480
+      : Math.min(1250, Math.round(440 + Math.pow(jumpDist, 0.72) * 70 + speed * 50));
     setTransitionDuration(durationMs);
 
     if (totalJump !== 0) {
@@ -201,6 +227,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
       setActiveIndex(nextIndex);
     }
 
+    currentDragOffset.current = 0;
     setDragOffset(0);
     dragStartX.current = null;
     velocity.current = 0;
@@ -277,7 +304,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setTransitionDuration(600);
+              setTransitionDuration(480);
               setActiveIndex((prev) => Math.max(0, prev - 1));
             }}
             className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
@@ -293,7 +320,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setTransitionDuration(600);
+              setTransitionDuration(480);
               setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
             }}
             className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
@@ -321,56 +348,45 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             const centerOffset = isMobile ? 84 : 136;
             const itemSpacing = isMobile ? 34 : 54;
             const centerScale = isMobile ? 1.02 : 1.10;
+            const centerZ = isMobile ? 50 : 65;
+            const baseZ = isMobile ? -70 : -80;
 
-            let translateX = 0;
-            let rotateY = 0;
-            let translateZ = 0;
-            let scale = 1;
+            const clamped = Math.min(1, absOffset);
+            const extra = Math.max(0, absOffset - 1);
+            const clampedExtra = Math.min(5, extra) + Math.max(0, extra - 5) * 0.12;
+
+            const sign = offset === 0 ? 0 : Math.sign(offset);
+            const translateX = sign * (centerOffset * clamped + clampedExtra * itemSpacing);
+            const rotateY = -sign * (maxTilt * clamped);
+            // Mathematically continuous Z-depth interpolation eliminating any abrupt drop at center
+            const translateZ = Math.max(
+              isMobile ? -260 : -320,
+              centerZ - (centerZ - baseZ) * clamped - clampedExtra * 36
+            );
+            const scale = Math.max(
+              isMobile ? 0.65 : 0.70,
+              centerScale - (isMobile ? 0.20 : 0.22) * clamped - Math.min(extra, 5) * 0.04
+            );
+
             // Always-positive z-index preserving stack order for all collection items
             const zIndex = Math.max(1, Math.round(100 - absOffset * 6));
 
-            // Progressive opacity & brightness ensuring rank 1, 2, and 3 are clearly visible
+            // Progressive opacity & compositor-accelerated darkness overlay (eliminates expensive CSS filter recalculation)
             let opacity = 1;
-            let brightness = 1;
+            let darkness = 0;
 
             if (absOffset <= 1) {
-              opacity = 1 - absOffset * 0.06;
-              brightness = 1.05 - absOffset * 0.17;
+              opacity = 1 - absOffset * 0.05;
+              darkness = absOffset * 0.18;
             } else if (absOffset <= 2) {
-              opacity = 0.94 - (absOffset - 1) * 0.14;
-              brightness = 0.88 - (absOffset - 1) * 0.14;
+              opacity = 0.95 - (absOffset - 1) * 0.12;
+              darkness = 0.18 + (absOffset - 1) * 0.16;
             } else if (absOffset <= 3) {
-              opacity = 0.80 - (absOffset - 2) * 0.16;
-              brightness = 0.74 - (absOffset - 2) * 0.14;
+              opacity = 0.83 - (absOffset - 2) * 0.15;
+              darkness = 0.34 + (absOffset - 2) * 0.18;
             } else {
-              opacity = Math.max(0, 0.64 - (absOffset - 3) * 0.7);
-              brightness = 0.50;
-            }
-
-            if (offset > 0) {
-              const clamped = Math.min(1, offset);
-              const extra = Math.max(0, offset - 1);
-              const clampedExtra = Math.min(5, extra) + Math.max(0, extra - 5) * 0.12;
-              translateX = centerOffset * clamped + clampedExtra * itemSpacing;
-              rotateY = -maxTilt * clamped;
-              translateZ = Math.max(isMobile ? -260 : -320, -75 * clamped - clampedExtra * 36);
-              scale = Math.max(isMobile ? 0.65 : 0.70, centerScale - (isMobile ? 0.20 : 0.22) * clamped - Math.min(extra, 5) * 0.04);
-            } else if (offset < 0) {
-              const neg = -offset;
-              const clamped = Math.min(1, neg);
-              const extra = Math.max(0, neg - 1);
-              const clampedExtra = Math.min(5, extra) + Math.max(0, extra - 5) * 0.12;
-              translateX = -(centerOffset * clamped + clampedExtra * itemSpacing);
-              rotateY = maxTilt * clamped;
-              translateZ = Math.max(isMobile ? -260 : -320, -75 * clamped - clampedExtra * 36);
-              scale = Math.max(isMobile ? 0.65 : 0.70, centerScale - (isMobile ? 0.20 : 0.22) * clamped - Math.min(extra, 5) * 0.04);
-            } else {
-              translateX = 0;
-              rotateY = 0;
-              translateZ = 65;
-              scale = centerScale;
-              brightness = 1.05;
-              opacity = 1;
+              opacity = Math.max(0, 0.68 - (absOffset - 3) * 0.55);
+              darkness = 0.52;
             }
 
             // Fallback thumbnail
@@ -391,21 +407,22 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   if (isCenter) {
                     handlePlayActiveVinyl();
                   } else {
-                    setTransitionDuration(Math.min(850, 500 + Math.abs(idx - activeIndex) * 90));
+                    setTransitionDuration(Math.min(750, 420 + Math.abs(idx - activeIndex) * 70));
                     setActiveIndex(idx);
                   }
                 }}
-                className="absolute w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 cursor-pointer pointer-events-auto select-none"
+                className={`absolute w-44 h-44 sm:w-56 sm:h-56 md:w-64 md:h-64 cursor-pointer select-none ${
+                  absOffset > 4.5 ? 'pointer-events-none' : 'pointer-events-auto'
+                }`}
                 style={{
                   transform: `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
                   zIndex,
                   opacity,
-                  filter: `brightness(${brightness})`,
-                  willChange: 'transform, opacity',
+                  willChange: absOffset <= 3.5 ? 'transform, opacity' : 'auto',
                   transformStyle: 'preserve-3d',
                   transition: isDragging
                     ? 'none'
-                    : `transform ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), filter ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1)`,
+                    : `transform ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 }}
                 title={album.name}
               >
@@ -416,57 +433,72 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                     <div className="absolute inset-0 -m-3 rounded-2xl bg-amber-500/30 blur-2xl animate-pulse pointer-events-none" />
                   )}
 
-                  {/* Real Vinyl LP Disc (Slides out of center jacket ONLY during active playback) */}
-                  <div
-                    className={`absolute top-[4%] bottom-[4%] right-0 aspect-square z-0 pointer-events-none transition-all duration-700 ease-out ${
-                      isAlbumActivePlaying
-                        ? 'translate-x-[44%] sm:translate-x-[48%] opacity-100 scale-100'
-                        : 'translate-x-0 opacity-0 scale-95'
-                    }`}
-                  >
+                  {/* Real Vinyl LP Disc (Mounted only near center to keep GPU memory light; slides out of jacket ONLY during active playback) */}
+                  {(isCenter || absOffset < 1.0) && (
                     <div
-                      className="w-full h-full rounded-full relative overflow-hidden shadow-[-8px_0_22px_rgba(0,0,0,0.85)] drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)]"
-                      style={{
-                        animation: isAlbumActivePlaying
-                          ? 'vinyl-spin 1.8s linear infinite'
-                          : 'none',
-                        transformOrigin: 'center center',
-                      }}
+                      className={`absolute top-[4%] bottom-[4%] right-0 aspect-square z-0 pointer-events-none transition-all duration-700 ease-out ${
+                        isAlbumActivePlaying
+                          ? 'translate-x-[44%] sm:translate-x-[48%] opacity-100 scale-100'
+                          : 'translate-x-0 opacity-0 scale-95 pointer-events-none'
+                      }`}
                     >
-                      <img
-                        src="./assets/vinilo.png"
-                        alt="Vinyl Record"
-                        className="w-full h-full object-cover rounded-full pointer-events-none select-none"
-                      />
-                      {/* Center Spindle Label with Album Cover Artwork */}
-                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full overflow-hidden border-2 border-zinc-800 shadow-[inset_0_0_8px_rgba(0,0,0,0.8),0_0_8px_rgba(0,0,0,0.6)] bg-zinc-950 pointer-events-none select-none">
+                      <div
+                        className="w-full h-full rounded-full relative overflow-hidden shadow-[-8px_0_22px_rgba(0,0,0,0.85)] drop-shadow-[0_10px_20px_rgba(0,0,0,0.95)]"
+                        style={{
+                          animation: isAlbumActivePlaying
+                            ? 'vinyl-spin 1.8s linear infinite'
+                            : 'none',
+                          transformOrigin: 'center center',
+                        }}
+                      >
                         <img
-                          src={coverImage}
-                          alt={album.name}
-                          className="w-full h-full object-cover rounded-full"
+                          src="./assets/vinilo.png"
+                          alt="Vinyl Record"
+                          className="w-full h-full object-cover rounded-full pointer-events-none select-none"
                         />
-                        {/* Concentric label grooved rings overlay */}
-                        <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
-                        <div className="absolute inset-[15%] rounded-full border border-black/30 pointer-events-none" />
+                        {/* Center Spindle Label with Album Cover Artwork */}
+                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] rounded-full overflow-hidden border-2 border-zinc-800 shadow-[inset_0_0_8px_rgba(0,0,0,0.8),0_0_8px_rgba(0,0,0,0.6)] bg-zinc-950 pointer-events-none select-none">
+                          <img
+                            src={coverImage}
+                            alt={album.name}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                          {/* Concentric label grooved rings overlay */}
+                          <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+                          <div className="absolute inset-[15%] rounded-full border border-black/30 pointer-events-none" />
 
-                        {/* Center Spindle Hole with brass grommet */}
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-zinc-950 border-2 border-amber-600 shadow-inner z-20 flex items-center justify-center">
-                          <div className="w-0.5 h-0.5 rounded-full bg-black" />
+                          {/* Center Spindle Hole with brass grommet */}
+                          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-zinc-950 border-2 border-amber-600 shadow-inner z-20 flex items-center justify-center">
+                            <div className="w-0.5 h-0.5 rounded-full bg-black" />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Vinyl Cardboard Jacket / Cover Sleeve */}
-                  <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-[0_15px_35px_rgba(0,0,0,0.9)] border-2 border-white/15 bg-black z-10 group">
+                  <div
+                    className={`relative w-full h-full rounded-2xl overflow-hidden border-2 bg-black z-10 group ${
+                      isCenter
+                        ? 'shadow-[0_20px_45px_rgba(0,0,0,0.95)] border-white/20'
+                        : 'shadow-[0_8px_22px_rgba(0,0,0,0.7)] border-white/10'
+                    }`}
+                  >
                     <img
                       src={coverImage}
                       alt={album.name}
+                      loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 pointer-events-none select-none"
                     />
 
                     {/* Analog Vintage Vinyl Plastic Sleeve Sheen Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-black/60 via-transparent to-white/15 pointer-events-none" />
+
+                    {/* Hardware GPU-Accelerated Dynamic Depth Darkness (0 CPU rasterization) */}
+                    <div
+                      className="absolute inset-0 bg-black pointer-events-none rounded-2xl transition-opacity duration-300"
+                      style={{ opacity: darkness }}
+                    />
 
                     {/* Vintage LP Badge */}
                     <div className="absolute top-2 left-2 bg-black/85 backdrop-blur-md text-amber-300 font-mono-retro font-extrabold text-[8px] sm:text-[9px] px-2 py-0.5 rounded shadow border border-amber-400/30 uppercase tracking-widest flex items-center gap-1">
@@ -494,23 +526,26 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                     )}
                   </div>
 
-                  {/* Apple Signature Glossy Mirror Floor Reflection */}
-                  <div
-                    className="absolute top-[102%] left-0 right-0 h-28 pointer-events-none overflow-hidden scale-y-[-1] opacity-35 origin-top blur-[0.4px] rounded-2xl z-0"
-                    style={{
-                      WebkitMaskImage:
-                        'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 80%)',
-                      maskImage:
-                        'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 80%)',
-                    }}
-                  >
-                    <img
-                      src={coverImage}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#090d18]/70 to-[#04060c]" />
-                  </div>
+                  {/* Apple Signature Glossy Mirror Floor Reflection (Culled on distant items for 60fps/120fps GPU performance) */}
+                  {absOffset <= 2.2 && (
+                    <div
+                      className="absolute top-[102%] left-0 right-0 h-24 pointer-events-none overflow-hidden scale-y-[-1] opacity-30 origin-top rounded-2xl z-0"
+                      style={{
+                        WebkitMaskImage:
+                          'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 75%)',
+                        maskImage:
+                          'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 75%)',
+                      }}
+                    >
+                      <img
+                        src={coverImage}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[#090d18]/70 to-[#04060c]" />
+                    </div>
+                  )}
                 </div>
               </div>
             );
