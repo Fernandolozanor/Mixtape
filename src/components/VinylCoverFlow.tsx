@@ -157,33 +157,43 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     const dragJump = -dx / dragStep;
     const speed = Math.abs(v); // px per ms
 
-    // High-momentum kinetic inertia: scales dynamically with swipe speed
-    let momentumBoost = 0;
-    if (speed > 0.16) {
-      const multiplier = isMobile ? 3.4 : 4.0;
-      momentumBoost = -Math.sign(v) * Math.pow(speed, 1.25) * multiplier;
-    }
+    const totalAlbums = vinyls.length;
+    const maxPossibleJump = Math.max(1, totalAlbums - 1);
 
-    let totalJump = Math.round(dragJump + momentumBoost);
+    // High-momentum kinetic inertia:
+    // Allows traversing the entire collection on a sufficiently strong swipe / flick
+    let totalJump = 0;
+    if (speed > 0.16) {
+      // Natural base momentum for standard swipes
+      const baseMomentum = Math.pow(speed, 1.3) * (isMobile ? 3.2 : 4.0);
+
+      // Traversal boost that activates on faster flicks (speed > 1.2 px/ms)
+      // reaching full collection span at speed ~2.3 - 2.5 px/ms
+      let collectionTraverseBoost = 0;
+      if (speed > 1.2) {
+        const intensity = Math.min(1, (speed - 1.2) / 1.15);
+        collectionTraverseBoost = Math.pow(intensity, 1.35) * maxPossibleJump;
+      }
+
+      const rawJump = dragJump + (-Math.sign(v) * (baseMomentum + collectionTraverseBoost));
+      totalJump = Math.round(rawJump);
+    } else if (Math.abs(dx) > (isMobile ? 32 : 45)) {
+      totalJump = dx < 0 ? 1 : -1;
+    }
 
     // Guaranteed minimum 1-step navigation for definite swipes
-    if (totalJump === 0) {
-      if (speed > 0.18) {
-        totalJump = v < 0 ? 1 : -1;
-      } else if (Math.abs(dx) > (isMobile ? 32 : 45)) {
-        totalJump = dx < 0 ? 1 : -1;
-      }
+    if (totalJump === 0 && (speed > 0.16 || Math.abs(dx) > 20)) {
+      totalJump = v < 0 || dx < 0 ? 1 : -1;
     }
 
-    // Generous inertia limit so fast swipes can coast through the collection
-    const maxInertiaJump = isMobile ? 7 : 9;
-    totalJump = Math.max(-maxInertiaJump, Math.min(maxInertiaJump, totalJump));
+    // Clamp totalJump to remaining distance in direction of swipe
+    totalJump = Math.max(-maxPossibleJump, Math.min(maxPossibleJump, totalJump));
 
     // Dynamic glide duration that scales gracefully with distance and momentum
     const jumpDist = Math.abs(totalJump);
     const durationMs = jumpDist <= 1
       ? 600
-      : Math.min(1350, Math.round(580 + jumpDist * 95 + speed * 120));
+      : Math.min(1850, Math.round(580 + jumpDist * 65 + speed * 110));
     setTransitionDuration(durationMs);
 
     if (totalJump !== 0) {
@@ -306,9 +316,6 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             const absOffset = Math.abs(offset);
             const isCenter = absOffset < 0.45;
 
-            // Skip rendering albums beyond the visible range (extended to 5.5 for smooth high-inertia flights)
-            if (absOffset > 5.5) return null;
-
             // Tailored spacing & steeper tilt so 3 records are clearly visible on each flank
             const maxTilt = isMobile ? 70 : 73; // Steeper angle for classic Cover Flow perspective
             const centerOffset = isMobile ? 84 : 136;
@@ -319,7 +326,8 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             let rotateY = 0;
             let translateZ = 0;
             let scale = 1;
-            const zIndex = Math.round(50 - absOffset * 8);
+            // Always-positive z-index preserving stack order for all collection items
+            const zIndex = Math.max(1, Math.round(100 - absOffset * 6));
 
             // Progressive opacity & brightness ensuring rank 1, 2, and 3 are clearly visible
             let opacity = 1;
@@ -342,18 +350,20 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             if (offset > 0) {
               const clamped = Math.min(1, offset);
               const extra = Math.max(0, offset - 1);
-              translateX = centerOffset * clamped + extra * itemSpacing;
+              const clampedExtra = Math.min(5, extra) + Math.max(0, extra - 5) * 0.12;
+              translateX = centerOffset * clamped + clampedExtra * itemSpacing;
               rotateY = -maxTilt * clamped;
-              translateZ = -75 * clamped - extra * 40;
-              scale = centerScale - (isMobile ? 0.20 : 0.22) * clamped - extra * (isMobile ? 0.04 : 0.045);
+              translateZ = Math.max(isMobile ? -260 : -320, -75 * clamped - clampedExtra * 36);
+              scale = Math.max(isMobile ? 0.65 : 0.70, centerScale - (isMobile ? 0.20 : 0.22) * clamped - Math.min(extra, 5) * 0.04);
             } else if (offset < 0) {
               const neg = -offset;
               const clamped = Math.min(1, neg);
               const extra = Math.max(0, neg - 1);
-              translateX = -centerOffset * clamped - extra * itemSpacing;
+              const clampedExtra = Math.min(5, extra) + Math.max(0, extra - 5) * 0.12;
+              translateX = -(centerOffset * clamped + clampedExtra * itemSpacing);
               rotateY = maxTilt * clamped;
-              translateZ = -75 * clamped - extra * 40;
-              scale = centerScale - (isMobile ? 0.20 : 0.22) * clamped - extra * (isMobile ? 0.04 : 0.045);
+              translateZ = Math.max(isMobile ? -260 : -320, -75 * clamped - clampedExtra * 36);
+              scale = Math.max(isMobile ? 0.65 : 0.70, centerScale - (isMobile ? 0.20 : 0.22) * clamped - Math.min(extra, 5) * 0.04);
             } else {
               translateX = 0;
               rotateY = 0;
@@ -395,7 +405,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   transformStyle: 'preserve-3d',
                   transition: isDragging
                     ? 'none'
-                    : `transform ${transitionDuration}ms cubic-bezier(0.18, 1, 0.32, 1), opacity ${transitionDuration}ms cubic-bezier(0.18, 1, 0.32, 1), filter ${transitionDuration}ms cubic-bezier(0.18, 1, 0.32, 1)`,
+                    : `transform ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), filter ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1)`,
                 }}
                 title={album.name}
               >
