@@ -146,28 +146,44 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
     const now = performance.now();
     const timeSinceLastMove = now - lastTime.current;
 
-    // Decay velocity if held motionless before release
+    // Decay velocity if held motionless before release (allow up to 120ms for touch hardware)
     let v = velocity.current;
-    if (timeSinceLastMove > 80) {
+    if (timeSinceLastMove > 120) {
       v = 0;
     }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    const thresholdPx = isMobile ? 42 : 55;
+    const dragStep = isMobile ? 65 : 85;
+    const dragJump = -dx / dragStep;
     const speed = Math.abs(v); // px per ms
 
-    let totalJump = 0;
-    if (speed > 0.28) {
-      // Natural fluid flick: gentle momentum capped at 3 steps maximum
-      const flickBoost = Math.min(3, Math.max(1, Math.round(speed * 2.2)));
-      totalJump = -Math.sign(v) * flickBoost;
-    } else if (Math.abs(dx) > thresholdPx) {
-      totalJump = dx < 0 ? 1 : -1;
+    // High-momentum kinetic inertia: scales dynamically with swipe speed
+    let momentumBoost = 0;
+    if (speed > 0.16) {
+      const multiplier = isMobile ? 3.4 : 4.0;
+      momentumBoost = -Math.sign(v) * Math.pow(speed, 1.25) * multiplier;
     }
 
-    // Silky smooth duration tailored for gentle, non-abrupt motion
+    let totalJump = Math.round(dragJump + momentumBoost);
+
+    // Guaranteed minimum 1-step navigation for definite swipes
+    if (totalJump === 0) {
+      if (speed > 0.18) {
+        totalJump = v < 0 ? 1 : -1;
+      } else if (Math.abs(dx) > (isMobile ? 32 : 45)) {
+        totalJump = dx < 0 ? 1 : -1;
+      }
+    }
+
+    // Generous inertia limit so fast swipes can coast through the collection
+    const maxInertiaJump = isMobile ? 7 : 9;
+    totalJump = Math.max(-maxInertiaJump, Math.min(maxInertiaJump, totalJump));
+
+    // Dynamic glide duration that scales gracefully with distance and momentum
     const jumpDist = Math.abs(totalJump);
-    const durationMs = jumpDist <= 1 ? 600 : Math.min(950, 600 + (jumpDist - 1) * 140);
+    const durationMs = jumpDist <= 1
+      ? 600
+      : Math.min(1350, Math.round(580 + jumpDist * 95 + speed * 120));
     setTransitionDuration(durationMs);
 
     if (totalJump !== 0) {
@@ -284,14 +300,14 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
         >
           {vinyls.map((album, idx) => {
             const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-            const cardShiftRatio = isMobile ? 120 : 160;
+            const cardShiftRatio = isMobile ? 100 : 135;
             // Dynamic fluid offset during finger drag
             const offset = (idx - activeIndex) + (isDragging ? dragOffset / cardShiftRatio : 0);
             const absOffset = Math.abs(offset);
             const isCenter = absOffset < 0.45;
 
-            // Skip rendering albums beyond the visible 3-tier flank wings
-            if (absOffset > 4.2) return null;
+            // Skip rendering albums beyond the visible range (extended to 5.5 for smooth high-inertia flights)
+            if (absOffset > 5.5) return null;
 
             // Tailored spacing & steeper tilt so 3 records are clearly visible on each flank
             const maxTilt = isMobile ? 70 : 73; // Steeper angle for classic Cover Flow perspective
@@ -379,7 +395,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   transformStyle: 'preserve-3d',
                   transition: isDragging
                     ? 'none'
-                    : `transform ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1), filter ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1)`,
+                    : `transform ${transitionDuration}ms cubic-bezier(0.18, 1, 0.32, 1), opacity ${transitionDuration}ms cubic-bezier(0.18, 1, 0.32, 1), filter ${transitionDuration}ms cubic-bezier(0.18, 1, 0.32, 1)`,
                 }}
                 title={album.name}
               >
