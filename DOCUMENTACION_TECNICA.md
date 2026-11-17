@@ -152,6 +152,18 @@ Implementado en `VinylCoverFlow.tsx` y `VinylRecordCard.tsx`:
 * **Extracción Solo al Reproducir:** En el instante en que comienza la reproducción activa (`isAlbumActivePlaying`), el disco se desliza suavemente hacia fuera (`translate-x-[44%] sm:translate-x-[48%] opacity-100 scale-100`) y gira a 33⅓ RPM.
 * Al pausar o cambiar de disco, el vinilo se guarda automáticamente en la funda.
 
+### 4.4. Jukebox Retro (Sinfonola Wurlitzer 1015) y Parrilla de Etiquetas (`JukeboxView.tsx`)
+* **Tubos de Burbujas de Neón:** Simulación física continua mediante `requestAnimationFrame` y HTML5 `<canvas>` con 180 burbujas dinámicas a lo largo del arco de neón, acelerándose automáticamente durante la reproducción.
+* **Etiquetas de Selección Vintage (*Title Strips*):**
+  * **Ajuste Tipográfico Milimétrico:** Interlineado controlado (`leading-[1.1]` y `leading-[1.0]`) y pesos de fuente proporcionados que garantizan que el título y el artista quepan con holgura en pantallas móviles sin cortar letras por abajo ni desbordar el contenedor.
+  * **Distintivos Alfanuméricos:** Código de ranura visible en cada tira (`A1`, `B2`, `C3`...) con ribetes de color analógicos (Rojo, Cian, Ámbar) emulando las etiquetas clásicas de discos de 45 RPM.
+  * **Iluminación de Cinta Activa:** Resplandor ámbar iluminado (`#fffde6` con sombra dorada y aro neón) sobre el disco en reproducción.
+* **Modo Ampliado de Parrilla de Etiquetas (*Zoom Rack*):**
+  * Botón dedicado "Ampliar" en la barra de herramientas y en el visor de cristal de la gramola.
+  * Abre una parrilla en alta definición a pantalla completa donde leer cómodamente títulos y artistas completos en formato cartel retro de gran tamaño con selector interactivo y navegación por páginas.
+* **Mecanismo de Monedas y Créditos de 25¢:**
+  * Ranura interactiva con sonido físico de inserción de moneda (`playJukeboxCoinDrop`), aviso temático y persistencia multi-dispositivo en tiempo real vía código QR (`mixtape_jukebox_credits`).
+
 ---
 
 ## 5. Búsqueda Continua y Dial de Radio FM
