@@ -51,12 +51,12 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
           <div className="absolute inset-0 -m-1.5 rounded-2xl bg-amber-500/20 blur-xl pointer-events-none animate-pulse" />
         )}
 
-        {/* LAYER 1: Full Circular Vinyl Record that slides out smoothly from inside the sleeve */}
+        {/* LAYER 1: Full Circular Vinyl Record that slides out smoothly from inside the sleeve ONLY on playback */}
         <div
-          className={`absolute top-[3%] bottom-[3%] right-0 aspect-square z-0 transition-all duration-500 ease-out ${
+          className={`absolute top-[3%] bottom-[3%] right-0 aspect-square z-0 transition-all duration-600 cubic-bezier(0.22, 1, 0.36, 1) ${
             isCurrent && isPlaying
-              ? 'translate-x-[26%] sm:translate-x-[30%]'
-              : 'translate-x-[8%] group-hover:translate-x-[26%] sm:group-hover:translate-x-[30%]'
+              ? 'translate-x-[28%] sm:translate-x-[32%] opacity-100 scale-100'
+              : 'translate-x-0 opacity-0 scale-95 pointer-events-none'
           }`}
           style={{ willChange: 'transform' }}
         >

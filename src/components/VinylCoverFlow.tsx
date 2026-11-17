@@ -56,11 +56,11 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
 
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setTransitionDuration(450);
+        setTransitionDuration(600);
         setActiveIndex((prev) => Math.max(0, prev - 1));
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setTransitionDuration(450);
+        setTransitionDuration(600);
         setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
       } else if (e.key === ' ' || e.key === 'Enter') {
         const activeVinyl = vinyls[activeIndex];
@@ -148,38 +148,26 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
 
     // Decay velocity if held motionless before release
     let v = velocity.current;
-    if (timeSinceLastMove > 75) {
+    if (timeSinceLastMove > 80) {
       v = 0;
     }
 
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    const stepWidth = isMobile ? 50 : 70;
-
+    const thresholdPx = isMobile ? 42 : 55;
     const speed = Math.abs(v); // px per ms
-    const distanceFraction = -dx / stepWidth;
 
-    // Real physics momentum: higher speed yields non-linear kinetic inertia glide
-    const momentumMultiplier = isMobile ? 3.8 : 4.6;
-    const kineticBoost = speed > 0.5
-      ? Math.pow(speed, 1.35) * momentumMultiplier
-      : speed * momentumMultiplier;
-
-    const velocityJump = -Math.sign(v) * kineticBoost;
-    let totalJump = Math.round(distanceFraction + velocityJump);
-
-    // Guaranteed minimum 1-step navigation for definite swipes
-    if (speed > 0.22 && totalJump === 0) {
-      totalJump = v < 0 ? 1 : -1;
-    } else if (Math.abs(dx) > 28 && totalJump === 0) {
+    let totalJump = 0;
+    if (speed > 0.28) {
+      // Natural fluid flick: gentle momentum capped at 3 steps maximum
+      const flickBoost = Math.min(3, Math.max(1, Math.round(speed * 2.2)));
+      totalJump = -Math.sign(v) * flickBoost;
+    } else if (Math.abs(dx) > thresholdPx) {
       totalJump = dx < 0 ? 1 : -1;
     }
 
-    // Adaptive duration proportional to momentum & jump distance for authentic physical glide
+    // Silky smooth duration tailored for gentle, non-abrupt motion
     const jumpDist = Math.abs(totalJump);
-    const durationMs = Math.min(
-      1400,
-      Math.max(450, Math.round(450 + jumpDist * 120 + speed * 160))
-    );
+    const durationMs = jumpDist <= 1 ? 600 : Math.min(950, 600 + (jumpDist - 1) * 140);
     setTransitionDuration(durationMs);
 
     if (totalJump !== 0) {
@@ -263,7 +251,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setTransitionDuration(450);
+              setTransitionDuration(600);
               setActiveIndex((prev) => Math.max(0, prev - 1));
             }}
             className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
@@ -279,7 +267,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setTransitionDuration(450);
+              setTransitionDuration(600);
               setActiveIndex((prev) => Math.min(vinyls.length - 1, prev + 1));
             }}
             className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 p-2 sm:p-2.5 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/15 backdrop-blur-md transition-all active:scale-90 shadow-xl cursor-pointer"
@@ -296,45 +284,67 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
         >
           {vinyls.map((album, idx) => {
             const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-            const cardShiftRatio = isMobile ? 100 : 140;
+            const cardShiftRatio = isMobile ? 120 : 160;
             // Dynamic fluid offset during finger drag
             const offset = (idx - activeIndex) + (isDragging ? dragOffset / cardShiftRatio : 0);
             const absOffset = Math.abs(offset);
             const isCenter = absOffset < 0.45;
 
-            // Responsive spacing based on device width
-            const centerOffset = isMobile ? 110 : 155;
-            const itemSpacing = isMobile ? 38 : 55;
+            // Skip rendering albums beyond the visible 3-tier flank wings
+            if (absOffset > 4.2) return null;
+
+            // Tailored spacing & steeper tilt so 3 records are clearly visible on each flank
+            const maxTilt = isMobile ? 70 : 73; // Steeper angle for classic Cover Flow perspective
+            const centerOffset = isMobile ? 84 : 136;
+            const itemSpacing = isMobile ? 34 : 54;
+            const centerScale = isMobile ? 1.02 : 1.10;
 
             let translateX = 0;
             let rotateY = 0;
             let translateZ = 0;
             let scale = 1;
-            let zIndex = Math.round(50 - absOffset * 6);
-            let opacity = Math.max(0.12, 1 - absOffset * 0.18);
-            let brightness = Math.max(0.35, 1 - absOffset * 0.15);
+            const zIndex = Math.round(50 - absOffset * 8);
+
+            // Progressive opacity & brightness ensuring rank 1, 2, and 3 are clearly visible
+            let opacity = 1;
+            let brightness = 1;
+
+            if (absOffset <= 1) {
+              opacity = 1 - absOffset * 0.06;
+              brightness = 1.05 - absOffset * 0.17;
+            } else if (absOffset <= 2) {
+              opacity = 0.94 - (absOffset - 1) * 0.14;
+              brightness = 0.88 - (absOffset - 1) * 0.14;
+            } else if (absOffset <= 3) {
+              opacity = 0.80 - (absOffset - 2) * 0.16;
+              brightness = 0.74 - (absOffset - 2) * 0.14;
+            } else {
+              opacity = Math.max(0, 0.64 - (absOffset - 3) * 0.7);
+              brightness = 0.50;
+            }
 
             if (offset > 0) {
               const clamped = Math.min(1, offset);
               const extra = Math.max(0, offset - 1);
               translateX = centerOffset * clamped + extra * itemSpacing;
-              rotateY = -52 * clamped;
-              translateZ = -90 * clamped - extra * 25;
-              scale = (isMobile ? 1.02 : 1.12) - (isMobile ? 0.24 : 0.27) * clamped;
+              rotateY = -maxTilt * clamped;
+              translateZ = -75 * clamped - extra * 40;
+              scale = centerScale - (isMobile ? 0.20 : 0.22) * clamped - extra * (isMobile ? 0.04 : 0.045);
             } else if (offset < 0) {
               const neg = -offset;
               const clamped = Math.min(1, neg);
               const extra = Math.max(0, neg - 1);
               translateX = -centerOffset * clamped - extra * itemSpacing;
-              rotateY = 52 * clamped;
-              translateZ = -90 * clamped - extra * 25;
-              scale = (isMobile ? 1.02 : 1.12) - (isMobile ? 0.24 : 0.27) * clamped;
+              rotateY = maxTilt * clamped;
+              translateZ = -75 * clamped - extra * 40;
+              scale = centerScale - (isMobile ? 0.20 : 0.22) * clamped - extra * (isMobile ? 0.04 : 0.045);
             } else {
               translateX = 0;
               rotateY = 0;
-              translateZ = 70;
-              scale = isMobile ? 1.02 : 1.12;
+              translateZ = 65;
+              scale = centerScale;
               brightness = 1.05;
+              opacity = 1;
             }
 
             // Fallback thumbnail
@@ -355,7 +365,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   if (isCenter) {
                     handlePlayActiveVinyl();
                   } else {
-                    setTransitionDuration(Math.min(850, 420 + Math.abs(idx - activeIndex) * 90));
+                    setTransitionDuration(Math.min(850, 500 + Math.abs(idx - activeIndex) * 90));
                     setActiveIndex(idx);
                   }
                 }}
@@ -369,7 +379,7 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                   transformStyle: 'preserve-3d',
                   transition: isDragging
                     ? 'none'
-                    : `transform ${transitionDuration}ms cubic-bezier(0.16, 1, 0.3, 1), opacity ${Math.min(transitionDuration, 600)}ms ease-out, filter ${Math.min(transitionDuration, 600)}ms ease-out`,
+                    : `transform ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1), opacity ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1), filter ${transitionDuration}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 }}
                 title={album.name}
               >
@@ -380,14 +390,12 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                     <div className="absolute inset-0 -m-3 rounded-2xl bg-amber-500/30 blur-2xl animate-pulse pointer-events-none" />
                   )}
 
-                  {/* Protruding Real Vinyl LP Disc (Slides out of center jacket) */}
+                  {/* Real Vinyl LP Disc (Slides out of center jacket ONLY during active playback) */}
                   <div
-                    className={`absolute top-[4%] bottom-[4%] right-0 aspect-square z-0 transition-all duration-700 ease-out pointer-events-none ${
-                      isCenter
-                        ? isAlbumActivePlaying
-                          ? 'translate-x-[42%] sm:translate-x-[46%]'
-                          : 'translate-x-[22%] sm:translate-x-[26%]'
-                        : 'translate-x-[6%]'
+                    className={`absolute top-[4%] bottom-[4%] right-0 aspect-square z-0 pointer-events-none transition-all duration-700 ease-out ${
+                      isAlbumActivePlaying
+                        ? 'translate-x-[44%] sm:translate-x-[48%] opacity-100 scale-100'
+                        : 'translate-x-0 opacity-0 scale-95'
                     }`}
                   >
                     <div
