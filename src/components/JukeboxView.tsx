@@ -387,11 +387,12 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
         </button>
       </div>
 
-      {/* JUKEBOX MACHINE WRAPPER (Auto-scales to viewport height so full machine is visible without scrolling) */}
+      {/* JUKEBOX MACHINE WRAPPER (Responsive full-width with aspect ratio) */}
       <div
-        className="relative w-auto max-w-sm sm:max-w-md md:max-w-lg max-h-[calc(100dvh-150px)] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 border border-white/10 z-10 mx-auto"
+        className="relative w-full max-w-[360px] sm:max-w-[440px] md:max-w-[520px] rounded-3xl overflow-hidden shadow-2xl transition-all duration-300 border border-white/10 z-10 mx-auto"
         style={{
           aspectRatio: '1696 / 2528',
+          maxHeight: 'calc(100dvh - 175px)',
           boxShadow: isPlaying
             ? '0 25px 70px rgba(0,0,0,0.9), 0 0 50px rgba(0, 245, 255, 0.25), 0 0 100px rgba(245, 158, 11, 0.15)'
             : '0 20px 50px rgba(0,0,0,0.8)',
