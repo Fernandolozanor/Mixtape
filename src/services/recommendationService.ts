@@ -1,5 +1,6 @@
 import type { Track, Playlist } from '../types/music';
 import { streamResolver } from './streamResolver';
+import { playbackHistoryService } from './playbackHistoryService';
 
 export interface RecommendationGroup {
   id: string;
@@ -63,7 +64,8 @@ class RecommendationService {
   analyzeTastes(
     likedTracks: Track[],
     playlists: Playlist[],
-    searchHistory: string[]
+    searchHistory: string[],
+    recentTracks: Track[] = []
   ): { artist: string; score: number }[] {
     const scores: Record<string, number> = {};
 
@@ -75,7 +77,15 @@ class RecommendationService {
       }
     }
 
-    // 2. Playlist tracks (weight 2)
+    // 2. Recent plays (weight 3 - strong current listener intent)
+    for (const track of recentTracks) {
+      const artist = this.cleanArtistName(track.artist);
+      if (artist) {
+        scores[artist] = (scores[artist] || 0) + 3;
+      }
+    }
+
+    // 3. Playlist tracks (weight 2)
     for (const pl of playlists) {
       for (const track of pl.tracks) {
         const artist = this.cleanArtistName(track.artist);
@@ -85,7 +95,7 @@ class RecommendationService {
       }
     }
 
-    // 3. Search history (weight 1)
+    // 4. Search history (weight 1)
     for (const query of searchHistory) {
       const term = query.trim();
       if (term.length > 2) {
@@ -114,6 +124,7 @@ class RecommendationService {
 
   /**
    * Fetch personalized recommendations based on the user's profile
+   * Section: "Seleccionado para ti"
    */
   async getPersonalizedRecommendations(
     likedTracks: Track[],
@@ -121,24 +132,55 @@ class RecommendationService {
     forceRefresh: boolean = false
   ): Promise<RecommendationGroup[]> {
     const searchHistory = this.getSearchHistory();
+    const recentTracks = playbackHistoryService.getRecentTracks(10);
 
     // Generate a signature of user profile to avoid redundant calls
-    const signature = `${likedTracks.length}_${playlists.reduce((acc, p) => acc + p.tracks.length, 0)}_${searchHistory.slice(0, 5).join('|')}`;
+    const signature = `${likedTracks.length}_${playlists.reduce((acc, p) => acc + p.tracks.length, 0)}_${recentTracks.length}_${searchHistory.slice(0, 5).join('|')}`;
 
     if (!forceRefresh && this.cachedRecommendations.length > 0 && this.lastAnalyzedSignature === signature) {
       return this.cachedRecommendations;
     }
 
-    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory);
+    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory, recentTracks);
     const groups: RecommendationGroup[] = [];
+
+    // 1. Todas mis canciones favoritas (if user has marked any favorites)
+    if (likedTracks.length > 0) {
+      groups.push({
+        id: 'group_all_favorites',
+        reason: 'Todas mis canciones favoritas',
+        artistOrGenre: `${likedTracks.length} canciones guardadas`,
+        tracks: [...likedTracks],
+      });
+    }
 
     // Case 1: User has tastes detected
     if (tastes.length > 0) {
       const topArtists = tastes.slice(0, 3);
 
+      // 2. Mix de mis grupos favoritos (combinación de tus artistas top)
+      if (topArtists.length >= 2) {
+        try {
+          const names = topArtists.map((a) => a.artist).slice(0, 3).join(' ');
+          const discoveryQuery = `${names} greatest hits mix`;
+          const mixResults = await streamResolver.search(discoveryQuery, 'youtube');
+          if (mixResults.length > 0) {
+            groups.push({
+              id: 'mix_favorite_bands',
+              reason: 'Mix de mis grupos favoritos',
+              artistOrGenre: topArtists.map((a) => a.artist).slice(0, 3).join(', '),
+              tracks: mixResults.slice(0, 9),
+            });
+          }
+        } catch (e) {
+          console.warn('Mix of favorite bands error:', e);
+        }
+      }
+
+      // 3. Más cosas de mis grupos favoritos (canciones que aún no tienes guardadas)
       for (const item of topArtists) {
         try {
-          const query = `${item.artist} hits`;
+          const query = `${item.artist} greatest hits full songs`;
           const results = await streamResolver.search(query, 'youtube');
 
           // Filter out tracks already liked or in playlists to give fresh discoveries
@@ -152,31 +194,13 @@ class RecommendationService {
           if (freshTracks.length > 0) {
             groups.push({
               id: `rec_${item.artist.replace(/\s+/g, '_')}`,
-              reason: `Porque te gusta ${item.artist}`,
+              reason: `Más cosas de ${item.artist}`,
               artistOrGenre: item.artist,
               tracks: freshTracks,
             });
           }
         } catch (e) {
           console.warn(`Failed to fetch recommendations for ${item.artist}:`, e);
-        }
-      }
-
-      // Also create a "Mix Descubrimiento" combining top tastes
-      if (topArtists.length >= 2) {
-        try {
-          const discoveryQuery = `${topArtists[0].artist} ${topArtists[1].artist} playlist`;
-          const mixResults = await streamResolver.search(discoveryQuery, 'youtube');
-          if (mixResults.length > 0) {
-            groups.unshift({
-              id: 'mix_discovery',
-              reason: 'Tu Mix Personalizado de Descubrimiento',
-              artistOrGenre: `${topArtists[0].artist} & ${topArtists[1].artist}`,
-              tracks: mixResults.slice(0, 8),
-            });
-          }
-        } catch (e) {
-          // Ignore mix error
         }
       }
     }
@@ -201,6 +225,59 @@ class RecommendationService {
     this.cachedRecommendations = groups;
     this.lastAnalyzedSignature = signature;
     return groups;
+  }
+
+  /**
+   * Fetch new releases, latest singles and modern updates for groups that match user tastes
+   * Section: "Novedades para ti"
+   */
+  async getNewReleasesForYou(
+    likedTracks: Track[],
+    playlists: Playlist[],
+    recentTracks: Track[] = []
+  ): Promise<Track[]> {
+    const searchHistory = this.getSearchHistory();
+    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory, recentTracks);
+
+    const queries: string[] = [];
+    if (tastes.length > 0) {
+      const topArtists = tastes.slice(0, 3);
+      for (const item of topArtists) {
+        queries.push(`${item.artist} new single official`);
+        queries.push(`${item.artist} latest release`);
+      }
+    } else {
+      queries.push('80s rock remastered 2026 new release');
+      queries.push('classic rock latest official release');
+    }
+
+    const newTracks: Track[] = [];
+    const seenIds = new Set<string>();
+
+    try {
+      const results = await Promise.allSettled(
+        queries.slice(0, 3).map((q) => streamResolver.search(q, 'youtube', 1))
+      );
+
+      for (const res of results) {
+        if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+          for (const track of res.value) {
+            if (!seenIds.has(track.id)) {
+              seenIds.add(track.id);
+              newTracks.push(track);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch new releases for user:', e);
+    }
+
+    // Filter out tracks already in likedTracks so they are genuinely new
+    const likedIds = new Set(likedTracks.map((t) => t.id));
+    const filtered = newTracks.filter((t) => !likedIds.has(t.id));
+
+    return (filtered.length > 0 ? filtered : newTracks).slice(0, 9);
   }
 
   /**

@@ -3,6 +3,7 @@ import type { Track, RepeatMode, LyricLine, Playlist } from '../types/music';
 import { audioEngine } from '../services/audioEngine';
 import { lyricsService } from '../services/lyricsService';
 import { tapeProgressService } from '../services/tapeProgressService';
+import { playbackHistoryService } from '../services/playbackHistoryService';
 import { useLibrary } from './LibraryContext';
 
 interface PlayerContextType {
@@ -277,6 +278,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentTrack(track);
     currentTrackRef.current = track;
     setPlayTriggerCount((c) => c + 1);
+    playbackHistoryService.recordPlayback(track);
 
     if (context !== undefined) {
       setPlaybackContext(context);
