@@ -89,6 +89,17 @@ function setupPWAUpdateSync() {
 const initialTextSize = localStorage.getItem('pulse_text_size') || 'medium';
 document.documentElement.setAttribute('data-text-size', initialTextSize);
 
+// Inicializar modo de apariencia (oscuro / claro satinado) antes de pintar
+const initialThemeMode = localStorage.getItem('pulse_theme_mode') || 'dark';
+document.documentElement.setAttribute('data-theme-mode', initialThemeMode);
+if (initialThemeMode === 'light') {
+  document.documentElement.classList.remove('dark');
+  document.documentElement.classList.add('light');
+} else {
+  document.documentElement.classList.remove('light');
+  document.documentElement.classList.add('dark');
+}
+
 setupPWAUpdateSync();
 
 createRoot(document.getElementById('root')!).render(

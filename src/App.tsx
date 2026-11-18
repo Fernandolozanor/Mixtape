@@ -40,7 +40,8 @@ const AppContent: React.FC = () => {
   const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
   const { currentTrack, isFullScreenPlayerOpen, setFullScreenPlayerOpen, setActiveNavigationTab } = usePlayer();
-  const { syncState, dismissJustLinkedBanner } = useLibrary();
+  const { syncState, dismissJustLinkedBanner, settings } = useLibrary();
+  const isLight = settings.themeMode === 'light';
 
   React.useEffect(() => {
     setActiveNavigationTab(activeTab);
@@ -95,7 +96,11 @@ const AppContent: React.FC = () => {
   const playlistIdFromRoute = isPlaylistRoute ? activeTab.replace('playlist:', '') : null;
 
   return (
-    <div className="flex h-[100dvh] w-full max-w-full overflow-hidden bg-[#09090b] text-[#f4f4f5]">
+    <div
+      className={`app-shell flex h-[100dvh] w-full max-w-full overflow-hidden transition-colors duration-200 ${
+        isLight ? 'bg-[#cbd2dc] text-[#0f172a]' : 'bg-[#09090b] text-[#f4f4f5]'
+      }`}
+    >
       {/* Desktop Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -174,17 +179,27 @@ const AppContent: React.FC = () => {
             </div>
           </div>
         ) : session ? (
-          <div className="w-full max-w-5xl mx-auto mb-3.5 px-3.5 py-2.5 rounded-2xl bg-[#111622]/95 border border-amber-500/30 flex md:hidden flex-wrap items-center justify-between gap-2 text-xs font-mono relative z-30 shrink-0 shadow-lg">
+          <div
+            className={`w-full max-w-5xl mx-auto mb-3.5 px-3.5 py-2.5 rounded-2xl ${
+              isLight
+                ? 'bg-[#cbd2dc]/95 border border-slate-400 text-slate-900 shadow-md'
+                : 'bg-[#111622]/95 border border-amber-500/30 text-white'
+            } flex md:hidden flex-wrap items-center justify-between gap-2 text-xs font-mono relative z-30 shrink-0 shadow-lg`}
+          >
             <div className="flex items-center gap-2 min-w-0">
-              <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
-              <span className="text-white font-bold truncate">{session.username}</span>
-              <span className="text-[10px] text-zinc-400">({deviceId})</span>
+              <ShieldCheck className={`w-4 h-4 ${isLight ? 'text-amber-700' : 'text-amber-400'} shrink-0`} />
+              <span className={`font-bold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{session.username}</span>
+              <span className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>({deviceId})</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsSyncModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-500/15 active:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                className={`px-3 py-1.5 rounded-xl ${
+                  isLight
+                    ? 'bg-amber-600/20 active:bg-amber-600/35 text-amber-900 border border-amber-600/40'
+                    : 'bg-amber-500/15 active:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                } font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer`}
                 title="Sincronizar dispositivos por QR"
               >
                 <QrCode className="w-3.5 h-3.5" />
@@ -193,10 +208,14 @@ const AppContent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsSettingsModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                className={`px-3 py-1.5 rounded-xl ${
+                  isLight
+                    ? 'bg-black/10 hover:bg-black/20 text-slate-800 border border-black/20'
+                    : 'bg-white/10 hover:bg-white/20 text-zinc-200 border border-white/20'
+                } font-bold text-xs flex items-center gap-1.5 transition cursor-pointer`}
                 title="Abrir Ajustes"
               >
-                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <Settings className={`w-3.5 h-3.5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                 <span>Ajustes</span>
               </button>
               {session.role === 'admin' && (
@@ -212,7 +231,9 @@ const AppContent: React.FC = () => {
               <button
                 type="button"
                 onClick={logout}
-                className="p-2 rounded-xl bg-white/10 text-zinc-300 hover:text-red-400 active:bg-red-500/20"
+                className={`p-2 rounded-xl ${
+                  isLight ? 'bg-black/10 text-slate-700 hover:text-red-600 active:bg-red-500/20' : 'bg-white/10 text-zinc-300 hover:text-red-400 active:bg-red-500/20'
+                }`}
                 title="Cerrar sesión"
               >
                 <LogOut className="w-4 h-4" />

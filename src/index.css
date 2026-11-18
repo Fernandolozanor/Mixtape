@@ -441,3 +441,246 @@ html[data-text-size="xlarge"] {
 .animate-vinyl-spin {
   animation: vinyl-spin 1.8s linear infinite;
 }
+
+/* ==========================================================================
+   MODO CLARO HI-FI (Plata / Aluminio Cepillado Satinado - Sin ser blanco)
+   ========================================================================== */
+
+html[data-theme-mode="light"],
+html[data-theme-mode="light"] body {
+  background-color: #cbd2dc !important;
+  background-image: 
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.45) 0%, transparent 65%),
+    linear-gradient(180deg, #d5dae2 0%, #cbd2dc 40%, #bec6d2 100%) !important;
+  color: #0f172a !important;
+}
+
+/* Base text contrast on light backgrounds */
+html[data-theme-mode="light"] h1:not([class*="from-black"]):not([class*="text-black"]):not([class*="text-amber-"]):not([class*="text-emerald-"]),
+html[data-theme-mode="light"] h2:not([class*="from-black"]):not([class*="text-black"]):not([class*="text-amber-"]):not([class*="text-emerald-"]),
+html[data-theme-mode="light"] h3:not([class*="from-black"]):not([class*="text-black"]):not([class*="text-amber-"]):not([class*="text-emerald-"]),
+html[data-theme-mode="light"] h4:not([class*="from-black"]):not([class*="text-black"]):not([class*="text-amber-"]):not([class*="text-emerald-"]) {
+  color: #0f172a !important;
+}
+
+html[data-theme-mode="light"] .text-white {
+  color: #0f172a;
+}
+
+html[data-theme-mode="light"] .text-zinc-100,
+html[data-theme-mode="light"] .text-zinc-200 {
+  color: #1e293b !important;
+}
+
+html[data-theme-mode="light"] .text-zinc-300,
+html[data-theme-mode="light"] .text-zinc-400 {
+  color: #334155 !important;
+}
+
+html[data-theme-mode="light"] .text-zinc-500 {
+  color: #475569 !important;
+}
+
+html[data-theme-mode="light"] .text-zinc-600 {
+  color: #64748b !important;
+}
+
+/* Amber / Gold serigraphy with deep contrast against light silver */
+html[data-theme-mode="light"] .text-amber-400 {
+  color: #b45309 !important;
+}
+
+html[data-theme-mode="light"] .text-amber-300 {
+  color: #92400e !important;
+}
+
+/* Glass panels and cards adapted to satin aluminum faceplates */
+html[data-theme-mode="light"] .glass-nav {
+  background: linear-gradient(180deg, rgba(230, 235, 243, 0.98) 0%, rgba(216, 222, 232, 0.98) 100%) !important;
+  border-top: 1px solid #9aa5b6 !important;
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+html[data-theme-mode="light"] .glass-card {
+  background: linear-gradient(180deg, rgba(238, 242, 248, 0.94) 0%, rgba(223, 229, 238, 0.97) 100%) !important;
+  border: 1px solid #9aa5b6 !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.06),
+    0 4px 14px rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme-mode="light"] .glass-card.bg-black\/45 {
+  background: linear-gradient(180deg, rgba(235, 240, 247, 0.96) 0%, rgba(220, 227, 237, 0.98) 100%) !important;
+}
+
+html[data-theme-mode="light"] .glass-card-hover:hover {
+  background: linear-gradient(180deg, rgba(247, 250, 254, 0.98) 0%, rgba(231, 237, 246, 1) 100%) !important;
+  border-color: #d97706 !important;
+  box-shadow: 
+    inset 0 1px 0 #ffffff,
+    0 8px 24px rgba(15, 23, 42, 0.14) !important;
+}
+
+html[data-theme-mode="light"] .glass-panel {
+  background: linear-gradient(180deg, rgba(236, 240, 247, 0.98) 0%, rgba(223, 229, 238, 0.98) 100%) !important;
+  border: 1px solid #8e9aa9 !important;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1),
+    0 16px 36px rgba(15, 23, 42, 0.2) !important;
+}
+
+html[data-theme-mode="light"] .glass-input {
+  background: linear-gradient(180deg, #b8c0cc 0%, #c4cad5 100%) !important;
+  border: 1px solid #7f8c9e !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.14), 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+html[data-theme-mode="light"] .glass-input::placeholder {
+  color: #475569 !important;
+}
+
+html[data-theme-mode="light"] .glass-input:focus {
+  background: #cbd3de !important;
+  border-color: #b45309 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 10px rgba(217, 119, 6, 0.3) !important;
+}
+
+/* Mechanical Push Buttons on Light Mode */
+html[data-theme-mode="light"] .theme-btn {
+  background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 60%, #94a3b8 100%) !important;
+  border-top: 1px solid #ffffff !important;
+  border-bottom: 2px solid #475569 !important;
+  border-left: 1px solid #cbd5e1 !important;
+  border-right: 1px solid #64748b !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+html[data-theme-mode="light"] .theme-btn:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #d8dde6 60%, #a1aab9 100%) !important;
+  color: #000000 !important;
+  border-color: #d97706 !important;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.2), 0 0 12px rgba(217, 119, 6, 0.25) !important;
+}
+
+/* Borders and transparent surfaces */
+html[data-theme-mode="light"] .border-white\/5,
+html[data-theme-mode="light"] .border-white\/10,
+html[data-theme-mode="light"] .border-white\/15,
+html[data-theme-mode="light"] .border-white\/20 {
+  border-color: rgba(71, 85, 105, 0.28) !important;
+}
+
+html[data-theme-mode="light"] .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+html[data-theme-mode="light"] .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme-mode="light"] .bg-white\/15 {
+  background-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+html[data-theme-mode="light"] .hover\:bg-white\/5:hover {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+html[data-theme-mode="light"] .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+html[data-theme-mode="light"] .hover\:bg-white\/15:hover {
+  background-color: rgba(15, 23, 42, 0.16) !important;
+}
+
+html[data-theme-mode="light"] .bg-black\/20,
+html[data-theme-mode="light"] .bg-black\/30,
+html[data-theme-mode="light"] .bg-black\/40 {
+  background-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+/* Modals backdrop */
+html[data-theme-mode="light"] .bg-black\/75,
+html[data-theme-mode="light"] .bg-black\/85 {
+  background-color: rgba(15, 23, 42, 0.55) !important;
+}
+
+/* Scrollbars on Light Mode */
+html[data-theme-mode="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.25) !important;
+}
+html[data-theme-mode="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.45) !important;
+}
+
+/* Form selects & options */
+html[data-theme-mode="light"] select,
+html[data-theme-mode="light"] option {
+  background-color: #cbd3de !important;
+  color: #0f172a !important;
+}
+
+/* ==========================================================================
+   PROTECT DARK MEDIA, COVER OVERLAYS, VINYL, AND SENSITIVE ACCENTS
+   ========================================================================== */
+html[data-theme-mode="light"] [class*="from-black"] *,
+html[data-theme-mode="light"] [class*="bg-black/60"] *,
+html[data-theme-mode="light"] [class*="bg-black/70"] *,
+html[data-theme-mode="light"] [class*="bg-black/80"] *,
+html[data-theme-mode="light"] [class*="bg-black/90"] *,
+html[data-theme-mode="light"] [class*="bg-black "] *,
+html[data-theme-mode="light"] [class*="bg-zinc-950"] *,
+html[data-theme-mode="light"] [class*="bg-emerald-"] *,
+html[data-theme-mode="light"] [class*="bg-red-"] *,
+html[data-theme-mode="light"] [class*="bg-rose-"] *,
+html[data-theme-mode="light"] [class*="bg-pink-"] *,
+html[data-theme-mode="light"] [class*="bg-amber-400"] *,
+html[data-theme-mode="light"] .retro-tape-window *,
+html[data-theme-mode="light"] .retro-counter-display *,
+html[data-theme-mode="light"] .preserve-light,
+html[data-theme-mode="light"] .preserve-light * {
+  color: initial;
+}
+
+/* Force crisp white on dark cover overlays & action badges */
+html[data-theme-mode="light"] [class*="from-black"] .text-white,
+html[data-theme-mode="light"] [class*="from-black"] h1,
+html[data-theme-mode="light"] [class*="from-black"] h2,
+html[data-theme-mode="light"] [class*="from-black"] h3,
+html[data-theme-mode="light"] [class*="from-black"] h4,
+html[data-theme-mode="light"] [class*="bg-black/60"] .text-white,
+html[data-theme-mode="light"] [class*="bg-black/70"] .text-white,
+html[data-theme-mode="light"] [class*="bg-black/80"] .text-white,
+html[data-theme-mode="light"] [class*="bg-black/90"] .text-white,
+html[data-theme-mode="light"] [class*="bg-emerald-500"] .text-white,
+html[data-theme-mode="light"] [class*="bg-emerald-600"] .text-white,
+html[data-theme-mode="light"] [class*="bg-red-500"] .text-white,
+html[data-theme-mode="light"] [class*="bg-red-600"] .text-white,
+html[data-theme-mode="light"] [class*="bg-rose-500"] .text-white,
+html[data-theme-mode="light"] [class*="bg-rose-600"] .text-white,
+html[data-theme-mode="light"] [class*="bg-pink-500"] .text-white,
+html[data-theme-mode="light"] [class*="bg-pink-600"] .text-white {
+  color: #ffffff !important;
+}
+
+/* Force luminous gold on dark media overlays */
+html[data-theme-mode="light"] [class*="from-black"] .text-amber-400,
+html[data-theme-mode="light"] [class*="bg-black/60"] .text-amber-400,
+html[data-theme-mode="light"] [class*="bg-black/70"] .text-amber-400,
+html[data-theme-mode="light"] [class*="bg-black/80"] .text-amber-400,
+html[data-theme-mode="light"] [class*="bg-black/90"] .text-amber-400,
+html[data-theme-mode="light"] .retro-tape-window .text-amber-400,
+html[data-theme-mode="light"] .retro-counter-display .text-amber-400 {
+  color: #fbbf24 !important;
+}
+
+/* Subtitles on dark cover gradients */
+html[data-theme-mode="light"] [class*="from-black"] .text-zinc-300,
+html[data-theme-mode="light"] [class*="from-black"] .text-zinc-400 {
+  color: #cbd5e1 !important;
+}

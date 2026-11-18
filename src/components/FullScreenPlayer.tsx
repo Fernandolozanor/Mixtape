@@ -56,7 +56,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     playbackMediaType,
   } = usePlayer();
 
-  const { isLiked, toggleLike } = useLibrary();
+  const { isLiked, toggleLike, settings } = useLibrary();
   const { currentTheme } = useTheme();
 
   // Active Center View: 'deck' | 'lyrics' | 'queue'
@@ -65,7 +65,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const [showPitchControl, setShowPitchControl] = useState(false);
 
   const liked = currentTrack ? isLiked(currentTrack.id) : false;
-  const isSteel = currentTheme.id === 'retro-rock-80s';
+  const isSteel = currentTheme.id === 'retro-rock-80s' || settings.themeMode === 'light';
 
   // Ensure retro deck (cassette or vinyl as appropriate) is activated when track changes or 3-second auto-trigger fires
   useEffect(() => {
@@ -86,7 +86,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const remainingTime = duration > currentTime ? duration - currentTime : 0;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col justify-between overflow-hidden bg-black select-none safe-top safe-bottom animate-in fade-in slide-in-from-bottom duration-300">
+    <div
+      className={`fixed inset-0 z-[60] flex flex-col justify-between overflow-hidden ${
+        settings.themeMode === 'light' ? 'bg-[#cbd2dc]' : 'bg-black'
+      } select-none safe-top safe-bottom animate-in fade-in slide-in-from-bottom duration-300`}
+    >
       {/* Blurred Album Art Ambient Background */}
       <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
         <img

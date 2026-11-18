@@ -71,10 +71,10 @@ flowchart TD
   * `src/App.tsx` — Orquestador de contextos, navegación adaptable (escritorio/móvil), barra superior de estado/sesión y modales globales.
 * **Contextos (`src/context/`):**
   * `AuthContext.tsx` — Huella de dispositivo `EQ-XXXX-XXXX`, prueba de 1 hora, validación SHA-256 de licencias `MX-XXXX-XXXX` y panel maestro de administración.
-  * `LibraryContext.tsx` — Gestión de listas (*Cintas*), álbumes oficiales (*Vinilos*), ajustes y enlace con la sincronización en la nube.
+  * `LibraryContext.tsx` — Gestión de listas (*Cintas*), álbumes oficiales (*Vinilos*), ajustes (tamaño de texto, VU meter, modo de apariencia claro/oscuro) y sincronización multi-dispositivo.
   * `PlayerContext.tsx` — Cola de reproducción, control de tiempo, descarga de letras sincronizadas, activación automática de la pletina a los 3 segundos, control de *Pitch* y seguimiento del progreso de cintas activas.
   * `KidsModeContext.tsx` — Estado del modo infantil, PIN parental, limitador de volumen seguro y temporizador de apagado (*Sleep Timer*).
-  * `ThemeContext.tsx` — Motor de 5 esquemas visuales con acabado por defecto *Sony Brushed Steel*.
+  * `ThemeContext.tsx` — Motor de esquemas de color personalizables combinado con el selector de **Modo Claro (Plata / Aluminio Satinado Hi-Fi)** y **Modo Oscuro (Carbón / Hi-Fi Nocturno)**, con calibración de alto contraste para máxima legibilidad.
 * **Servicios (`src/services/`):**
   * `audioEngine.ts` — Motor de audio híbrido (HTML5 `<audio>` + YouTube IFrame API sin cookies), bloqueo de anuncios pre-roll/mid-roll, SponsorBlock, `navigator.mediaSession`, soporte de posicionamiento inicial `startTime` y ancla de audio en segundo plano para móviles con pantalla bloqueada.
   * `streamResolver.ts` — Resolución en carrera paralela (`Promise.any`) contra Cloudflare Worker, nodos Piped e Invidious y red Audius.

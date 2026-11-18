@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound, Gauge, Activity, RefreshCw, CheckCircle2, Type, Disc3 } from 'lucide-react';
+import { X, Shield, Database, Trash2, Baby, QrCode, KeyRound, Gauge, Activity, RefreshCw, CheckCircle2, Type, Disc3, Sun, Moon } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { useKidsMode } from '../context/KidsModeContext';
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +56,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const { settings, syncState, updateSettings } = useLibrary();
   const { isKidsMode } = useKidsMode();
   const { session, setAdminModalOpen } = useAuth();
+  const isLight = settings.themeMode === 'light';
   const [cacheClearedMsg, setCacheClearedMsg] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateStatusMsg, setUpdateStatusMsg] = useState<string | null>(null);
@@ -89,12 +90,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="w-full max-w-lg rounded-3xl glass-panel p-6 shadow-2xl relative border border-white/10 max-h-[84dvh] overflow-y-auto my-auto">
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 p-1.5 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition"
+          className={`absolute right-5 top-5 p-1.5 rounded-full ${isLight ? 'text-slate-600 hover:text-slate-950 hover:bg-black/10' : 'text-zinc-400 hover:text-white hover:bg-white/10'} transition cursor-pointer`}
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold text-white mb-6">Ajustes de Mixtape</h2>
+        <h2 className={`text-xl font-bold ${isLight ? 'text-slate-900' : 'text-white'} mb-6`}>Ajustes de Mixtape</h2>
 
         {/* Section 0: Text Size Selection (4 Tamaños con Auto-Organización) */}
         <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-white/5 to-transparent border border-amber-500/30 space-y-3">
@@ -132,18 +133,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onClick={() => updateSettings({ textSize: opt.id })}
                   className={`p-3 rounded-xl border flex flex-col items-center justify-between gap-1.5 transition active:scale-95 text-center cursor-pointer ${
                     isSelected
-                      ? 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
-                      : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+                      ? isLight
+                        ? 'bg-amber-600/20 text-slate-900 border-amber-600 shadow-md ring-1 ring-amber-600/40'
+                        : 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
+                      : isLight
+                        ? 'bg-black/5 text-slate-700 border-black/10 hover:text-slate-950 hover:bg-black/10'
+                        : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <span className={`font-black font-stereo tracking-tight text-amber-400 ${opt.previewClass}`}>
+                  <span className={`font-black font-stereo tracking-tight ${isLight ? 'text-amber-800' : 'text-amber-400'} ${opt.previewClass}`}>
                     A
                   </span>
                   <div>
-                    <p className={`text-xs font-bold leading-tight ${isSelected ? 'text-white' : 'text-zinc-200'}`}>
+                    <p className={`text-xs font-bold leading-tight ${isSelected ? (isLight ? 'text-slate-950 font-bold' : 'text-white') : (isLight ? 'text-slate-800' : 'text-zinc-200')}`}>
                       {opt.name}
                     </p>
-                    <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                    <p className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-zinc-400'} font-mono mt-0.5`}>
                       {opt.description}
                     </p>
                   </div>
@@ -182,6 +187,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         )}
 
+        {/* Section: Visual Theme Mode (Modo Oscuro vs Modo Claro Satinado - No Blanco) */}
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-white/5 to-transparent border border-amber-500/30 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <Sun className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-white">Modo de Apariencia</h3>
+                <p className="text-xs text-zinc-400">Elige entre fondo carbón oscuro o plata satinado (no blanco)</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase">
+              {settings.themeMode === 'light' ? 'Modo Claro (Plata)' : 'Modo Oscuro (Carbón)'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={() => updateSettings({ themeMode: 'dark' })}
+              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition active:scale-95 text-center cursor-pointer ${
+                (settings.themeMode || 'dark') === 'dark'
+                  ? 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
+                  : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Moon className="w-6 h-6 text-amber-400" />
+              <div>
+                <p className={`text-xs font-bold leading-tight ${(settings.themeMode || 'dark') === 'dark' ? 'text-white' : 'text-zinc-200'}`}>
+                  Modo Oscuro
+                </p>
+                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                  Carbón • Hi-Fi Nocturno
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => updateSettings({ themeMode: 'light' })}
+              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition active:scale-95 text-center cursor-pointer ${
+                settings.themeMode === 'light'
+                  ? 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
+                  : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Sun className="w-6 h-6 text-amber-400" />
+              <div>
+                <p className={`text-xs font-bold leading-tight ${settings.themeMode === 'light' ? 'text-white' : 'text-zinc-200'}`}>
+                  Modo Claro
+                </p>
+                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                  Plata • Acero Satinado
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+
         {/* Section 0: Color Theme Selection */}
         <div className="mb-6 p-4 rounded-2xl bg-white/5 border border-white/5">
           <ThemeSelector />
@@ -204,16 +267,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={() => updateSettings({ vuMeterStyle: 'analog' })}
-              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition active:scale-95 text-center ${
+              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition active:scale-95 text-center cursor-pointer ${
                 (settings.vuMeterStyle || 'analog') === 'analog'
-                  ? 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
-                  : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+                  ? isLight
+                    ? 'bg-amber-600/20 text-slate-900 border-amber-600 shadow-md ring-1 ring-amber-600/40'
+                    : 'bg-amber-500/20 text-white border-amber-400 shadow-lg ring-1 ring-amber-400/40'
+                  : isLight
+                    ? 'bg-black/5 text-slate-700 border-black/10 hover:text-slate-950 hover:bg-black/10'
+                    : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Gauge className="w-6 h-6 text-amber-400" />
+              <Gauge className={`w-6 h-6 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
               <div>
-                <p className="text-xs font-bold font-stereo uppercase tracking-wider">Agujas Analógicas</p>
-                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">Vúmetro clásico vintage</p>
+                <p className={`text-xs font-bold font-stereo uppercase tracking-wider ${(settings.vuMeterStyle || 'analog') === 'analog' ? (isLight ? 'text-slate-950 font-black' : 'text-white') : (isLight ? 'text-slate-800' : 'text-zinc-200')}`}>Agujas Analógicas</p>
+                <p className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-zinc-400'} font-mono mt-0.5`}>Vúmetro clásico vintage</p>
               </div>
             </button>
 
@@ -221,10 +288,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <button
               type="button"
               onClick={() => updateSettings({ vuMeterStyle: 'led' })}
-              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition active:scale-95 text-center ${
+              className={`p-3 rounded-xl border flex flex-col items-center gap-2 transition active:scale-95 text-center cursor-pointer ${
                 settings.vuMeterStyle === 'led'
-                  ? 'bg-emerald-500/20 text-white border-emerald-400 shadow-lg ring-1 ring-emerald-400/40'
-                  : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
+                  ? isLight
+                    ? 'bg-emerald-600/20 text-slate-900 border-emerald-600 shadow-md ring-1 ring-emerald-600/40'
+                    : 'bg-emerald-500/20 text-white border-emerald-400 shadow-lg ring-1 ring-emerald-400/40'
+                  : isLight
+                    ? 'bg-black/5 text-slate-700 border-black/10 hover:text-slate-950 hover:bg-black/10'
+                    : 'bg-black/30 text-zinc-400 border-white/10 hover:text-white hover:bg-white/5'
               }`}
             >
               <div className="flex items-center gap-0.5 h-6">
@@ -234,8 +305,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span className="w-1.5 h-6 bg-rose-500 rounded-sm shadow-[0_0_6px_#f43f5e]" />
               </div>
               <div>
-                <p className="text-xs font-bold font-stereo uppercase tracking-wider">Luces Digitales</p>
-                <p className="text-[10px] text-zinc-400 font-mono mt-0.5">Barras LED de colores</p>
+                <p className={`text-xs font-bold font-stereo uppercase tracking-wider ${settings.vuMeterStyle === 'led' ? (isLight ? 'text-slate-950 font-black' : 'text-white') : (isLight ? 'text-slate-800' : 'text-zinc-200')}`}>Luces Digitales</p>
+                <p className={`text-[10px] ${isLight ? 'text-slate-600' : 'text-zinc-400'} font-mono mt-0.5`}>Barras LED de colores</p>
               </div>
             </button>
           </div>

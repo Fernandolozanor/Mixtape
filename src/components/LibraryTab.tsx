@@ -170,7 +170,10 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
     createPlaylist,
     addTracksToPlaylist,
     updateSettings,
+    settings,
   } = useLibrary();
+
+  const isLight = settings.themeMode === 'light';
 
   const { playTrack, playTape, currentTrack, isPlaying } = usePlayer();
   const { currentTheme } = useTheme();
@@ -818,7 +821,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                       style={{
                         color:
                           currentTrack?.id === track.id && !isEditingMode
-                            ? currentTheme.accent
+                            ? isLight
+                              ? '#b45309'
+                              : currentTheme.accent
+                            : isLight
+                            ? '#0f172a'
                             : '#ffffff',
                       }}
                     >
@@ -1139,7 +1146,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                       style={{
                         color:
                           currentTrack?.id === track.id && !isEditingMode
-                            ? currentTheme.accent
+                            ? isLight
+                              ? '#b45309'
+                              : currentTheme.accent
+                            : isLight
+                            ? '#0f172a'
                             : '#ffffff',
                       }}
                     >

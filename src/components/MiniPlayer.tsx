@@ -22,9 +22,9 @@ export const MiniPlayer: React.FC = () => {
     setFullScreenPlayerOpen,
   } = usePlayer();
 
-  const { likedTracks, playlists, isLiked, toggleLike } = useLibrary();
+  const { likedTracks, playlists, isLiked, toggleLike, settings } = useLibrary();
   const { currentTheme } = useTheme();
-  const isSteel = currentTheme.id === 'retro-rock-80s';
+  const isSteel = currentTheme.id === 'retro-rock-80s' || settings.themeMode === 'light';
 
   // Find candidate track and label to show when standby (nothing actively playing)
   const standbyTrack = useMemo<Track | null>(() => {

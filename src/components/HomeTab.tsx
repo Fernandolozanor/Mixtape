@@ -53,8 +53,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   onOpenSettingsModal,
 }) => {
   const { playTrack, currentTrack, isPlaying } = usePlayer();
-  const { likedTracks, playlists, isLiked, toggleLike } = useLibrary();
+  const { likedTracks, playlists, isLiked, toggleLike, settings } = useLibrary();
   const { currentTheme } = useTheme();
+  const isLight = settings.themeMode === 'light';
 
   // Active expanded window ID (only one subsección open at any time)
   const [expandedWindowId, setExpandedWindowId] = useState<string | null>(null);
@@ -298,7 +299,13 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                         <p
                           className="text-sm font-semibold truncate"
                           style={{
-                            color: isCurrent ? currentTheme.accent : '#ffffff',
+                            color: isCurrent
+                              ? isLight
+                                ? '#b45309'
+                                : currentTheme.accent
+                              : isLight
+                              ? '#0f172a'
+                              : '#ffffff',
                           }}
                         >
                           {track.title}
@@ -628,7 +635,15 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 <div className="overflow-hidden flex-1">
                   <p
                     className="text-sm font-semibold truncate"
-                    style={{ color: isCurrent ? currentTheme.accent : '#ffffff' }}
+                    style={{
+                      color: isCurrent
+                        ? isLight
+                          ? '#b45309'
+                          : currentTheme.accent
+                        : isLight
+                        ? '#0f172a'
+                        : '#ffffff',
+                    }}
                   >
                     {item.title}
                   </p>

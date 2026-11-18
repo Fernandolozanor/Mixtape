@@ -68,6 +68,7 @@ export interface UserSettings {
   activeInstanceIndex: number;
   vuMeterStyle?: 'analog' | 'led';
   textSize?: TextSizeType;
+  themeMode?: 'dark' | 'light';
   crossfadeEnabled?: boolean;
   crossfadeDuration?: number; // in seconds (e.g. 2 - 12)
   autoOpenPlayerDeck?: boolean; // Abrir automáticamente el dispositivo de reproducción (cinta o vinilo) a los 2 segundos

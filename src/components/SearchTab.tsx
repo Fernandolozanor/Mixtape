@@ -98,8 +98,9 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
   const { playTrack, currentTrack } = usePlayer();
-  const { isLiked, toggleLike, addMultipleToLiked, createPlaylist, addTracksToPlaylist } = useLibrary();
+  const { isLiked, toggleLike, addMultipleToLiked, createPlaylist, addTracksToPlaylist, settings } = useLibrary();
   const { currentTheme } = useTheme();
+  const isLight = settings.themeMode === 'light';
 
   // Active radio tuning sound stop callback ref (plays until results are found)
   const stopTuningRef = useRef<(() => void) | null>(null);
@@ -1048,7 +1049,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                             color: isSelected
                               ? '#ffffff'
                               : isCurrent && !isMultiSelectMode
-                              ? currentTheme.accent
+                              ? isLight
+                                ? '#b45309'
+                                : currentTheme.accent
+                              : isLight
+                              ? '#0f172a'
                               : '#ffffff',
                           }}
                         >
@@ -1160,7 +1165,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl font-semibold transition border text-sm shadow-md active:scale-95 disabled:opacity-50"
                 style={{
                   backgroundColor: currentTheme.secondary,
-                  color: '#ffffff',
+                  color: isLight || currentTheme.id === 'retro-rock-80s' ? '#0f172a' : '#ffffff',
                   borderColor: currentTheme.badgeBorder,
                 }}
               >

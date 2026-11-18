@@ -58,6 +58,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   activeInstanceIndex: 0,
   vuMeterStyle: 'analog',
   textSize: 'medium',
+  themeMode: 'dark',
   crossfadeEnabled: false,
   crossfadeDuration: 5,
   autoOpenPlayerDeck: true,
@@ -107,6 +108,20 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     document.documentElement.setAttribute('data-text-size', size);
     localStorage.setItem('pulse_text_size', size);
   }, [settings.textSize]);
+
+  // Synchronize Theme Mode (dark vs light brushed silver) to document root and localStorage
+  useEffect(() => {
+    const mode = settings.themeMode || 'dark';
+    document.documentElement.setAttribute('data-theme-mode', mode);
+    if (mode === 'light') {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+      document.documentElement.classList.add('dark');
+    }
+    localStorage.setItem('pulse_theme_mode', mode);
+  }, [settings.themeMode]);
 
   // Synchronize initial audio settings on startup
   useEffect(() => {
