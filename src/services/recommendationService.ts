@@ -9,6 +9,44 @@ export interface RecommendationGroup {
   tracks: Track[];
 }
 
+export interface ContentWindow {
+  id: string;
+  title: string;
+  subtitle?: string;
+  tracks: Track[];
+}
+
+/**
+ * Calculates a stable epoch week number, rotating every Monday at 00:00 UTC.
+ */
+export function getEpochWeek(): number {
+  const now = Date.now();
+  const FOUR_DAYS_MS = 4 * 86400000;
+  const ONE_WEEK_MS = 7 * 86400000;
+  return Math.floor((now + FOUR_DAYS_MS) / ONE_WEEK_MS);
+}
+
+/**
+ * Deterministically picks a cover from a tracklist that stays stable for 7 days,
+ * then rotates automatically to another track next week.
+ */
+export function getWeeklyCover(tracks: Track[], saltKey: string): string {
+  if (!tracks || tracks.length === 0) return '';
+  const valid = tracks.filter((t) => t.thumbnail && t.thumbnail.trim().length > 0);
+  const pool = valid.length > 0 ? valid : tracks;
+  if (pool.length === 0) return '';
+
+  const week = getEpochWeek();
+  let hash = 0;
+  const str = `${saltKey}_wk_${week}`;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % pool.length;
+  return pool[index]?.thumbnail || '';
+}
+
 export interface FeaturedCollection {
   id: string;
   title: string;
@@ -222,9 +260,215 @@ class RecommendationService {
       }
     }
 
-    this.cachedRecommendations = groups;
+    // Ensure we have 4 or 5 groups in "Seleccionado para ti"
+    const discoveryFillers = [
+      { id: 'fill_rock_80', reason: 'Himnos Legendarios del Rock', genre: 'Grandes Clásicos del Rock 80s', query: '80s Rock Classics Greatest Hits' },
+      { id: 'fill_ballads', reason: 'Grandes Baladas del Rock', genre: 'Baladas Inmortales', query: 'Classic Rock Ballads Greatest Hits' },
+      { id: 'fill_rock_es', reason: 'Rock en Español Legendario', genre: 'Clásicos en Español', query: 'Rock en Español Grandes Exitos' },
+      { id: 'fill_hard_rock', reason: 'Lo Mejor del Hard Rock', genre: 'Hard Rock & Metal 80s', query: 'Hard Rock 80s 90s Greatest Hits' },
+    ];
+
+    for (const item of discoveryFillers) {
+      if (groups.length >= 5) break;
+      if (groups.some((g) => g.id === item.id || g.reason === item.reason)) continue;
+      try {
+        const res = await streamResolver.search(item.query, 'youtube');
+        if (res.length > 0) {
+          groups.push({
+            id: item.id,
+            reason: item.reason,
+            artistOrGenre: item.genre,
+            tracks: res.slice(0, 8),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    this.cachedRecommendations = groups.slice(0, 5);
     this.lastAnalyzedSignature = signature;
-    return groups;
+    return this.cachedRecommendations;
+  }
+
+  /**
+   * Generates 4 or 5 content windows for "Reproducciones recientes"
+   */
+  async getRecentPlaybackWindows(recentTracks: Track[] = []): Promise<ContentWindow[]> {
+    const windows: ContentWindow[] = [];
+
+    // Window 1: Últimas canciones escuchadas (las últimas 4 o 5)
+    if (recentTracks.length > 0) {
+      windows.push({
+        id: 'recent_top5',
+        title: 'Últimas canciones escuchadas',
+        subtitle: `${recentTracks.slice(0, 5).length} canciones recientes`,
+        tracks: recentTracks.slice(0, 5),
+      });
+    }
+
+    // Extract unique recent artists
+    const recentArtists = Array.from(
+      new Set(
+        recentTracks
+          .map((t) => this.cleanArtistName(t.artist))
+          .filter((a) => a && a.length > 1)
+      )
+    );
+
+    // Window 2: Más de recentArtist[0]
+    if (recentArtists.length > 0) {
+      try {
+        const artist = recentArtists[0];
+        const res = await streamResolver.search(`${artist} greatest hits full`, 'youtube');
+        if (res.length > 0) {
+          windows.push({
+            id: `recent_artist_${artist.replace(/\s+/g, '_')}`,
+            title: `Más de ${artist}`,
+            subtitle: 'Inspirado en tu última escucha',
+            tracks: res.slice(0, 8),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Window 3: Más de recentArtist[1]
+    if (recentArtists.length > 1) {
+      try {
+        const artist = recentArtists[1];
+        const res = await streamResolver.search(`${artist} greatest hits full`, 'youtube');
+        if (res.length > 0) {
+          windows.push({
+            id: `recent_artist_${artist.replace(/\s+/g, '_')}`,
+            title: `Más de ${artist}`,
+            subtitle: 'Inspirado en tus reproducciones',
+            tracks: res.slice(0, 8),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Window 4: Mix de tu última sesión
+    if (recentArtists.length >= 1) {
+      try {
+        const query = `${recentArtists.slice(0, 2).join(' ')} session mix rock`;
+        const res = await streamResolver.search(query, 'youtube');
+        if (res.length > 0) {
+          windows.push({
+            id: 'recent_session_mix',
+            title: 'Mix de tu última sesión',
+            subtitle: 'Pistas similares a tus recientes',
+            tracks: res.slice(0, 8),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Window 5: Historial completo de escuchas
+    const fullHistory = playbackHistoryService.getRecentTracks(20);
+    if (fullHistory.length > 0) {
+      windows.push({
+        id: 'recent_history_full',
+        title: 'Historial completo de escuchas',
+        subtitle: `${fullHistory.length} pistas en tu historial`,
+        tracks: fullHistory,
+      });
+    }
+
+    // Fallbacks if fewer than 4 windows (e.g. brand new user)
+    const starterDefaults = [
+      { id: 'recent_starter_1', title: 'Últimas canciones escuchadas', query: '80s Rock Greatest Hits' },
+      { id: 'recent_starter_2', title: 'Sesión Rock de los 80', query: 'Classic 80s Rock Anthems' },
+      { id: 'recent_starter_3', title: 'Sesión Baladas Legendarias', query: 'Legendary Rock Ballads' },
+      { id: 'recent_starter_4', title: 'Sesión Hard Rock Clásico', query: 'Hard Rock 80s Classics' },
+      { id: 'recent_starter_5', title: 'Sesión Grandes Himnos', query: 'Greatest Rock Anthems of all time' },
+    ];
+
+    for (const def of starterDefaults) {
+      if (windows.length >= 5) break;
+      if (windows.some((w) => w.id === def.id || w.title === def.title)) continue;
+      try {
+        const res = await streamResolver.search(def.query, 'youtube');
+        if (res.length > 0) {
+          windows.push({
+            id: def.id,
+            title: def.title,
+            subtitle: 'Selección de bienvenida',
+            tracks: res.slice(0, 6),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return windows.slice(0, 5);
+  }
+
+  /**
+   * Generates 4 or 5 content windows for "Novedades para ti"
+   */
+  async getNewReleasesWindows(
+    likedTracks: Track[],
+    playlists: Playlist[],
+    recentTracks: Track[] = []
+  ): Promise<ContentWindow[]> {
+    const searchHistory = this.getSearchHistory();
+    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory, recentTracks);
+    const windows: ContentWindow[] = [];
+
+    if (tastes.length > 0) {
+      const topArtists = tastes.slice(0, 3);
+      for (const item of topArtists) {
+        try {
+          const res = await streamResolver.search(`${item.artist} new single official latest release`, 'youtube');
+          if (res.length > 0) {
+            windows.push({
+              id: `news_${item.artist.replace(/\s+/g, '_')}`,
+              title: `Novedades de ${item.artist}`,
+              subtitle: 'Últimos singles y directos',
+              tracks: res.slice(0, 8),
+            });
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    const thematicNews = [
+      { id: 'news_singles', title: 'Nuevos Singles y Remasters', query: 'rock new single official 2026 remaster' },
+      { id: 'news_live', title: 'Directos y Conciertos Recientes', query: 'classic rock live concert full 2025 2026' },
+      { id: 'news_rock_es', title: 'Novedades de Rock en Español', query: 'rock en español nuevo single oficial 2025 2026' },
+      { id: 'news_acoustic', title: 'Sesiones Acústicas Recientes', query: 'rock acoustic live session recent official' },
+      { id: 'news_anthems', title: 'Lanzamientos del Mes', query: 'rock metal new releases monthly compilation' },
+    ];
+
+    for (const gen of thematicNews) {
+      if (windows.length >= 5) break;
+      if (windows.some((w) => w.id === gen.id || w.title === gen.title)) continue;
+      try {
+        const res = await streamResolver.search(gen.query, 'youtube');
+        if (res.length > 0) {
+          windows.push({
+            id: gen.id,
+            title: gen.title,
+            subtitle: 'Últimas publicaciones',
+            tracks: res.slice(0, 8),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return windows.slice(0, 5);
   }
 
   /**

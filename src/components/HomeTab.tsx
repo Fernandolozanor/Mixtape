@@ -12,6 +12,8 @@ import {
   Sparkles,
   Settings,
   History,
+  ArrowLeft,
+  Disc3,
 } from 'lucide-react';
 import type { Track } from '../types/music';
 import { usePlayer } from '../context/PlayerContext';
@@ -19,7 +21,8 @@ import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   recommendationService,
-  type RecommendationGroup,
+  getWeeklyCover,
+  type ContentWindow,
   type FeaturedCollection,
 } from '../services/recommendationService';
 import { playbackHistoryService } from '../services/playbackHistoryService';
@@ -52,66 +55,83 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const { likedTracks, playlists, isLiked, toggleLike } = useLibrary();
   const { currentTheme } = useTheme();
 
-  const [recommendations, setRecommendations] = useState<RecommendationGroup[]>([]);
-  const [recentTracks, setRecentTracks] = useState<Track[]>(() =>
-    playbackHistoryService.getRecentTracks(5)
-  );
-  const [newReleases, setNewReleases] = useState<Track[]>([]);
+  // Active expanded window ID (only one subsección open at any time)
+  const [expandedWindowId, setExpandedWindowId] = useState<string | null>(null);
+
+  // 4 or 5 Content windows for each main section
+  const [selectedWindows, setSelectedWindows] = useState<ContentWindow[]>([]);
+  const [recentWindows, setRecentWindows] = useState<ContentWindow[]>([]);
+  const [newReleasesWindows, setNewReleasesWindows] = useState<ContentWindow[]>([]);
+
   const [featuredCollections, setFeaturedCollections] = useState<FeaturedCollection[]>(() =>
     recommendationService.getPersonalizedCollections(likedTracks, playlists)
   );
   const [continuousChannels, setContinuousChannels] = useState<Track[]>([]);
-  const [isLoadingRecs, setIsLoadingRecs] = useState(false);
+
+  const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const [isLoadingNewReleases, setIsLoadingNewReleases] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
 
-  const loadRecommendations = async (force: boolean = false) => {
-    setIsLoadingRecs(true);
+  const loadContent = async (force: boolean = false) => {
+    setIsLoadingSelected(true);
+    setIsLoadingRecent(true);
     setIsLoadingNewReleases(true);
     setIsLoadingChannels(true);
-    try {
-      const recents = playbackHistoryService.getRecentTracks(5);
-      setRecentTracks(recents);
 
-      // 1. Personalized Groups ("Seleccionado para ti")
+    try {
+      const recents = playbackHistoryService.getRecentTracks(15);
+
+      // 1. Seleccionado para ti (4-5 windows)
       const recs = await recommendationService.getPersonalizedRecommendations(
         likedTracks,
         playlists,
         force
       );
-      setRecommendations(recs);
+      const selWins: ContentWindow[] = recs.slice(0, 5).map((g) => ({
+        id: g.id,
+        title: g.reason,
+        subtitle: g.artistOrGenre,
+        tracks: g.tracks,
+      }));
+      setSelectedWindows(selWins);
 
-      // 2. Novedades para ti
-      const releases = await recommendationService.getNewReleasesForYou(
+      // 2. Reproducciones recientes (4-5 windows)
+      const recWins = await recommendationService.getRecentPlaybackWindows(recents);
+      setRecentWindows(recWins);
+
+      // 3. Novedades para ti (4-5 windows)
+      const newsWins = await recommendationService.getNewReleasesWindows(
         likedTracks,
         playlists,
         recents
       );
-      setNewReleases(releases);
+      setNewReleasesWindows(newsWins);
 
-      // 3. Personalized Collections ("Colecciones Destacadas")
+      // 4. Featured Collections & Channels
       const cols = recommendationService.getPersonalizedCollections(likedTracks, playlists);
       setFeaturedCollections(cols);
 
-      // 4. Personalized Continuous Channels ("Canales Continuos")
       const channels = await recommendationService.getPersonalizedChannels(likedTracks, playlists);
       setContinuousChannels(channels);
     } catch (e) {
-      console.warn('Error loading recommendations & channels:', e);
+      console.warn('Error loading home content:', e);
     } finally {
-      setIsLoadingRecs(false);
+      setIsLoadingSelected(false);
+      setIsLoadingRecent(false);
       setIsLoadingNewReleases(false);
       setIsLoadingChannels(false);
     }
   };
 
   useEffect(() => {
-    loadRecommendations(false);
+    loadContent(false);
   }, [likedTracks.length, playlists.length]);
 
-  // Keep recent tracks synchronized when user plays any song
+  // Keep recent windows synchronized when user plays any song
   useEffect(() => {
-    setRecentTracks(playbackHistoryService.getRecentTracks(5));
+    const recents = playbackHistoryService.getRecentTracks(15);
+    recommendationService.getRecentPlaybackWindows(recents).then(setRecentWindows);
   }, [currentTrack?.id]);
 
   const formatDuration = (seconds: number) => {
@@ -124,6 +144,222 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  const isGlobalLoading =
+    isLoadingSelected && selectedWindows.length === 0;
+
+  /**
+   * Renders a main section with 4 or 5 folded content windows.
+   * Tapping any window unfolds its tracklist and folds any previously open window.
+   */
+  const renderMainSection = (
+    title: string,
+    subtitle: string,
+    icon: React.ReactNode,
+    windows: ContentWindow[],
+    isLoading: boolean
+  ) => {
+    const activeWindow = windows.find((w) => w.id === expandedWindowId);
+
+    return (
+      <div className="space-y-4">
+        {/* Section Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {icon}
+            <div>
+              <h2 className="text-lg font-bold text-white tracking-tight uppercase">
+                {title}
+              </h2>
+              <p className="text-xs text-zinc-400">{subtitle}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Loading state */}
+        {isLoading && windows.length === 0 ? (
+          <div className="p-10 text-center text-zinc-400 glass-card rounded-3xl">
+            <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3" style={{ color: currentTheme.accent }} />
+            <p className="text-sm font-medium text-white">Sintonizando ventanas de contenido...</p>
+          </div>
+        ) : activeWindow ? (
+          /* EXPANDED SUBSECTION VIEW */
+          <div className="space-y-4 p-4 sm:p-6 rounded-3xl glass-card border border-white/15 bg-black/45 shadow-2xl transition-all duration-300">
+            {/* Top Bar with 'Volver' button */}
+            <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setExpandedWindowId(null)}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
+                  title="Plegar y volver a las ventanas"
+                >
+                  <ArrowLeft className="w-4 h-4 text-amber-400" />
+                  <span>Volver</span>
+                </button>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
+                    {activeWindow.title}
+                  </h3>
+                  {activeWindow.subtitle && (
+                    <p className="text-xs text-zinc-400">{activeWindow.subtitle}</p>
+                  )}
+                </div>
+              </div>
+
+              {activeWindow.tracks.length > 0 && (
+                <button
+                  onClick={() => playTrack(activeWindow.tracks[0], activeWindow.tracks)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
+                  style={{
+                    backgroundColor: currentTheme.primary,
+                    color: '#ffffff',
+                  }}
+                >
+                  <Play className="w-4 h-4 fill-current" />
+                  <span>Reproducir Todo</span>
+                </button>
+              )}
+            </div>
+
+            {/* Tracklist Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+              {activeWindow.tracks.map((track, idx) => {
+                const isCurrent = currentTrack?.id === track.id;
+                const liked = isLiked(track.id);
+
+                return (
+                  <div
+                    key={`${activeWindow.id}-${track.id}-${idx}`}
+                    onClick={() => playTrack(track, activeWindow.tracks)}
+                    className={`p-3 rounded-2xl cursor-pointer transition flex items-center justify-between gap-3 group ${
+                      isCurrent
+                        ? 'border shadow-md'
+                        : 'glass-card glass-card-hover'
+                    }`}
+                    style={
+                      isCurrent
+                        ? {
+                            backgroundColor: `rgba(${currentTheme.rgb}, 0.16)`,
+                            borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
+                          }
+                        : {}
+                    }
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md">
+                        <img
+                          src={track.thumbnail}
+                          alt={track.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                          <Play className="w-5 h-5 fill-white text-white" />
+                        </div>
+                      </div>
+
+                      <div className="overflow-hidden">
+                        <p
+                          className="text-sm font-semibold truncate"
+                          style={{
+                            color: isCurrent ? currentTheme.accent : '#ffffff',
+                          }}
+                        >
+                          {track.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                          <span className="truncate">{track.artist}</span>
+                          <span className="text-zinc-600">•</span>
+                          <SourceBadge source={track.source} size="xs" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <span className="text-[11px] text-zinc-500 font-mono">
+                        {formatDuration(track.duration)}
+                      </span>
+                      <button
+                        onClick={() => toggleLike(track)}
+                        className="p-1.5 text-zinc-400 hover:text-white transition cursor-pointer"
+                        title="Me gusta"
+                      >
+                        <Heart
+                          className="w-4 h-4 transition-colors"
+                          style={{
+                            fill: liked ? currentTheme.accent : 'none',
+                            color: liked ? currentTheme.accent : 'currentColor',
+                          }}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Volver Button for convenience on mobile */}
+            <div className="pt-2 flex justify-center">
+              <button
+                onClick={() => setExpandedWindowId(null)}
+                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-amber-400" />
+                <span>Volver a las ventanas</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* FOLDED STATE: 4 or 5 Content Windows (Cards) */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            {windows.map((win) => {
+              const cover = getWeeklyCover(win.tracks, win.id);
+
+              return (
+                <div
+                  key={win.id}
+                  onClick={() => setExpandedWindowId(win.id)}
+                  className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-3 select-none"
+                  title={`Toca para abrir ${win.title}`}
+                >
+                  {/* Weekly Cover Image (changes once a week deterministically) */}
+                  {cover ? (
+                    <img
+                      src={cover}
+                      alt={win.title}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div
+                      className="absolute inset-0 flex items-center justify-center opacity-70"
+                      style={{ background: currentTheme.gradient }}
+                    >
+                      <Disc3 className="w-12 h-12 text-white/30" />
+                    </div>
+                  )}
+
+                  {/* Vinyl Groove / Retro Accent */}
+                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full border border-white/20 bg-black/40 backdrop-blur-xs flex items-center justify-center opacity-80 group-hover:opacity-100 transition shadow">
+                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                  </div>
+
+                  {/* Dark Gradient Overlay for Title Legibility */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent pointer-events-none" />
+
+                  {/* Only Section Name as Requested */}
+                  <div className="relative z-10">
+                    <h4 className="font-bold text-xs sm:text-sm text-white line-clamp-2 leading-tight drop-shadow-md group-hover:text-amber-400 transition">
+                      {win.title}
+                    </h4>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -162,12 +398,12 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </button>
           )}
           <button
-            onClick={() => loadRecommendations(true)}
-            disabled={isLoadingRecs}
+            onClick={() => loadContent(true)}
+            disabled={isGlobalLoading}
             className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 cursor-pointer"
             title="Actualizar recomendaciones"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isLoadingRecs ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isGlobalLoading ? 'animate-spin' : ''}`} />
             <span>Actualizar</span>
           </button>
           {onOpenSettingsModal && (
@@ -187,360 +423,31 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       <RpmPlaylistGenerator />
 
       {/* 1. SELECCIONADO PARA TI */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-5 h-5 text-amber-400" />
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-tight uppercase">
-                Seleccionado para ti
-              </h2>
-              <p className="text-xs text-zinc-400">
-                Listas mezclando temas de tus grupos favoritos, todas tus canciones y descubrimientos
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {isLoadingRecs && recommendations.length === 0 ? (
-          <div className="p-10 text-center text-zinc-400 glass-card rounded-3xl">
-            <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3" style={{ color: currentTheme.accent }} />
-            <p className="text-sm font-medium text-white">Sintonizando tu selección personalizada...</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {recommendations.map((group) => (
-              <div key={group.id} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: currentTheme.accent }}
-                    />
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-                      {group.reason}
-                    </h3>
-                    {group.artistOrGenre && (
-                      <span className="text-xs text-zinc-400 hidden sm:inline">
-                        • {group.artistOrGenre}
-                      </span>
-                    )}
-                  </div>
-                  {group.tracks.length > 0 && (
-                    <button
-                      onClick={() => playTrack(group.tracks[0], group.tracks)}
-                      className="text-xs font-semibold hover:underline cursor-pointer"
-                      style={{ color: currentTheme.accent }}
-                    >
-                      Reproducir Grupo →
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {group.tracks.map((track) => {
-                    const isCurrent = currentTrack?.id === track.id;
-                    const liked = isLiked(track.id);
-
-                    return (
-                      <div
-                        key={track.id}
-                        onClick={() => playTrack(track, group.tracks)}
-                        className={`p-3 rounded-2xl cursor-pointer transition flex items-center justify-between gap-3 group ${
-                          isCurrent
-                            ? 'border shadow-md'
-                            : 'glass-card glass-card-hover'
-                        }`}
-                        style={
-                          isCurrent
-                            ? {
-                                backgroundColor: `rgba(${currentTheme.rgb}, 0.16)`,
-                                borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
-                              }
-                            : {}
-                        }
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md">
-                            <img
-                              src={track.thumbnail}
-                              alt={track.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition"
-                            />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                              <Play className="w-5 h-5 fill-white text-white" />
-                            </div>
-                          </div>
-
-                          <div className="overflow-hidden">
-                            <p
-                              className="text-sm font-semibold truncate"
-                              style={{
-                                color: isCurrent ? currentTheme.accent : '#ffffff',
-                              }}
-                            >
-                              {track.title}
-                            </p>
-                            <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                              <span className="truncate">{track.artist}</span>
-                              <span className="text-zinc-600">•</span>
-                              <SourceBadge source={track.source} size="xs" />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <span className="text-[11px] text-zinc-500 font-mono">
-                            {formatDuration(track.duration)}
-                          </span>
-                          <button
-                            onClick={() => toggleLike(track)}
-                            className="p-1.5 text-zinc-400 hover:text-white transition cursor-pointer"
-                            title="Me gusta"
-                          >
-                            <Heart
-                              className="w-4 h-4 transition-colors"
-                              style={{
-                                fill: liked ? currentTheme.accent : 'none',
-                                color: liked ? currentTheme.accent : 'currentColor',
-                              }}
-                            />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {renderMainSection(
+        'Seleccionado para ti',
+        'Listas mezclando temas de tus grupos favoritos, todas tus canciones y descubrimientos',
+        <Sparkles className="w-5 h-5 text-amber-400" />,
+        selectedWindows,
+        isLoadingSelected
+      )}
 
       {/* 2. REPRODUCCIONES RECIENTES */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <History className="w-5 h-5 text-amber-400" />
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-tight uppercase">
-                Reproducciones recientes
-              </h2>
-              <p className="text-xs text-zinc-400">
-                Tus últimas pistas escuchadas en la app
-              </p>
-            </div>
-          </div>
-          {recentTracks.length > 0 && (
-            <button
-              onClick={() => playTrack(recentTracks[0], recentTracks)}
-              className="text-xs font-semibold hover:underline cursor-pointer"
-              style={{ color: currentTheme.accent }}
-            >
-              Reanudar recientes →
-            </button>
-          )}
-        </div>
-
-        {recentTracks.length === 0 ? (
-          <div className="p-6 text-center text-zinc-400 glass-card rounded-2xl border border-white/5">
-            <Clock className="w-6 h-6 mx-auto mb-2 text-zinc-500" />
-            <p className="text-xs text-zinc-300">Aún no hay reproducciones recientes.</p>
-            <p className="text-[11px] text-zinc-500 mt-0.5">
-              Las canciones que escuches en la Jukebox o el reproductor se registrarán automáticamente aquí.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {recentTracks.slice(0, 5).map((track, idx) => {
-              const isCurrent = currentTrack?.id === track.id;
-              const liked = isLiked(track.id);
-
-              return (
-                <div
-                  key={`recent-${track.id}-${idx}`}
-                  onClick={() => playTrack(track, recentTracks)}
-                  className={`p-3 rounded-2xl cursor-pointer transition flex items-center justify-between gap-3 group ${
-                    isCurrent
-                      ? 'border shadow-md'
-                      : 'glass-card glass-card-hover'
-                  }`}
-                  style={
-                    isCurrent
-                      ? {
-                          backgroundColor: `rgba(${currentTheme.rgb}, 0.16)`,
-                          borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
-                        }
-                      : {}
-                  }
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md">
-                      <img
-                        src={track.thumbnail}
-                        alt={track.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                        <Play className="w-5 h-5 fill-white text-white" />
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/75 px-1 py-0.5 text-[9px] font-mono font-bold text-center text-amber-300">
-                        #{idx + 1}
-                      </div>
-                    </div>
-
-                    <div className="overflow-hidden">
-                      <p
-                        className="text-sm font-semibold truncate"
-                        style={{
-                          color: isCurrent ? currentTheme.accent : '#ffffff',
-                        }}
-                      >
-                        {track.title}
-                      </p>
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                        <span className="truncate">{track.artist}</span>
-                        <span className="text-zinc-600">•</span>
-                        <SourceBadge source={track.source} size="xs" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-[11px] text-zinc-500 font-mono">
-                      {formatDuration(track.duration)}
-                    </span>
-                    <button
-                      onClick={() => toggleLike(track)}
-                      className="p-1.5 text-zinc-400 hover:text-white transition cursor-pointer"
-                      title="Me gusta"
-                    >
-                      <Heart
-                        className="w-4 h-4 transition-colors"
-                        style={{
-                          fill: liked ? currentTheme.accent : 'none',
-                          color: liked ? currentTheme.accent : 'currentColor',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {renderMainSection(
+        'Reproducciones recientes',
+        'Tus últimas sesiones y canciones escuchadas en el equipo',
+        <History className="w-5 h-5 text-amber-400" />,
+        recentWindows,
+        isLoadingRecent
+      )}
 
       {/* 3. NOVEDADES PARA TI */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Flame className="w-5 h-5 text-amber-500" />
-            <div>
-              <h2 className="text-lg font-bold text-white tracking-tight uppercase">
-                Novedades para ti
-              </h2>
-              <p className="text-xs text-zinc-400">
-                Últimos singles, directos y lanzamientos de grupos acordes a tus gustos
-              </p>
-            </div>
-          </div>
-          {newReleases.length > 0 && (
-            <button
-              onClick={() => playTrack(newReleases[0], newReleases)}
-              className="text-xs font-semibold hover:underline cursor-pointer"
-              style={{ color: currentTheme.accent }}
-            >
-              Reproducir Novedades →
-            </button>
-          )}
-        </div>
-
-        {isLoadingNewReleases && newReleases.length === 0 ? (
-          <div className="p-8 text-center text-zinc-400 glass-card rounded-2xl">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-400" />
-            <p className="text-xs font-medium text-white">Explorando últimos lanzamientos...</p>
-          </div>
-        ) : newReleases.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {newReleases.map((track) => {
-              const isCurrent = currentTrack?.id === track.id;
-              const liked = isLiked(track.id);
-
-              return (
-                <div
-                  key={`new-${track.id}`}
-                  onClick={() => playTrack(track, newReleases)}
-                  className={`p-3 rounded-2xl cursor-pointer transition flex items-center justify-between gap-3 group ${
-                    isCurrent
-                      ? 'border shadow-md'
-                      : 'glass-card glass-card-hover'
-                  }`}
-                  style={
-                    isCurrent
-                      ? {
-                          backgroundColor: `rgba(${currentTheme.rgb}, 0.16)`,
-                          borderColor: `rgba(${currentTheme.rgb}, 0.35)`,
-                        }
-                      : {}
-                  }
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 shadow-md">
-                      <img
-                        src={track.thumbnail}
-                        alt={track.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                        <Play className="w-5 h-5 fill-white text-white" />
-                      </div>
-                      <div className="absolute top-0.5 right-0.5 bg-amber-500 text-black text-[8px] font-bold px-1 rounded uppercase tracking-tighter shadow">
-                        NUEVO
-                      </div>
-                    </div>
-
-                    <div className="overflow-hidden">
-                      <p
-                        className="text-sm font-semibold truncate"
-                        style={{
-                          color: isCurrent ? currentTheme.accent : '#ffffff',
-                        }}
-                      >
-                        {track.title}
-                      </p>
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                        <span className="truncate">{track.artist}</span>
-                        <span className="text-zinc-600">•</span>
-                        <SourceBadge source={track.source} size="xs" />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <span className="text-[11px] text-zinc-500 font-mono">
-                      {formatDuration(track.duration)}
-                    </span>
-                    <button
-                      onClick={() => toggleLike(track)}
-                      className="p-1.5 text-zinc-400 hover:text-white transition cursor-pointer"
-                      title="Me gusta"
-                    >
-                      <Heart
-                        className="w-4 h-4 transition-colors"
-                        style={{
-                          fill: liked ? currentTheme.accent : 'none',
-                          color: liked ? currentTheme.accent : 'currentColor',
-                        }}
-                      />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
-      </div>
+      {renderMainSection(
+        'Novedades para ti',
+        'Últimos singles, directos y lanzamientos de grupos acordes a tus gustos',
+        <Flame className="w-5 h-5 text-amber-500" />,
+        newReleasesWindows,
+        isLoadingNewReleases
+      )}
 
       {/* Recommended Tags Bar */}
       <div className="space-y-2.5">
