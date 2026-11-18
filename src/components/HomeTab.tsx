@@ -311,7 +311,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
         ) : (
           /* FOLDED STATE: 4 or 5 Content Windows (Cards) */
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+          /* Mobile: Single horizontal row with scroll, 3rd card peeking on the right */
+          /* PC / Desktop: Preserved grid layout untouched (sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5) */
+          <div className="flex sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none snap-x snap-mandatory">
             {windows.map((win) => {
               const cover = getWeeklyCover(win.tracks, win.id);
 
@@ -319,7 +321,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 <div
                   key={win.id}
                   onClick={() => setExpandedWindowId(win.id)}
-                  className="group relative aspect-square rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-3 select-none"
+                  className="group relative aspect-square shrink-0 w-[41vw] max-w-[168px] sm:w-auto sm:max-w-none sm:shrink snap-start rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-2.5 sm:p-3 select-none"
                   title={`Toca para abrir ${win.title}`}
                 >
                   {/* Weekly Cover Image (changes once a week deterministically) */}
