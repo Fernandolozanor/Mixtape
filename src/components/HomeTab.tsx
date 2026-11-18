@@ -14,6 +14,7 @@ import {
   History,
   ArrowLeft,
   Disc3,
+  Compass,
 } from 'lucide-react';
 import type { Track } from '../types/music';
 import { usePlayer } from '../context/PlayerContext';
@@ -60,6 +61,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
   // 4 or 5 Content windows for each main section
   const [selectedWindows, setSelectedWindows] = useState<ContentWindow[]>([]);
+  const [discoveryWindows, setDiscoveryWindows] = useState<ContentWindow[]>([]);
   const [recentWindows, setRecentWindows] = useState<ContentWindow[]>([]);
   const [newReleasesWindows, setNewReleasesWindows] = useState<ContentWindow[]>([]);
 
@@ -69,6 +71,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const [continuousChannels, setContinuousChannels] = useState<Track[]>([]);
 
   const [isLoadingSelected, setIsLoadingSelected] = useState(false);
+  const [isLoadingDiscovery, setIsLoadingDiscovery] = useState(false);
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const [isLoadingNewReleases, setIsLoadingNewReleases] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
@@ -98,6 +101,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
   const loadContent = async (force: boolean = false) => {
     setIsLoadingSelected(true);
+    setIsLoadingDiscovery(true);
     setIsLoadingRecent(true);
     setIsLoadingNewReleases(true);
     setIsLoadingChannels(true);
@@ -119,11 +123,19 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       }));
       setSelectedWindows(selWins);
 
-      // 2. Reproducciones recientes (4-5 windows)
+      // 2. Descubriendo para ti (4-5 windows de grupos afines que NO están en tus listas)
+      const discWins = await recommendationService.getDiscoveryForYouWindows(
+        likedTracks,
+        playlists,
+        recents
+      );
+      setDiscoveryWindows(discWins);
+
+      // 3. Reproducciones recientes (4-5 windows)
       const recWins = await recommendationService.getRecentPlaybackWindows(recents);
       setRecentWindows(recWins);
 
-      // 3. Novedades para ti (4-5 windows)
+      // 4. Novedades para ti (4-5 windows)
       const newsWins = await recommendationService.getNewReleasesWindows(
         likedTracks,
         playlists,
@@ -131,7 +143,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       );
       setNewReleasesWindows(newsWins);
 
-      // 4. Featured Collections & Channels
+      // 5. Featured Collections & Channels
       const cols = recommendationService.getPersonalizedCollections(likedTracks, playlists);
       setFeaturedCollections(cols);
 
@@ -141,6 +153,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
       console.warn('Error loading home content:', e);
     } finally {
       setIsLoadingSelected(false);
+      setIsLoadingDiscovery(false);
       setIsLoadingRecent(false);
       setIsLoadingNewReleases(false);
       setIsLoadingChannels(false);
@@ -457,7 +470,16 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         isLoadingSelected
       )}
 
-      {/* 2. REPRODUCCIONES RECIENTES */}
+      {/* 2. DESCUBRIENDO PARA TI */}
+      {renderMainSection(
+        'Descubriendo para ti',
+        'Bandas y grupos afines a tu estilo que no están en tus listas',
+        <Compass className="w-5 h-5 text-amber-400" />,
+        discoveryWindows,
+        isLoadingDiscovery
+      )}
+
+      {/* 3. REPRODUCCIONES RECIENTES */}
       {renderMainSection(
         'Reproducciones recientes',
         'Tus últimas sesiones y canciones escuchadas en el equipo',
@@ -466,7 +488,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
         isLoadingRecent
       )}
 
-      {/* 3. NOVEDADES PARA TI */}
+      {/* 4. NOVEDADES PARA TI */}
       {renderMainSection(
         'Novedades para ti',
         'Últimos singles, directos y lanzamientos de grupos acordes a tus gustos',

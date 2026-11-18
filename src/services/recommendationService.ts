@@ -57,6 +57,72 @@ export interface FeaturedCollection {
   badge?: string;
 }
 
+// Affinity mapping between popular artists and musically related acts
+const RELATED_ARTISTS_MAP: Record<string, string[]> = {
+  // Spanish Rock & Urban Rock
+  extremoduro: ['Marea', 'Robe', 'La Fuga', 'Poncho K', 'Sinkope', 'Barricada', 'Los Suaves', 'Transfer'],
+  marea: ['Extremoduro', 'La Fuga', 'Poncho K', 'Sinkope', 'Desakato', 'Gritando en Silencio', 'Bocanada'],
+  'platero y tu': ['Los Zigarros', 'Fito & Fitipaldis', 'Leiva', 'M-Clan', 'Tequila', 'Buenas Noches Rose', 'Extremoduro'],
+  'fito & fitipaldis': ['Los Zigarros', 'Platero y Tú', 'M-Clan', 'Leiva', 'Quique Gonzalez', 'Los Secretos'],
+  'heroes del silencio': ['Enrique Bunbury', 'Los Piratas', 'Nacho Vegas', 'Elefantes', '091', 'Radio Futura'],
+  bunbury: ['Heroes del Silencio', 'Nacho Vegas', 'Los Piratas', 'Elefantes', 'Calamaro', 'Coque Malla'],
+  barricada: ['Los Suaves', 'Extremoduro', 'Marea', 'Reincidentes', 'Leize', 'Hamlet'],
+  'los suaves': ['Barricada', 'Extremoduro', 'Marea', 'Asfalto', 'Leize', 'Tierra Santa'],
+  loquillo: ['Burning', 'Los Rebeldes', 'Ilegales', 'Gabinete Caligari', 'Los Enemigos', 'Los Rodriguez'],
+  'los zigarros': ['Platero y Tú', 'Fito & Fitipaldis', 'Tequila', 'M-Clan', 'Burning', 'Sexy Zebras'],
+  'ska-p': ['Boikot', 'Reincidentes', 'Talco', 'La Polla Records', 'Kortatu', 'Gatillazo'],
+  'la fuga': ['Marea', 'Extremoduro', 'Poncho K', 'Despistaos', 'Celtas Cortos'],
+  leiva: ['Pereza', 'Los Zigarros', 'Quique Gonzalez', 'Sidecars', 'Iván Ferreiro', 'Coque Malla'],
+  pereza: ['Leiva', 'Sidecars', 'Los Zigarros', 'El Canto del Loco', 'Despistaos'],
+  'arde bogota': ['Viva Suecia', 'Shinova', 'Siloé', 'Sexy Zebras', 'León Benavente', 'Second'],
+  'viva suecia': ['Arde Bogotá', 'Shinova', 'Vetusta Morla', 'Izal', 'Love of Lesbian'],
+  'vetusta morla': ['Izal', 'Love of Lesbian', 'Lori Meyers', 'Viva Suecia', 'Shinova', 'Miss Caffeina'],
+
+  // Classic Hard Rock & Heavy Metal
+  'ac/dc': ['Airbourne', 'Krokus', 'Rose Tattoo', 'Accept', 'Saxon', 'The Cult', 'Motorhead', 'Judas Priest'],
+  'iron maiden': ['Judas Priest', 'Saxon', 'Helloween', 'Dio', 'Bruce Dickinson', 'Accept', 'Megadeth', 'Manowar'],
+  'judas priest': ['Iron Maiden', 'Saxon', 'Accept', 'Dio', 'Halford', 'Motorhead', 'Primal Fear'],
+  metallica: ['Megadeth', 'Pantera', 'Slayer', 'Anthrax', 'Ghost', 'Avenged Sevenfold', 'Testament'],
+  megadeth: ['Metallica', 'Anthrax', 'Slayer', 'Pantera', 'Judas Priest'],
+  'guns n roses': ['Velvet Revolver', 'Aerosmith', 'Motley Crue', 'Skid Row', 'Slash', 'Poison', 'Def Leppard'],
+  aerosmith: ['Guns N\' Roses', 'Bon Jovi', 'Kiss', 'Alice Cooper', 'Def Leppard', 'The Rolling Stones'],
+  'bon jovi': ['Europe', 'Whitesnake', 'Def Leppard', 'Scorpions', 'Bryan Adams', 'Journey', 'Foreigner'],
+  scorpions: ['Europe', 'Whitesnake', 'Bon Jovi', 'Def Leppard', 'UFO', 'Michael Schenker Group'],
+  'def leppard': ['Bon Jovi', 'Europe', 'Whitesnake', 'Motley Crue', 'Poison', 'Aerosmith'],
+  queen: ['David Bowie', 'Electric Light Orchestra', 'The Darkness', 'Elton John', 'Supertramp', 'Led Zeppelin'],
+  'led zeppelin': ['Deep Purple', 'Black Sabbath', 'Cream', 'Greta Van Fleet', 'The Who', 'Jimi Hendrix'],
+  'deep purple': ['Rainbow', 'Led Zeppelin', 'Black Sabbath', 'Whitesnake', 'Uriah Heep', 'Cream'],
+  'black sabbath': ['Ozzy Osbourne', 'Dio', 'Deep Purple', 'Judas Priest', 'Iron Maiden'],
+  kiss: ['Alice Cooper', 'Motley Crue', 'Aerosmith', 'Twisted Sister', 'Judas Priest'],
+  motorhead: ['Judas Priest', 'Saxon', 'Girlschool', 'Venom', 'AC/DC', 'Accept'],
+  dio: ['Rainbow', 'Black Sabbath', 'Iron Maiden', 'Judas Priest', 'Accept'],
+
+  // Classic Rock & Prog
+  'dire straits': ['The Police', 'Eric Clapton', 'Chris Rea', 'J.J. Cale', 'Tom Petty', 'Fleetwood Mac'],
+  'mark knopfler': ['Dire Straits', 'Eric Clapton', 'J.J. Cale', 'Chet Atkins', 'Chris Rea'],
+  'the police': ['Dire Straits', 'Sting', 'Genesis', 'U2', 'Talking Heads', 'Men at Work'],
+  'pink floyd': ['Genesis', 'Yes', 'King Crimson', 'Roger Waters', 'The Alan Parsons Project', 'Supertramp'],
+  'the rolling stones': ['The Beatles', 'The Who', 'The Kinks', 'The Doors', 'Cream', 'Creedence Clearwater Revival'],
+  'the beatles': ['The Rolling Stones', 'The Kinks', 'The Who', 'John Lennon', 'George Harrison', 'Paul McCartney'],
+  'creedence clearwater revival': ['The Doors', 'The Rolling Stones', 'Lynyrd Skynyrd', 'ZZ Top', 'Bob Dylan'],
+  'the doors': ['Creedence Clearwater Revival', 'Jimi Hendrix', 'The Rolling Stones', 'Led Zeppelin', 'The Who'],
+  u2: ['The Police', 'Simple Minds', 'R.E.M.', 'INXS', 'Midnight Oil', 'Depeche Mode'],
+
+  // Grunge & 90s Alternative
+  nirvana: ['Pearl Jam', 'Soundgarden', 'Alice in Chains', 'Foo Fighters', 'Stone Temple Pilots', 'Silverchair'],
+  'pearl jam': ['Soundgarden', 'Alice in Chains', 'Nirvana', 'Temple of the Dog', 'Eddie Vedder', 'Foo Fighters'],
+  'foo fighters': ['Nirvana', 'Queens of the Stone Age', 'Red Hot Chili Peppers', 'Audioslave', 'The Offspring'],
+  'red hot chili peppers': ['Rage Against the Machine', 'Faith No More', 'Jane\'s Addiction', 'Incubus', 'Foo Fighters'],
+  'green day': ['The Offspring', 'Blink-182', 'Sum 41', 'Bad Religion', 'NOFX', 'Rancid'],
+  'the offspring': ['Green Day', 'Blink-182', 'Sum 41', 'Bad Religion', 'Pennywise'],
+
+  // 80s Pop & New Wave
+  'depeche mode': ['The Cure', 'New Order', 'Tears for Fears', 'Pet Shop Boys', 'Duran Duran', 'INXS'],
+  'the cure': ['Depeche Mode', 'Joy Division', 'The Smiths', 'Echo & the Bunnymen', 'Siouxsie and the Banshees'],
+  'duran duran': ['Spandau Ballet', 'Tears for Fears', 'INXS', 'A-ha', 'Wham!'],
+  'tears for fears': ['Simple Minds', 'Duran Duran', 'Talk Talk', 'The Police', 'INXS'],
+};
+
 class RecommendationService {
   private cachedRecommendations: RecommendationGroup[] = [];
   private lastAnalyzedSignature: string = '';
@@ -289,6 +355,158 @@ class RecommendationService {
     this.cachedRecommendations = groups.slice(0, 5);
     this.lastAnalyzedSignature = signature;
     return this.cachedRecommendations;
+  }
+
+  /**
+   * Generates 4 or 5 content windows for "Descubriendo para ti"
+   * Surfaces bands matching the user's tastes that are STRICTLY NOT in their playlists or favorites.
+   */
+  async getDiscoveryForYouWindows(
+    likedTracks: Track[],
+    playlists: Playlist[],
+    recentTracks: Track[] = []
+  ): Promise<ContentWindow[]> {
+    const searchHistory = this.getSearchHistory();
+    const tastes = this.analyzeTastes(likedTracks, playlists, searchHistory, recentTracks);
+
+    // 1. Gather all known artists and track IDs to strictly exclude them
+    const knownArtists = new Set<string>();
+    const knownTrackIds = new Set<string>();
+
+    const registerArtist = (name: string) => {
+      const clean = this.cleanArtistName(name).toLowerCase();
+      if (clean) knownArtists.add(clean);
+    };
+
+    for (const t of likedTracks) {
+      registerArtist(t.artist);
+      knownTrackIds.add(t.id);
+    }
+    for (const pl of playlists) {
+      for (const t of pl.tracks) {
+        registerArtist(t.artist);
+        knownTrackIds.add(t.id);
+      }
+    }
+    for (const t of recentTracks) {
+      registerArtist(t.artist);
+      knownTrackIds.add(t.id);
+    }
+
+    const windows: ContentWindow[] = [];
+    const usedNewArtists = new Set<string>();
+
+    // 2. Discover related bands based on top tastes
+    for (const item of tastes) {
+      if (windows.length >= 4) break;
+      const cleanTop = this.cleanArtistName(item.artist).toLowerCase();
+
+      // Find candidates from affinity map
+      let candidates: string[] = RELATED_ARTISTS_MAP[cleanTop] || [];
+      if (candidates.length === 0) {
+        // Fallback substring matching in keys
+        for (const [key, list] of Object.entries(RELATED_ARTISTS_MAP)) {
+          if (cleanTop.includes(key) || key.includes(cleanTop)) {
+            candidates = list;
+            break;
+          }
+        }
+      }
+
+      // Pick candidate bands that user does NOT have in their lists
+      const freshCandidates = candidates.filter(
+        (c) => !knownArtists.has(c.toLowerCase()) && !usedNewArtists.has(c.toLowerCase())
+      );
+
+      for (const candidate of freshCandidates) {
+        if (windows.length >= 4) break;
+        try {
+          const res = await streamResolver.search(`${candidate} greatest hits full`, 'youtube');
+          // Strict filter: make sure track is not already known and artist is candidate
+          const freshTracks = res.filter(
+            (t) =>
+              !knownTrackIds.has(t.id) &&
+              !knownArtists.has(this.cleanArtistName(t.artist).toLowerCase())
+          ).slice(0, 8);
+
+          if (freshTracks.length >= 3) {
+            usedNewArtists.add(candidate.toLowerCase());
+            windows.push({
+              id: `disc_${candidate.replace(/\s+/g, '_')}`,
+              title: `Descubre a ${candidate}`,
+              subtitle: `Afín a tu gusto por ${item.artist}`,
+              tracks: freshTracks,
+            });
+            break; // One band per taste artist for variety
+          }
+        } catch (e) {
+          console.warn(`Error discovering ${candidate}:`, e);
+        }
+      }
+    }
+
+    // 3. Add a mix window: "Mix de bandas afines a tu estilo"
+    if (tastes.length > 0 && windows.length < 5) {
+      try {
+        const topNames = tastes.slice(0, 2).map((t) => t.artist).join(' ');
+        const mixRes = await streamResolver.search(`bands like ${topNames} rock greatest hits mix`, 'youtube');
+        const freshMix = mixRes.filter(
+          (t) =>
+            !knownTrackIds.has(t.id) &&
+            !knownArtists.has(this.cleanArtistName(t.artist).toLowerCase())
+        ).slice(0, 8);
+
+        if (freshMix.length >= 3) {
+          windows.push({
+            id: 'disc_mix_similar',
+            title: 'Mix de grupos afines a tu estilo',
+            subtitle: 'Bandas recomendadas que aún no tienes guardadas',
+            tracks: freshMix,
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // 4. Fillers for cold-start or when fewer than 4-5 windows found
+    const starterBands = [
+      { name: 'Airbourne', ref: 'Hard Rock clásico y potente', query: 'Airbourne greatest hits full' },
+      { name: 'Marea', ref: 'Rock urbano con poesía callejera', query: 'Marea mejores canciones hits' },
+      { name: 'Los Zigarros', ref: 'Puro Rock and Roll en español', query: 'Los Zigarros grandes exitos' },
+      { name: 'Greta Van Fleet', ref: 'Sonido setentero legendario', query: 'Greta Van Fleet greatest hits' },
+      { name: 'Judas Priest', ref: 'Pioneros del heavy metal melódico', query: 'Judas Priest greatest hits full' },
+      { name: 'The Darkness', ref: 'Glam Rock y falsetes épicos', query: 'The Darkness greatest hits' },
+      { name: 'Rival Sons', ref: 'Blues Rock moderno de alta fidelidad', query: 'Rival Sons greatest hits' },
+    ];
+
+    for (const b of starterBands) {
+      if (windows.length >= 5) break;
+      if (knownArtists.has(b.name.toLowerCase()) || usedNewArtists.has(b.name.toLowerCase())) continue;
+
+      try {
+        const res = await streamResolver.search(b.query, 'youtube');
+        const fresh = res.filter(
+          (t) =>
+            !knownTrackIds.has(t.id) &&
+            !knownArtists.has(this.cleanArtistName(t.artist).toLowerCase())
+        ).slice(0, 8);
+
+        if (fresh.length >= 3) {
+          usedNewArtists.add(b.name.toLowerCase());
+          windows.push({
+            id: `disc_${b.name.replace(/\s+/g, '_')}`,
+            title: `Descubre a ${b.name}`,
+            subtitle: b.ref,
+            tracks: fresh,
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return windows.slice(0, 5);
   }
 
   /**
