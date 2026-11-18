@@ -153,8 +153,8 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
       const video = videoRef.current;
       const now = performance.now();
 
-      // Scan every ~90ms to keep 11fps scanning speed while keeping main thread free
-      if (video && video.readyState >= 2 && video.videoWidth > 0 && now - lastScanTime >= 90) {
+      // Scan every ~75ms (approx 13fps) while keeping UI smooth
+      if (video && video.readyState >= 2 && video.videoWidth > 0 && now - lastScanTime >= 75) {
         lastScanTime = now;
 
         // 1. Try Native BarcodeDetector (instant GPU-accelerated scanning on supported browsers)
@@ -171,12 +171,36 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
           } catch {}
         }
 
-        // 2. High-speed jsQR fallback on downscaled frame (max 480px)
+        // 2. High-speed jsQR fallback
         if (ctx && scanCanvas) {
           try {
             const vw = video.videoWidth;
             const vh = video.videoHeight;
-            const maxDim = 480;
+
+            // Pass 1: Center viewfinder crop at native 1:1 sensor resolution (razor-sharp, zero blur)
+            if (cropCtx && cropCanvas) {
+              const cropSize = Math.round(Math.min(vw, vh) * 0.72);
+              const cropX = Math.round((vw - cropSize) / 2);
+              const cropY = Math.round((vh - cropSize) / 2);
+              const targetCrop = Math.min(cropSize, 640);
+
+              if (cropCanvas.width !== targetCrop || cropCanvas.height !== targetCrop) {
+                cropCanvas.width = targetCrop;
+                cropCanvas.height = targetCrop;
+              }
+
+              cropCtx.drawImage(video, cropX, cropY, cropSize, cropSize, 0, 0, targetCrop, targetCrop);
+              const cropImgData = cropCtx.getImageData(0, 0, targetCrop, targetCrop);
+              const qrCenter = jsQR(cropImgData.data, targetCrop, targetCrop, { inversionAttempts: 'attemptBoth' });
+
+              if (qrCenter && qrCenter.data) {
+                onQrDetected(qrCenter.data);
+                return;
+              }
+            }
+
+            // Pass 2: Full frame scaled (max 640px) if user holds QR off-center
+            const maxDim = 640;
             const scale = Math.min(1, maxDim / Math.max(vw, vh));
             const sw = Math.round(vw * scale);
             const sh = Math.round(vh * scale);
@@ -188,27 +212,10 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
 
             ctx.drawImage(video, 0, 0, sw, sh);
             const fullImgData = ctx.getImageData(0, 0, sw, sh);
-            let qr = jsQR(fullImgData.data, sw, sh, { inversionAttempts: 'attemptBoth' });
+            const qrFull = jsQR(fullImgData.data, sw, sh, { inversionAttempts: 'attemptBoth' });
 
-            // 3. Viewfinder center-crop fallback (focused 65% square region)
-            if (!qr && cropCtx && cropCanvas) {
-              const cropSize = Math.round(Math.min(vw, vh) * 0.65);
-              const cropX = Math.round((vw - cropSize) / 2);
-              const cropY = Math.round((vh - cropSize) / 2);
-              const cropCanvasSize = Math.min(cropSize, 360);
-
-              if (cropCanvas.width !== cropCanvasSize || cropCanvas.height !== cropCanvasSize) {
-                cropCanvas.width = cropCanvasSize;
-                cropCanvas.height = cropCanvasSize;
-              }
-
-              cropCtx.drawImage(video, cropX, cropY, cropSize, cropSize, 0, 0, cropCanvasSize, cropCanvasSize);
-              const cropImgData = cropCtx.getImageData(0, 0, cropCanvasSize, cropCanvasSize);
-              qr = jsQR(cropImgData.data, cropCanvasSize, cropCanvasSize, { inversionAttempts: 'attemptBoth' });
-            }
-
-            if (qr && qr.data) {
-              onQrDetected(qr.data);
+            if (qrFull && qrFull.data) {
+              onQrDetected(qrFull.data);
               return;
             }
           } catch {}
@@ -307,6 +314,18 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
     }
 
     if (!stream) return;
+
+    try {
+      const track = stream.getVideoTracks()[0];
+      if (track && 'applyConstraints' in track) {
+        const capabilities = (track as any).getCapabilities?.() || {};
+        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+          track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' } as any],
+          }).catch(() => {});
+        }
+      }
+    } catch {}
 
     streamRef.current = stream;
     setIsCameraOpen(true);
@@ -563,24 +582,24 @@ export const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose }) => {
                 Escanea este código QR con tu <strong>móvil, tablet o PC</strong> para conectar ambos dispositivos. Tus listas y favoritos se sincronizarán solos en tiempo real.
               </p>
 
-              {/* Crisp SVG QR Code with Quiet Zone */}
-              <div className="p-3.5 bg-white rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.2)] border-4 border-amber-400/80 mb-3">
+              {/* Crisp SVG QR Code with ISO/IEC 18004 Quiet Zone (4 modules) */}
+              <div className="p-4 bg-white rounded-2xl shadow-[0_0_30px_rgba(251,191,36,0.25)] border-4 border-amber-400/80 mb-3">
                 <svg
-                  viewBox={`0 0 ${qrSize + 4} ${qrSize + 4}`}
-                  className="w-44 h-44 sm:w-48 sm:h-48 block"
+                  viewBox={`0 0 ${qrSize + 8} ${qrSize + 8}`}
+                  className="w-48 h-48 sm:w-56 sm:h-56 block"
                   shapeRendering="crispEdges"
                 >
-                  <rect width={qrSize + 4} height={qrSize + 4} fill="#ffffff" />
+                  <rect width={qrSize + 8} height={qrSize + 8} fill="#ffffff" />
                   {qrMatrix.map((row, rIdx) =>
                     row.map((cell, cIdx) =>
                       cell ? (
                         <rect
                           key={`${rIdx}-${cIdx}`}
-                          x={cIdx + 2}
-                          y={rIdx + 2}
+                          x={cIdx + 4}
+                          y={rIdx + 4}
                           width={1}
                           height={1}
-                          fill="#09090b"
+                          fill="#000000"
                         />
                       ) : null
                     )
