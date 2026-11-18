@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Play,
   Flame,
@@ -72,6 +72,29 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
   const [isLoadingNewReleases, setIsLoadingNewReleases] = useState(false);
   const [isLoadingChannels, setIsLoadingChannels] = useState(false);
+
+  // Dynamically calculate device screen width and adapt mobile card sizing
+  const [screenWidth, setScreenWidth] = useState<number>(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 390
+  );
+
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize, { passive: true });
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = screenWidth < 640;
+  // Calculate exact card width so 2 cards fit flush on screen without spilling on the left,
+  // and the 3rd card peeks out by ~42px on the right to cue horizontal scrolling
+  const mobileCardWidth = useMemo(() => {
+    if (!isMobile) return undefined;
+    // <main> container in App.tsx has px-2.5 (10px on each side = 20px)
+    const availableWidth = screenWidth - 20;
+    const gap = 12; // gap-3 = 12px
+    const peekAmount = 42; // visible slice of the 3rd card
+    return Math.max(120, Math.round((availableWidth - gap * 2 - peekAmount) / 2));
+  }, [screenWidth, isMobile]);
 
   const loadContent = async (force: boolean = false) => {
     setIsLoadingSelected(true);
@@ -311,9 +334,9 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
         ) : (
           /* FOLDED STATE: 4 or 5 Content Windows (Cards) */
-          /* Mobile: Single horizontal row with scroll, 3rd card peeking on the right */
+          /* Mobile: Single horizontal row calculated to screen width, aligned flush on the left with 3rd card peeking right */
           /* PC / Desktop: Preserved grid layout untouched (sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5) */
-          <div className="flex sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2 sm:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none snap-x snap-mandatory">
+          <div className="flex sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2.5 sm:pb-0 scrollbar-none snap-x snap-mandatory">
             {windows.map((win) => {
               const cover = getWeeklyCover(win.tracks, win.id);
 
@@ -321,7 +344,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                 <div
                   key={win.id}
                   onClick={() => setExpandedWindowId(win.id)}
-                  className="group relative aspect-square shrink-0 w-[41vw] max-w-[168px] sm:w-auto sm:max-w-none sm:shrink snap-start rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-2.5 sm:p-3 select-none"
+                  style={isMobile && mobileCardWidth ? { width: `${mobileCardWidth}px` } : undefined}
+                  className="group relative aspect-square shrink-0 sm:w-auto sm:shrink snap-start rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-2.5 sm:p-3 select-none"
                   title={`Toca para abrir ${win.title}`}
                 >
                   {/* Weekly Cover Image (changes once a week deterministically) */}
