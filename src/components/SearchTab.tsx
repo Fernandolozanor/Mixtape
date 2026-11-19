@@ -441,11 +441,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-6 relative">
       {/* Header and Direct Search Box */}
-      <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl border-2 border-[#262f40] relative w-full min-w-0 overflow-hidden space-y-2.5">
+      <div className={`retro-tape-chassis rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl border-2 ${
+        isLight ? 'border-[#8591a2]' : 'border-[#262f40]'
+      } relative w-full min-w-0 overflow-hidden space-y-2.5`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
-            <h1 className="font-rock text-2xl sm:text-3xl tracking-widest text-white leading-none">
+            <h1 className={`font-rock text-2xl sm:text-3xl tracking-widest leading-none ${
+              isLight ? 'text-slate-900' : 'text-white'
+            }`}>
               BUSCAR MÚSICA
             </h1>
           </div>
@@ -457,7 +461,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 {isMultiSelectMode && (
                   <button
                     onClick={selectAll}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold bg-white/10 hover:bg-white/15 text-white transition flex items-center gap-1.5 border border-white/10"
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition flex items-center gap-1.5 border ${
+                      isLight
+                        ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-900 border-[#7c899a]'
+                        : 'bg-white/10 hover:bg-white/15 text-white border-white/10'
+                    }`}
                   >
                     {selectedIds.size === sortedResults.length ? (
                       <>
@@ -481,6 +489,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   className={`px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition border flex items-center gap-1.5 ${
                     isMultiSelectMode
                       ? 'bg-amber-400 text-black border-amber-400 shadow-md font-bold'
+                      : isLight
+                      ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-900 border-[#7c899a]'
                       : 'bg-[#151a24] hover:bg-[#1e2534] text-zinc-300 border-white/10'
                   }`}
                 >
@@ -502,10 +512,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             {onOpenSettingsModal && (
               <button
                 onClick={onOpenSettingsModal}
-                className="px-2.5 sm:px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition flex items-center gap-1.5 cursor-pointer"
+                className={`px-2.5 sm:px-3 py-1.5 rounded-xl font-stereo text-[11px] sm:text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer border ${
+                  isLight
+                    ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
+                    : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'
+                }`}
                 title="Abrir Ajustes"
               >
-                <Settings className="w-3.5 h-3.5 text-amber-400" />
+                <Settings className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'}`} />
                 <span>Ajustes</span>
               </button>
             )}
@@ -541,7 +555,9 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
         {/* Source Filter Switcher: All vs Audio de Fondo (Pantalla Apagada) vs YouTube */}
         <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-xs">
-          <span className="font-mono-retro text-[9px] text-zinc-400 uppercase font-bold mr-1">Fuente:</span>
+          <span className={`font-mono-retro text-[9px] uppercase font-bold mr-1 ${
+            isLight ? 'text-slate-700' : 'text-zinc-400'
+          }`}>Fuente:</span>
           <button
             onClick={() => {
               setFilterSource('all');
@@ -550,6 +566,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             className={`px-2.5 py-1 rounded-lg font-mono-retro text-[10px] font-semibold transition border ${
               filterSource === 'all'
                 ? 'bg-amber-400 text-black border-amber-400 shadow-sm font-bold'
+                : isLight
+                ? 'bg-[#a4aebb] text-slate-800 hover:bg-[#b0bac7] border-[#7c899a]'
                 : 'bg-black/40 text-zinc-400 hover:text-white border-white/10'
             }`}
           >
@@ -563,6 +581,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             className={`px-2.5 py-1 rounded-lg font-mono-retro text-[10px] font-semibold transition border flex items-center gap-1 ${
               filterSource === 'audius'
                 ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.5)] font-bold'
+                : isLight
+                ? 'bg-[#a4aebb] text-cyan-900 hover:bg-[#b0bac7] border-cyan-700/30'
                 : 'bg-black/40 text-cyan-400 hover:text-cyan-300 border-cyan-500/30'
             }`}
           >
@@ -576,6 +596,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             className={`px-2.5 py-1 rounded-lg font-mono-retro text-[10px] font-semibold transition border ${
               filterSource === 'youtube'
                 ? 'bg-red-500 text-white border-red-500 shadow-sm font-bold'
+                : isLight
+                ? 'bg-[#a4aebb] text-red-900 hover:bg-[#b0bac7] border-red-700/30'
                 : 'bg-black/40 text-red-400 hover:text-red-300 border-red-500/30'
             }`}
           >
@@ -584,14 +606,18 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         </div>
 
         {/* Content Type Selector: Canciones vs Lanzamientos Oficiales (Álbumes) */}
-        <div className="flex items-center gap-2 pt-2 border-t border-white/10 flex-wrap">
+        <div className={`flex items-center gap-2 pt-2 border-t flex-wrap ${
+          isLight ? 'border-black/15' : 'border-white/10'
+        }`}>
           <button
             type="button"
             onClick={() => setSearchContentType('tracks')}
-            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
               searchContentType === 'tracks'
-                ? 'bg-amber-400 text-black shadow-md'
-                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                ? 'bg-amber-400 text-black shadow-md border-amber-400'
+                : isLight
+                ? 'bg-[#a4aebb] text-slate-800 hover:bg-[#b0bac7] border-[#7c899a]'
+                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 border-transparent'
             }`}
           >
             <Music2 className="w-3.5 h-3.5" />
@@ -606,13 +632,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                 handleSearch(query);
               }
             }}
-            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
               searchContentType === 'releases'
-                ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md'
-                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                ? 'bg-gradient-to-r from-red-500 to-amber-500 text-white shadow-md border-amber-500'
+                : isLight
+                ? 'bg-[#a4aebb] text-slate-800 hover:bg-[#b0bac7] border-[#7c899a]'
+                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 border-transparent'
             }`}
           >
-            <Disc3 className={`w-3.5 h-3.5 ${isSearchingReleases ? 'animate-spin text-amber-300' : 'text-amber-400'}`} />
+            <Disc3 className={`w-3.5 h-3.5 ${isSearchingReleases ? 'animate-spin text-amber-300' : isLight ? 'text-amber-700' : 'text-amber-400'}`} />
             <span>Lanzamientos / Álbumes {releases.length > 0 ? `(${releases.length})` : ''}</span>
             {releases.length > 0 && (
               <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
@@ -622,21 +650,29 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
         {/* Sort By Dropdown (Only shown when there are results) */}
         {results.length > 0 && (
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2 pt-2 border-t border-white/5 text-xs">
-            <ArrowUpDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
-            <span className="font-mono-retro text-[9px] sm:text-[10px] text-zinc-400 font-bold uppercase">ORDEN:</span>
+          <div className={`flex items-center justify-end gap-1.5 sm:gap-2 pt-2 border-t text-xs ${
+            isLight ? 'border-black/10' : 'border-white/5'
+          }`}>
+            <ArrowUpDown className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isLight ? 'text-amber-700' : 'text-amber-500'}`} />
+            <span className={`font-mono-retro text-[9px] sm:text-[10px] font-bold uppercase ${
+              isLight ? 'text-slate-700' : 'text-zinc-400'
+            }`}>ORDEN:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-black/70 border border-white/10 rounded-lg sm:rounded-xl px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs text-amber-400 font-mono-retro focus:outline-none max-w-[190px] sm:max-w-none truncate"
+              className={`border rounded-lg sm:rounded-xl px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-mono-retro focus:outline-none max-w-[190px] sm:max-w-none truncate ${
+                isLight
+                  ? 'bg-[#a4aebb] border-[#7c899a] text-slate-900 font-semibold'
+                  : 'bg-black/70 border-white/10 text-amber-400'
+              }`}
             >
-              <option value="views" className="bg-zinc-900 text-white">
+              <option value="views" className={isLight ? 'bg-[#cbd2dc] text-slate-900' : 'bg-zinc-900 text-white'}>
                 Más reproducidos (Destacados)
               </option>
-              <option value="duration" className="bg-zinc-900 text-white">
+              <option value="duration" className={isLight ? 'bg-[#cbd2dc] text-slate-900' : 'bg-zinc-900 text-white'}>
                 Mayor duración (Conciertos)
               </option>
-              <option value="title" className="bg-zinc-900 text-white">
+              <option value="title" className={isLight ? 'bg-[#cbd2dc] text-slate-900' : 'bg-zinc-900 text-white'}>
                 Título (A-Z)
               </option>
             </select>
@@ -735,7 +771,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                     }}
                     className={`group cursor-pointer p-3 rounded-2xl border transition-all duration-200 flex flex-col relative select-none ${
                       isSelected
-                        ? 'bg-amber-500/15 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] ring-1 ring-amber-400/60 scale-[1.01]'
+                        ? isLight
+                          ? 'bg-amber-500/20 border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.3)] ring-1 ring-amber-500 scale-[1.01]'
+                          : 'bg-amber-500/15 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] ring-1 ring-amber-400/60 scale-[1.01]'
+                        : isLight
+                        ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] hover:from-[#c5cdd8] hover:to-[#b6c0cd] border-[#8591a2] text-slate-900 hover:border-amber-600 hover:shadow-xl active:scale-[0.98]'
                         : 'bg-[#131822] hover:bg-[#1b2333] border-white/10 hover:border-amber-400/50 hover:shadow-xl active:scale-[0.98]'
                     }`}
                   >
@@ -770,19 +810,25 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                       ) : null}
                     </div>
 
-                    <h3 className="font-bold text-xs sm:text-sm text-white group-hover:text-amber-300 truncate mt-2.5">
+                    <h3 className={`font-bold text-xs sm:text-sm truncate mt-2.5 ${
+                      isLight ? 'text-slate-900 group-hover:text-amber-700' : 'text-white group-hover:text-amber-300'
+                    }`}>
                       {album.title}
                     </h3>
-                    <p className="text-[11px] sm:text-xs text-zinc-400 font-mono truncate">
+                    <p className={`text-[11px] sm:text-xs font-mono truncate ${
+                      isLight ? 'text-slate-700' : 'text-zinc-400'
+                    }`}>
                       {album.artist}
                     </p>
 
                     {/* Non-multiselect: Quick record button & track count */}
                     {!isMultiAlbumMode ? (
                       <>
-                        <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                        <div className={`mt-2 pt-2 border-t flex items-center justify-between text-[11px] font-mono ${
+                          isLight ? 'border-black/10 text-slate-700' : 'border-white/5 text-zinc-400'
+                        }`}>
                           <span>{album.trackCount ? `${album.trackCount} canciones` : 'Álbum Oficial'}</span>
-                          <span className="text-amber-400 font-bold group-hover:underline">Ver pistas →</span>
+                          <span className={`font-bold group-hover:underline ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>Ver pistas →</span>
                         </div>
 
                         {/* Direct 1-Click Vinyl Recording Button */}
@@ -793,6 +839,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                           className={`w-full mt-2 py-1.5 px-2 rounded-xl text-[11px] font-mono-retro font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm border ${
                             recordedSuccessAlbumId === album.id
                               ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-300'
+                              : isLight
+                              ? 'bg-amber-500/20 hover:bg-amber-500 text-amber-900 hover:text-black border-amber-600/40 hover:shadow-md'
                               : 'bg-amber-400/15 hover:bg-amber-400 text-amber-300 hover:text-black border-amber-400/40 hover:shadow-md'
                           }`}
                           title="Guardar directamente este álbum en tu estantería de Vinilos"
@@ -809,16 +857,18 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                             </>
                           ) : (
                             <>
-                              <Disc3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              <Disc3 className={`w-3.5 h-3.5 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                               <span>Guardar en Vinilo</span>
                             </>
                           )}
                         </button>
                       </>
                     ) : (
-                      <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] font-mono">
-                        <span className="text-zinc-400">{album.trackCount ? `${album.trackCount} pistas` : 'Álbum'}</span>
-                        <span className={isSelected ? 'text-amber-400 font-bold' : 'text-zinc-500'}>
+                      <div className={`mt-2.5 pt-2 border-t flex items-center justify-between text-[11px] font-mono ${
+                        isLight ? 'border-black/10' : 'border-white/5'
+                      }`}>
+                        <span className={isLight ? 'text-slate-700' : 'text-zinc-400'}>{album.trackCount ? `${album.trackCount} pistas` : 'Álbum'}</span>
+                        <span className={isSelected ? isLight ? 'text-amber-700 font-bold' : 'text-amber-400 font-bold' : isLight ? 'text-slate-500' : 'text-zinc-500'}>
                           {isSelected ? '✓ Seleccionado' : 'Toca para elegir'}
                         </span>
                       </div>
@@ -833,18 +883,26 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
       {/* Horizontal Shelf of Official Releases / Albums when in Tracks view */}
       {searchContentType === 'tracks' && releases.length > 0 && (
-        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-transparent border border-amber-500/25 space-y-2.5">
+        <div className={`p-3 sm:p-4 rounded-2xl border space-y-2.5 ${
+          isLight
+            ? 'bg-gradient-to-r from-amber-600/15 via-purple-600/10 to-transparent border-amber-600/30'
+            : 'bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-transparent border border-amber-500/25'
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Disc3 className="w-4 h-4 text-amber-400" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono-retro">
+              <Disc3 className={`w-4 h-4 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
+              <h3 className={`text-xs font-bold uppercase tracking-wider font-mono-retro ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
                 Lanzamientos de {query || 'este artista'}
               </h3>
             </div>
             <button
               type="button"
               onClick={() => setSearchContentType('releases')}
-              className="text-[11px] font-mono font-bold text-amber-400 hover:text-amber-300 cursor-pointer"
+              className={`text-[11px] font-mono font-bold cursor-pointer ${
+                isLight ? 'text-amber-700 hover:text-amber-800' : 'text-amber-400 hover:text-amber-300'
+              }`}
             >
               Ver todos ({releases.length}) →
             </button>
@@ -855,7 +913,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               <div
                 key={album.id}
                 onClick={() => setSelectedRelease(album)}
-                className="w-28 sm:w-32 shrink-0 group cursor-pointer bg-black/40 hover:bg-black/60 p-2 rounded-xl border border-white/10 hover:border-amber-400/50 transition active:scale-95 text-center flex flex-col items-center"
+                className={`w-28 sm:w-32 shrink-0 group cursor-pointer p-2 rounded-xl border transition active:scale-95 text-center flex flex-col items-center ${
+                  isLight
+                    ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] hover:from-[#c5cdd8] hover:to-[#b6c0cd] border-[#8591a2] text-slate-900'
+                    : 'bg-black/40 hover:bg-black/60 border-white/10 hover:border-amber-400/50'
+                }`}
               >
                 <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg overflow-hidden relative shadow-md bg-black">
                   <img
@@ -867,7 +929,9 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                     ÁLBUM
                   </div>
                 </div>
-                <p className="text-xs font-bold text-zinc-100 truncate w-full mt-1.5 group-hover:text-amber-300">
+                <p className={`text-xs font-bold truncate w-full mt-1.5 ${
+                  isLight ? 'text-slate-900 group-hover:text-amber-700' : 'text-zinc-100 group-hover:text-amber-300'
+                }`}>
                   {album.title}
                 </p>
                 <p className="text-[10px] text-zinc-400 font-mono truncate w-full">
@@ -1249,16 +1313,24 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       )}
       {/* Floating Action Bar for Multi-Album Batch Recording */}
       {isMultiAlbumMode && selectedAlbumIds.size > 0 && (
-        <div className="fixed bottom-24 sm:bottom-28 left-3 right-3 sm:left-4 sm:right-4 max-w-xl mx-auto z-40 p-3 sm:p-4 rounded-2xl bg-[#0d121e]/95 border-2 border-amber-500/60 shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_25px_rgba(251,191,36,0.3)] backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom-5 select-none">
+        <div className={`fixed bottom-24 sm:bottom-28 left-3 right-3 sm:left-4 sm:right-4 max-w-xl mx-auto z-40 p-3 sm:p-4 rounded-2xl backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-bottom-5 select-none ${
+          isLight
+            ? 'bg-[#bcc4d0]/98 border-2 border-amber-600/70 shadow-[0_10px_35px_rgba(15,23,42,0.25)] text-slate-900'
+            : 'bg-[#0d121e]/95 border-2 border-amber-500/60 shadow-[0_10px_35px_rgba(0,0,0,0.85),0_0_25px_rgba(251,191,36,0.3)] text-white'
+        }`}>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300">
+            <div className={`flex items-center gap-1.5 text-xs font-mono font-bold ${
+              isLight ? 'text-amber-800' : 'text-amber-300'
+            }`}>
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               <span>
                 {selectedAlbumIds.size}{' '}
                 {selectedAlbumIds.size === 1 ? 'disco seleccionado' : 'discos seleccionados'}
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400 font-mono truncate mt-0.5">
+            <p className={`text-[11px] font-mono truncate mt-0.5 ${
+              isLight ? 'text-slate-700' : 'text-zinc-400'
+            }`}>
               {selectedAlbumsList.map((a) => a.title).join(' • ')}
             </p>
           </div>
@@ -1267,7 +1339,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             <button
               type="button"
               onClick={deselectAllAlbums}
-              className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-mono font-bold transition cursor-pointer"
+              className={`px-3 py-2 rounded-xl text-xs font-mono font-bold transition cursor-pointer border ${
+                isLight
+                  ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-transparent'
+              }`}
             >
               Limpiar
             </button>
@@ -1285,7 +1361,11 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
       {/* Retro Tape Recording Notification Toast */}
       {albumToast && (
-        <div className="fixed top-4 left-3 right-3 sm:left-4 sm:right-4 max-w-md mx-auto z-50 p-3.5 sm:p-4 rounded-2xl bg-[#0c111c]/95 border-2 border-amber-400/60 shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(251,191,36,0.35)] backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-4 select-none">
+        <div className={`fixed top-4 left-3 right-3 sm:left-4 sm:right-4 max-w-md mx-auto z-50 p-3.5 sm:p-4 rounded-2xl backdrop-blur-xl flex items-center justify-between gap-3 animate-in slide-in-from-top-4 select-none ${
+          isLight
+            ? 'bg-[#bcc4d0]/98 border-2 border-amber-600/70 shadow-[0_12px_40px_rgba(15,23,42,0.25)] text-slate-900'
+            : 'bg-[#0c111c]/95 border-2 border-amber-400/60 shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_25px_rgba(251,191,36,0.35)] text-white'
+        }`}>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-amber-400 font-mono-retro text-xs font-black uppercase tracking-wider">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />

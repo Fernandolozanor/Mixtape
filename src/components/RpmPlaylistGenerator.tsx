@@ -18,7 +18,8 @@ import { SourceBadge } from './SourceBadge';
 
 export const RpmPlaylistGenerator: React.FC = () => {
   const { playTrack, currentTrack, isPlaying, setFullScreenPlayerOpen } = usePlayer();
-  const { likedTracks, playlists, createPlaylist, addTracksToPlaylist } = useLibrary();
+  const { likedTracks, playlists, createPlaylist, addTracksToPlaylist, settings } = useLibrary();
+  const isLight = settings?.themeMode === 'light';
 
   const [isPanelOpen, setIsPanelOpen] = useState<boolean>(false);
   const [selectedPreset, setSelectedPreset] = useState<RpmPreset>('45');
@@ -84,7 +85,11 @@ export const RpmPlaylistGenerator: React.FC = () => {
   const displayedTracks = isExpanded ? sessionTracks : sessionTracks.slice(0, 6);
 
   return (
-    <section className="retro-tape-chassis rounded-2xl sm:rounded-3xl border-2 border-[#263042] shadow-xl overflow-hidden transition-all duration-200">
+    <section className={`rounded-2xl sm:rounded-3xl border-2 shadow-xl overflow-hidden transition-all duration-200 ${
+      isLight
+        ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] border-[#8591a2] text-slate-900'
+        : 'retro-tape-chassis border-[#263042]'
+    }`}>
       {/* Clickable Collapsible Header Bar */}
       <div
         onClick={() => setIsPanelOpen(!isPanelOpen)}
@@ -92,18 +97,26 @@ export const RpmPlaylistGenerator: React.FC = () => {
       >
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-inner">
-            <Gauge className="w-5 h-5" />
+            <Gauge className={`w-5 h-5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-rock text-lg sm:text-xl tracking-wider text-white leading-none">
+              <h2 className={`font-rock text-lg sm:text-xl tracking-wider leading-none ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
                 LISTAS POR RITMO (RPM / BPM)
               </h2>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">
+              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold border ${
+                isLight
+                  ? 'bg-amber-600/20 text-amber-800 border-amber-600/30'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}>
                 33⅓ • 45 • 78 RPM
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400 truncate mt-0.5">
+            <p className={`text-[11px] truncate mt-0.5 ${
+              isLight ? 'text-slate-700' : 'text-zinc-400'
+            }`}>
               {isPanelOpen
                 ? 'Selecciona las revoluciones o pulsaciones por minuto de tu sesión'
                 : 'Pulsa para desplegar el generador de listas por ritmo y cadencia'}
@@ -120,17 +133,25 @@ export const RpmPlaylistGenerator: React.FC = () => {
                 generateMix(selectedPreset, customBpm);
               }}
               disabled={isGenerating}
-              className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-[11px] font-mono-retro font-bold flex items-center gap-1.5 transition active:scale-95"
+              className={`px-2.5 py-1.5 rounded-xl border text-[11px] font-mono-retro font-bold flex items-center gap-1.5 transition active:scale-95 ${
+                isLight
+                  ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'
+              }`}
               title="Renovar selección de este ritmo"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 text-amber-400 ${isGenerating ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 ${isLight ? 'text-amber-700' : 'text-amber-400'} ${isGenerating ? 'animate-spin' : ''}`}
               />
               <span className="hidden sm:inline">RENOVAR</span>
             </button>
           )}
 
-          <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-amber-400">
+          <div className={`w-8 h-8 rounded-xl border flex items-center justify-center ${
+            isLight
+              ? 'bg-[#a4aebb] border-[#7c899a] text-amber-700'
+              : 'bg-white/5 border-white/10 text-amber-400'
+          }`}>
             {isPanelOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </div>
         </div>
@@ -138,7 +159,9 @@ export const RpmPlaylistGenerator: React.FC = () => {
 
       {/* Expandable Body */}
       {isPanelOpen && (
-        <div className="px-4 sm:px-6 pb-5 pt-2 border-t border-white/10 space-y-4 animate-in fade-in duration-200">
+        <div className={`px-4 sm:px-6 pb-5 pt-2 border-t space-y-4 animate-in fade-in duration-200 ${
+          isLight ? 'border-black/15' : 'border-white/10'
+        }`}>
           {/* 4 Speed Selector Buttons (33⅓, 45, 78 RPM + Exact Cadence) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             {(['33', '45', '78'] as const).map((key) => {
@@ -150,26 +173,30 @@ export const RpmPlaylistGenerator: React.FC = () => {
                   onClick={() => setSelectedPreset(key)}
                   className={`p-3 rounded-2xl text-left border transition-all flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-gradient-to-br from-[#232d42] to-[#131926] border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                      ? isLight
+                        ? 'bg-gradient-to-br from-[#c8d1dd] to-[#b4bdcb] border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.25)] ring-1 ring-amber-500'
+                        : 'bg-gradient-to-br from-[#232d42] to-[#131926] border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                      : isLight
+                      ? 'bg-[#a4aebb] hover:bg-[#b0bac7] border-[#7c899a] text-slate-800'
                       : 'bg-black/40 hover:bg-black/60 border-white/10 text-zinc-400'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full mb-1">
                     <span
                       className="font-mono-retro text-sm sm:text-base font-black tracking-wider"
-                      style={{ color: isSelected ? z.color : '#e4e4e7' }}
+                      style={{ color: isSelected ? (isLight ? '#92400e' : z.color) : (isLight ? '#1e293b' : '#e4e4e7') }}
                     >
                       {z.rpmLabel}
                     </span>
                     <Disc3
-                      className={`w-4 h-4 ${isSelected ? 'text-amber-400 animate-spin' : 'text-zinc-600'}`}
+                      className={`w-4 h-4 ${isSelected ? (isLight ? 'text-amber-700 animate-spin' : 'text-amber-400 animate-spin') : (isLight ? 'text-slate-600' : 'text-zinc-600')}`}
                       style={{
                         animationDuration: key === '33' ? '3s' : key === '45' ? '1.8s' : '0.9s',
                       }}
                     />
                   </div>
-                  <p className="text-xs font-bold text-white truncate">{z.title}</p>
-                  <p className="text-[10px] font-mono text-zinc-400 mt-0.5">
+                  <p className={`text-xs font-bold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{z.title}</p>
+                  <p className={`text-[10px] font-mono mt-0.5 ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
                     {z.minBpm}–{z.maxBpm} BPM
                   </p>
                 </button>
@@ -181,18 +208,24 @@ export const RpmPlaylistGenerator: React.FC = () => {
               onClick={() => setSelectedPreset('custom')}
               className={`p-3 rounded-2xl text-left border transition-all flex flex-col justify-between ${
                 selectedPreset === 'custom'
-                  ? 'bg-gradient-to-br from-[#232d42] to-[#131926] border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                  ? isLight
+                    ? 'bg-gradient-to-br from-[#c8d1dd] to-[#b4bdcb] border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.25)] ring-1 ring-amber-500'
+                    : 'bg-gradient-to-br from-[#232d42] to-[#131926] border-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                  : isLight
+                  ? 'bg-[#a4aebb] hover:bg-[#b0bac7] border-[#7c899a] text-slate-800'
                   : 'bg-black/40 hover:bg-black/60 border-white/10 text-zinc-400'
               }`}
             >
               <div className="flex items-center justify-between w-full mb-1">
-                <span className="font-mono-retro text-sm sm:text-base font-black tracking-wider text-emerald-400">
+                <span className={`font-mono-retro text-sm sm:text-base font-black tracking-wider ${
+                  isLight ? 'text-emerald-800' : 'text-emerald-400'
+                }`}>
                   CADENCIA
                 </span>
-                <Zap className="w-4 h-4 text-emerald-400" />
+                <Zap className={`w-4 h-4 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`} />
               </div>
-              <p className="text-xs font-bold text-white truncate">Ritmo Exacto Manual</p>
-              <p className="text-[10px] font-mono text-zinc-400 mt-0.5">
+              <p className={`text-xs font-bold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>Ritmo Exacto Manual</p>
+              <p className={`text-[10px] font-mono mt-0.5 ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
                 Objetivo: {customBpm} BPM/RPM
               </p>
             </button>
@@ -200,12 +233,20 @@ export const RpmPlaylistGenerator: React.FC = () => {
 
           {/* Custom BPM/RPM Dial Slider when 'custom' is active */}
           {selectedPreset === 'custom' && (
-            <div className="p-3.5 rounded-2xl bg-black/60 border border-emerald-500/30 space-y-2.5 animate-in fade-in duration-200">
+            <div className={`p-3.5 rounded-2xl border space-y-2.5 animate-in fade-in duration-200 ${
+              isLight
+                ? 'bg-[#a4aebb] border-emerald-600/40 text-slate-900'
+                : 'bg-black/60 border-emerald-500/30'
+            }`}>
               <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-zinc-300 font-bold">
+                <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-zinc-300'}`}>
                   AJUSTE DE PULSACIONES / REVOLUCIONES POR MINUTO:
                 </span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-sm">
+                <span className={`px-2.5 py-0.5 rounded-lg border font-bold text-sm ${
+                  isLight
+                    ? 'bg-emerald-600/20 text-emerald-800 border-emerald-600/40'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                }`}>
                   {customBpm} BPM ({activeZone.rpmLabel})
                 </span>
               </div>
@@ -233,7 +274,9 @@ export const RpmPlaylistGenerator: React.FC = () => {
                     }}
                     className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border transition ${
                       customBpm === val
-                        ? 'bg-emerald-400 text-black border-emerald-300'
+                        ? 'bg-emerald-500 text-white border-emerald-600'
+                        : isLight
+                        ? 'bg-[#b6beca] text-slate-800 hover:bg-[#c2cacf] border-[#8e99a8]'
                         : 'bg-white/5 text-zinc-400 hover:text-white border-white/10'
                     }`}
                   >
@@ -245,9 +288,13 @@ export const RpmPlaylistGenerator: React.FC = () => {
           )}
 
           {/* Action Bar: Play Session or Save as Mixtape Playlist */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-black/40 p-3 rounded-2xl border border-white/10">
-            <div className="text-xs font-mono text-zinc-300">
-              <span className="text-amber-400 font-bold">{activeZone.rpmLabel}:</span>{' '}
+          <div className={`flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border ${
+            isLight
+              ? 'bg-[#a4aebb] border-[#7c899a] text-slate-900'
+              : 'bg-black/40 border-white/10 text-zinc-300'
+          }`}>
+            <div className={`text-xs font-mono ${isLight ? 'text-slate-800' : 'text-zinc-300'}`}>
+              <span className={`font-bold ${isLight ? 'text-amber-800' : 'text-amber-400'}`}>{activeZone.rpmLabel}:</span>{' '}
               <span>{activeZone.subtitle}</span>
             </div>
 
@@ -298,6 +345,8 @@ export const RpmPlaylistGenerator: React.FC = () => {
                   className={`flex items-center justify-between gap-2.5 p-2 rounded-xl cursor-pointer border transition ${
                     isCurrent
                       ? 'bg-amber-500/20 border-amber-400/50'
+                      : isLight
+                      ? 'bg-[#a4aebb] hover:bg-[#b0bac7] border-[#7c899a]'
                       : 'bg-black/40 hover:bg-white/5 border-white/10'
                   }`}
                 >
@@ -316,10 +365,10 @@ export const RpmPlaylistGenerator: React.FC = () => {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{track.title}</p>
-                      <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 truncate">
+                      <p className={`text-xs font-bold truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>{track.title}</p>
+                      <div className={`flex items-center gap-1.5 text-[10px] truncate ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
                         <span className="truncate">{track.artist}</span>
-                        <span className="text-zinc-600">•</span>
+                        <span className={isLight ? 'text-slate-500' : 'text-zinc-600'}>•</span>
                         <SourceBadge source={track.source} size="xs" />
                       </div>
                     </div>

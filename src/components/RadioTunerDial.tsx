@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Radio, Volume2, VolumeX } from 'lucide-react';
+import { useLibrary } from '../context/LibraryContext';
 import {
   playRadioTuningSound,
   isRadioSoundEnabled,
@@ -19,6 +20,9 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
   hasResults,
   className = '',
 }) => {
+  const { settings } = useLibrary();
+  const isLight = settings?.themeMode === 'light';
+
   // Needle position in percentage of total tuner width (strictly constrained within glass scale: 18% to 57.5%)
   const [needlePos, setNeedlePos] = useState<number>(37.5);
   const [isTuned, setIsTuned] = useState<boolean>(true);
@@ -109,16 +113,24 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
 
   return (
     <div
-      className={`rounded-2xl bg-[#090c13] border-2 border-[#1e2736] p-2 sm:p-2.5 shadow-xl relative select-none overflow-hidden ${className}`}
+      className={`rounded-2xl ${
+        isLight
+          ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] border-2 border-[#8591a2] text-slate-900 shadow-xl'
+          : 'bg-[#090c13] border-2 border-[#1e2736] text-white shadow-xl'
+      } p-2 sm:p-2.5 relative select-none overflow-hidden transition-colors ${className}`}
     >
       {/* Top Brushed Steel Tuning Header */}
       <div className="flex items-center justify-between px-1 pb-1.5 text-[10px] sm:text-xs font-mono-retro flex-nowrap whitespace-nowrap overflow-hidden h-6 sm:h-7">
         <div className="flex items-center gap-1.5 sm:gap-2 shrink min-w-0 overflow-hidden">
-          <Radio className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="font-extrabold tracking-widest text-zinc-300 uppercase truncate">
+          <Radio className={`w-3.5 h-3.5 ${isLight ? 'text-amber-600' : 'text-amber-400'} shrink-0`} />
+          <span className={`font-extrabold tracking-widest ${isLight ? 'text-slate-900' : 'text-zinc-300'} uppercase truncate`}>
             <span className="hidden sm:inline">SINTONIZADOR </span>HI-FI TUNER
           </span>
-          <span className="hidden md:inline-block px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold text-[9px] shrink-0">
+          <span className={`hidden md:inline-block px-1.5 py-0.2 rounded font-bold text-[9px] shrink-0 ${
+            isLight
+              ? 'bg-amber-600/20 text-amber-800 border border-amber-600/30'
+              : 'bg-amber-500/20 text-amber-400'
+          }`}>
             FM STEREO
           </span>
         </div>
@@ -129,15 +141,25 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
             <span
               className={`w-2 h-2 rounded-full shrink-0 transition-all duration-300 ${
                 isTuned
-                  ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
+                  ? isLight
+                    ? 'bg-rose-600 shadow-[0_0_8px_#e11d48]'
+                    : 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
                   : isSearching
                   ? 'bg-amber-400 animate-pulse'
+                  : isLight
+                  ? 'bg-slate-400'
                   : 'bg-zinc-700'
               }`}
             />
             <span
               className={`text-[8.5px] sm:text-[9.5px] font-bold tracking-wider shrink-0 w-[50px] sm:w-[70px] text-left truncate ${
-                isTuned ? 'text-rose-400 font-extrabold' : 'text-zinc-500'
+                isTuned
+                  ? isLight
+                    ? 'text-rose-700 font-extrabold'
+                    : 'text-rose-400 font-extrabold'
+                  : isLight
+                  ? 'text-slate-600'
+                  : 'text-zinc-500'
               }`}
             >
               {isSearching ? 'TUNING' : isTuned ? 'STEREO' : 'READY'}
@@ -145,18 +167,22 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
           </div>
 
           {/* Fixed-width Tabular Frequency readout: guaranteed ZERO layout shift on 2 vs 3 digits */}
-          <div className="bg-black/90 px-1 sm:px-2 py-0.5 rounded border border-white/10 text-amber-400 font-bold font-mono tracking-wider text-[11px] sm:text-xs w-[70px] sm:w-[78px] text-center shrink-0 tabular-nums shadow-inner flex items-center justify-center gap-0.5">
+          <div className={`${
+            isLight
+              ? 'bg-[#a2acb9] border border-[#7a8798] text-[#92400e]'
+              : 'bg-black/90 border border-white/10 text-amber-400'
+          } px-1 sm:px-2 py-0.5 rounded font-bold font-mono tracking-wider text-[11px] sm:text-xs w-[70px] sm:w-[78px] text-center shrink-0 tabular-nums shadow-inner flex items-center justify-center gap-0.5`}>
             <span className="w-9 text-right font-bold">{currentFreq}</span>
-            <span className="text-[8.5px] sm:text-[9px] text-zinc-500 font-normal">MHz</span>
+            <span className={`text-[8.5px] sm:text-[9px] ${isLight ? 'text-slate-700 font-semibold' : 'text-zinc-500 font-normal'}`}>MHz</span>
           </div>
 
           {/* Sound mute toggle */}
           <button
             onClick={handleToggleSound}
-            className="text-zinc-500 hover:text-amber-400 transition p-1 shrink-0 active:scale-95"
+            className={`${isLight ? 'text-slate-600 hover:text-amber-700' : 'text-zinc-500 hover:text-amber-400'} transition p-1 shrink-0 active:scale-95`}
             title={soundEnabled ? 'Silenciar sonido de sintonizador' : 'Activar sonido de sintonizador'}
           >
-            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5 text-zinc-600" />}
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className={`w-3.5 h-3.5 ${isLight ? 'text-slate-400' : 'text-zinc-600'}`} />}
           </button>
         </div>
       </div>

@@ -32,7 +32,8 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
   const [recordedSuccess, setRecordedSuccess] = useState(false);
 
   const { playTrack, currentTrack } = usePlayer();
-  const { createPlaylist, addTracksToPlaylist, playlists } = useLibrary();
+  const { createPlaylist, addTracksToPlaylist, playlists, settings } = useLibrary();
+  const isLight = settings?.themeMode === 'light';
 
   const isSavedVinyl = release
     ? playlists.some(
@@ -107,14 +108,22 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in select-none">
-      <div className="w-full max-w-2xl bg-[#0d121d] border border-amber-500/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] relative">
+      <div className={`w-full max-w-2xl border rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] relative ${
+        isLight
+          ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] border-[#8591a2] text-slate-900'
+          : 'bg-[#0d121d] border-amber-500/30 text-white'
+      }`}>
         {/* Header Ambient Background Glow */}
         <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-amber-500/20 via-pink-500/10 to-transparent pointer-events-none" />
 
         {/* Top Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-20 p-2 rounded-full bg-black/40 hover:bg-black/60 text-zinc-400 hover:text-white border border-white/10 transition active:scale-95"
+          className={`absolute right-4 top-4 z-20 p-2 rounded-full transition active:scale-95 border ${
+            isLight
+              ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
+              : 'bg-black/40 hover:bg-black/60 text-zinc-400 hover:text-white border-white/10'
+          }`}
           aria-label="Cerrar modal"
         >
           <X className="w-5 h-5" />
@@ -149,19 +158,27 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
                   <span>LANZAMIENTO OFICIAL</span>
                 </span>
                 {release.year && (
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/10 text-amber-300 border border-white/10">
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
+                    isLight
+                      ? 'bg-black/10 text-amber-800 border-black/10'
+                      : 'bg-white/10 text-amber-300 border border-white/10'
+                  }`}>
                     {release.year}
                   </span>
                 )}
-                <span className="text-[10px] font-mono text-zinc-400">
+                <span className={`text-[10px] font-mono ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
                   {tracks.length > 0 ? `${tracks.length} canciones • ${totalMins} min` : 'Álbum Completo'}
                 </span>
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide leading-tight drop-shadow-md">
+              <h2 className={`text-xl sm:text-2xl font-black tracking-wide leading-tight ${
+                isLight ? 'text-slate-900' : 'text-white drop-shadow-md'
+              }`}>
                 {fullRelease?.title || release.title}
               </h2>
-              <p className="text-sm sm:text-base font-bold text-amber-400 font-mono mt-1">
+              <p className={`text-sm sm:text-base font-bold font-mono mt-1 ${
+                isLight ? 'text-amber-800' : 'text-amber-400'
+              }`}>
                 {fullRelease?.artist || release.artist}
               </p>
 
@@ -216,21 +233,27 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
           </div>
 
           {/* Tracklist Section */}
-          <div className="space-y-2 pt-2 border-t border-white/10">
-            <div className="flex items-center justify-between text-xs text-zinc-400 px-2 py-1">
-              <span className="font-mono-retro font-bold uppercase tracking-wider text-amber-400/90">
+          <div className={`space-y-2 pt-2 border-t ${isLight ? 'border-black/15' : 'border-white/10'}`}>
+            <div className="flex items-center justify-between text-xs px-2 py-1">
+              <span className={`font-mono-retro font-bold uppercase tracking-wider ${
+                isLight ? 'text-amber-800' : 'text-amber-400/90'
+              }`}>
                 Pistas del Álbum ({tracks.length})
               </span>
-              <span className="text-[11px] font-mono">Audio Original • Estudio</span>
+              <span className={`text-[11px] font-mono ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                Audio Original • Estudio
+              </span>
             </div>
 
             {isLoadingTracks ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-3 text-zinc-400 font-mono text-xs">
-                <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+              <div className={`py-12 flex flex-col items-center justify-center gap-3 font-mono text-xs ${
+                isLight ? 'text-slate-700' : 'text-zinc-400'
+              }`}>
+                <Loader2 className={`w-6 h-6 animate-spin ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                 <span>Cargando pistas oficiales de YouTube...</span>
               </div>
             ) : tracks.length === 0 ? (
-              <div className="py-8 text-center text-xs text-zinc-400 font-mono">
+              <div className={`py-8 text-center text-xs font-mono ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
                 No se han podido cargar las pistas de este lanzamiento.
               </div>
             ) : (
@@ -242,30 +265,44 @@ export const AlbumDetailModal: React.FC<AlbumDetailModalProps> = ({
                       key={t.id + idx}
                       className={`group flex items-center justify-between gap-3 px-3 py-2 rounded-xl border transition ${
                         isCurrent
-                          ? 'bg-amber-500/15 border-amber-500/40 text-white'
+                          ? isLight
+                            ? 'bg-amber-500/20 border-amber-600/50 text-slate-900'
+                            : 'bg-amber-500/15 border-amber-500/40 text-white'
+                          : isLight
+                          ? 'bg-[#a4aebb] border-[#7c899a] hover:bg-[#b0bac7] text-slate-900'
                           : 'bg-white/5 border-white/5 hover:bg-white/10 text-zinc-200'
                       }`}
                     >
                       {/* Left: Track Number + Title */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <span className="font-mono text-xs font-bold text-zinc-500 w-5 text-right shrink-0">
+                        <span className={`font-mono text-xs font-bold w-5 text-right shrink-0 ${
+                          isLight ? 'text-slate-600' : 'text-zinc-500'
+                        }`}>
                           {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
                         </span>
 
                         <button
                           type="button"
                           onClick={() => playTrack(t, tracks, false, isSavedVinyl ? 'vinyl' : 'tape')}
-                          className="w-7 h-7 rounded-lg bg-white/10 group-hover:bg-amber-400 group-hover:text-black flex items-center justify-center text-zinc-300 transition shrink-0 cursor-pointer"
+                          className={`w-7 h-7 rounded-lg group-hover:bg-amber-400 group-hover:text-black flex items-center justify-center transition shrink-0 cursor-pointer ${
+                            isLight
+                              ? 'bg-black/10 text-slate-800'
+                              : 'bg-white/10 text-zinc-300'
+                          }`}
                           aria-label={`Reproducir ${t.title}`}
                         >
                           <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                         </button>
 
                         <div className="min-w-0 flex-1">
-                          <p className={`text-xs sm:text-sm font-semibold truncate ${isCurrent ? 'text-amber-300' : 'text-zinc-100'}`}>
+                          <p className={`text-xs sm:text-sm font-semibold truncate ${
+                            isCurrent
+                              ? isLight ? 'text-amber-800' : 'text-amber-300'
+                              : isLight ? 'text-slate-900' : 'text-zinc-100'
+                          }`}>
                             {t.title}
                           </p>
-                          <p className="text-[11px] text-zinc-400 truncate">
+                          <p className={`text-[11px] truncate ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
                             {t.artist}
                           </p>
                         </div>

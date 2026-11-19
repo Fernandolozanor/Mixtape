@@ -222,24 +222,36 @@ export const HomeTab: React.FC<HomeTabProps> = ({
           </div>
         ) : activeWindow ? (
           /* EXPANDED SUBSECTION VIEW */
-          <div className="space-y-4 p-4 sm:p-6 rounded-3xl glass-card border border-white/15 bg-black/45 shadow-2xl transition-all duration-300">
+          <div className={`space-y-4 p-4 sm:p-6 rounded-3xl shadow-2xl transition-all duration-300 ${
+            isLight
+              ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] border-2 border-[#8591a2] text-slate-900'
+              : 'glass-card border border-white/15 bg-black/45'
+          }`}>
             {/* Top Bar with 'Volver' button */}
-            <div className="flex items-center justify-between gap-3 flex-wrap border-b border-white/10 pb-4">
+            <div className={`flex items-center justify-between gap-3 flex-wrap border-b pb-4 ${
+              isLight ? 'border-black/15' : 'border-white/10'
+            }`}>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setExpandedWindowId(null)}
-                  className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/35 text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-md"
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition active:scale-95 cursor-pointer shadow-md border ${
+                    isLight
+                      ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 border-amber-600/40'
+                      : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-500/35'
+                  }`}
                   title="Plegar y volver a las ventanas"
                 >
-                  <ArrowLeft className="w-4 h-4 text-amber-400" />
+                  <ArrowLeft className={`w-4 h-4 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                   <span>Volver</span>
                 </button>
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white leading-tight">
+                  <h3 className={`text-base sm:text-lg font-bold leading-tight ${
+                    isLight ? 'text-slate-900' : 'text-white'
+                  }`}>
                     {activeWindow.title}
                   </h3>
                   {activeWindow.subtitle && (
-                    <p className="text-xs text-zinc-400">{activeWindow.subtitle}</p>
+                    <p className={`text-xs ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>{activeWindow.subtitle}</p>
                   )}
                 </div>
               </div>

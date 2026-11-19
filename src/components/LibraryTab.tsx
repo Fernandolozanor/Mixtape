@@ -475,7 +475,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       >
         {/* Header: Ultra-compact when in Jukebox mode to gain maximum vertical space */}
         {isJukebox ? (
-          <div className="flex items-center justify-between gap-2 bg-black/50 px-3 py-1.5 rounded-2xl border border-white/10 shadow-md">
+          <div className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-2xl border shadow-md ${
+            isLight
+              ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] border-[#8591a2] text-slate-900'
+              : 'bg-black/50 border-white/10'
+          }`}>
             <div className="flex items-center gap-2 min-w-0">
               <div
                 className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md shrink-0"
@@ -487,10 +491,14 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 <Heart className="w-4 h-4 fill-white text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-sm font-extrabold text-white truncate leading-tight">
+                <h1 className={`text-sm font-extrabold truncate leading-tight ${
+                  isLight ? 'text-slate-900' : 'text-white'
+                }`}>
                   Jukebox de Favoritos
                 </h1>
-                <p className="text-[10px] text-zinc-400 font-mono leading-none">
+                <p className={`text-[10px] font-mono leading-none ${
+                  isLight ? 'text-slate-700' : 'text-zinc-400'
+                }`}>
                   {likedTracks.length} canciones
                 </p>
               </div>
@@ -505,17 +513,21 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   className={`p-1.5 rounded-xl border text-xs transition cursor-pointer ${
                     showFavoritesSearch || searchQuery
                       ? 'bg-amber-400 text-black border-amber-400 shadow'
+                      : isLight
+                      ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
                       : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10'
                   }`}
                   title="Buscar en favoritos"
                 >
-                  <Search className="w-3.5 h-3.5" />
+                  <Search className={`w-3.5 h-3.5 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                 </button>
               )}
 
               {/* View switcher: Jukebox vs Vinilos vs Lista */}
               {likedTracks.length > 0 && (
-                <div className="flex items-center bg-black/60 p-0.5 rounded-xl border border-white/10 shadow-inner">
+                <div className={`flex items-center p-0.5 rounded-xl border shadow-inner ${
+                  isLight ? 'bg-[#a4aebb] border-[#7c899a]' : 'bg-black/60 border-white/10'
+                }`}>
                   <button
                     onClick={() => handleSelectFavoritesViewMode('jukebox')}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-400 text-black shadow cursor-pointer"
@@ -526,7 +538,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   </button>
                   <button
                     onClick={() => handleSelectFavoritesViewMode('vinyl')}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition cursor-pointer"
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      isLight
+                        ? 'text-slate-800 hover:text-black'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
                     title="Vista Discos de Vinilo"
                   >
                     <Disc3 className="w-3 h-3" />
@@ -534,7 +550,11 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                   </button>
                   <button
                     onClick={() => handleSelectFavoritesViewMode('list')}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition cursor-pointer"
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                      isLight
+                        ? 'text-slate-800 hover:text-black'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
                     title="Vista Lista de Canciones"
                   >
                     <List className="w-3 h-3" />
@@ -609,10 +629,14 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               )}
 
               {likedTracks.length > 0 && (
-                <div className="flex items-center bg-black/40 p-1 rounded-2xl border border-white/10 shadow-inner">
+                <div className={`flex items-center p-1 rounded-2xl border shadow-inner ${
+                  isLight ? 'bg-[#a4aebb] border-[#7c899a]' : 'bg-black/40 border-white/10'
+                }`}>
                   <button
                     onClick={() => handleSelectFavoritesViewMode('jukebox')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white transition cursor-pointer"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                      isLight ? 'text-slate-700 hover:text-black' : 'text-zinc-400 hover:text-white'
+                    }`}
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>Jukebox</span>
@@ -622,6 +646,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                       favoritesViewMode === 'vinyl'
                         ? 'bg-amber-400 text-black shadow-md font-bold'
+                        : isLight
+                        ? 'text-slate-700 hover:text-black'
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -633,6 +659,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                       favoritesViewMode === 'list'
                         ? 'bg-amber-400 text-black shadow-md font-bold'
+                        : isLight
+                        ? 'text-slate-700 hover:text-black'
                         : 'text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -695,28 +723,36 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
         {/* Collapsible / Active Search Bar in Favorites */}
         {likedTracks.length > 0 && (!isJukebox || showFavoritesSearch || searchQuery) && (
-          <div className="flex items-center gap-2.5 bg-black/60 border border-white/10 rounded-2xl px-3.5 py-1.5 sm:py-2 shadow-inner">
-            <Search className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className={`flex items-center gap-2.5 border rounded-2xl px-3.5 py-1.5 sm:py-2 shadow-inner ${
+            isLight ? 'bg-[#a4aebb] border-[#7c899a]' : 'bg-black/60 border-white/10'
+          }`}>
+            <Search className={`w-4 h-4 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar en tus favoritos por título, artista o género..."
-              className="w-full bg-transparent text-white font-mono text-xs focus:outline-none placeholder:text-zinc-500"
+              className={`w-full bg-transparent font-mono text-xs focus:outline-none ${
+                isLight ? 'text-slate-900 placeholder:text-slate-600' : 'text-white placeholder:text-zinc-500'
+              }`}
               autoFocus={showFavoritesSearch && !searchQuery}
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="p-1 rounded-full text-zinc-400 hover:text-white transition cursor-pointer"
+                className={`p-1 rounded-full transition cursor-pointer ${
+                  isLight ? 'text-slate-600 hover:text-black' : 'text-zinc-400 hover:text-white'
+                }`}
                 title="Borrar búsqueda"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
             {searchQuery && (
-              <span className="text-[10px] font-mono text-amber-300 font-bold shrink-0">
+              <span className={`text-[10px] font-mono font-bold shrink-0 ${
+                isLight ? 'text-amber-800' : 'text-amber-300'
+              }`}>
                 {filteredLikedTracks.length} de {likedTracks.length}
               </span>
             )}
@@ -1414,29 +1450,43 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       {/* ==============================================================
           BARRA DE BÚSQUEDA Y FILTRADO AVANZADO (ARTISTAS, GÉNEROS, ETC.)
          ============================================================== */}
-      <div className="rounded-2xl bg-black/60 border border-white/10 p-3 sm:p-4 space-y-3 shadow-xl backdrop-blur-md">
+      <div className={`rounded-2xl border p-3 sm:p-4 space-y-3 shadow-xl backdrop-blur-md ${
+        isLight
+          ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] border-[#8591a2] text-slate-900'
+          : 'bg-black/60 border-white/10'
+      }`}>
         {/* Fila 1: Caja de búsqueda con icono, input, clear button y contador */}
-        <div className="flex items-center gap-2.5 bg-zinc-900/90 border border-white/10 focus-within:border-amber-400 rounded-xl px-3 py-2 transition shadow-inner">
-          <Search className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className={`flex items-center gap-2.5 border focus-within:border-amber-400 rounded-xl px-3 py-2 transition shadow-inner ${
+          isLight ? 'bg-[#a4aebb] border-[#7c899a]' : 'bg-zinc-900/90 border-white/10'
+        }`}>
+          <Search className={`w-4 h-4 shrink-0 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por artista, género (rock, pop, metal...), disco, cinta o canción..."
-            className="w-full bg-transparent text-white font-mono text-xs sm:text-sm focus:outline-none placeholder:text-zinc-500"
+            className={`w-full bg-transparent font-mono text-xs sm:text-sm focus:outline-none ${
+              isLight ? 'text-slate-900 placeholder:text-slate-600' : 'text-white placeholder:text-zinc-500'
+            }`}
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              className={`p-1 rounded-full transition cursor-pointer ${
+                isLight ? 'text-slate-600 hover:text-black hover:bg-black/10' : 'text-zinc-400 hover:text-white hover:bg-white/10'
+              }`}
               title="Borrar texto"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
           {hasActiveFilter && (
-            <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-400/15 border border-amber-400/30 px-2 py-0.5 rounded-full shrink-0">
+            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+              isLight
+                ? 'text-amber-900 bg-amber-500/25 border-amber-600/40'
+                : 'text-amber-300 bg-amber-400/15 border-amber-400/30'
+            }`}>
               {tapePlaylists.length + vinylPlaylists.length} coincidencia(s)
             </span>
           )}
@@ -1449,10 +1499,12 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             <button
               type="button"
               onClick={() => setSelectedGenre('all')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition shrink-0 cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition shrink-0 cursor-pointer border ${
                 selectedGenre === 'all'
-                  ? 'bg-amber-400 text-black shadow-md'
-                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/5'
+                  ? 'bg-amber-400 text-black shadow-md border-amber-400'
+                  : isLight
+                  ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-white/5'
               }`}
             >
               Todos los géneros
@@ -1462,10 +1514,12 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 key={g.id}
                 type="button"
                 onClick={() => setSelectedGenre(selectedGenre === g.id ? 'all' : g.id)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition shrink-0 flex items-center gap-1 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition shrink-0 flex items-center gap-1 cursor-pointer border ${
                   selectedGenre === g.id
-                    ? 'bg-amber-400 text-black shadow-md'
-                    : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/5'
+                    ? 'bg-amber-400 text-black shadow-md border-amber-400'
+                    : isLight
+                    ? 'bg-[#a4aebb] hover:bg-[#b0bac7] text-slate-800 border-[#7c899a]'
+                    : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border-white/5'
                 }`}
               >
                 <span>{g.icon}</span>
@@ -1477,14 +1531,20 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           {/* Selector de Artistas */}
           {availableArtists.length > 0 && (
             <div className="flex items-center gap-1.5 shrink-0">
-              <span className="text-[11px] font-mono text-zinc-400 flex items-center gap-1">
-                <Mic2 className="w-3 h-3 text-amber-400" />
+              <span className={`text-[11px] font-mono flex items-center gap-1 ${
+                isLight ? 'text-slate-700' : 'text-zinc-400'
+              }`}>
+                <Mic2 className={`w-3 h-3 ${isLight ? 'text-amber-700' : 'text-amber-400'}`} />
                 <span className="hidden sm:inline">Artista:</span>
               </span>
               <select
                 value={selectedArtist}
                 onChange={(e) => setSelectedArtist(e.target.value)}
-                className="bg-zinc-900 border border-white/15 text-zinc-200 text-xs font-mono font-bold rounded-xl px-2.5 py-1.5 focus:border-amber-400 focus:outline-none cursor-pointer max-w-[160px] sm:max-w-[200px] truncate"
+                className={`border text-xs font-mono font-bold rounded-xl px-2.5 py-1.5 focus:border-amber-400 focus:outline-none cursor-pointer max-w-[160px] sm:max-w-[200px] truncate ${
+                  isLight
+                    ? 'bg-[#a4aebb] border-[#7c899a] text-slate-900 font-semibold'
+                    : 'bg-zinc-900 border-white/15 text-zinc-200'
+                }`}
               >
                 <option value="all">Todos los artistas ({availableArtists.length})</option>
                 {availableArtists.map((artist) => (
