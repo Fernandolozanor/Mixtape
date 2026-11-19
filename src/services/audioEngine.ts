@@ -1230,6 +1230,26 @@ class AudioEngine {
     } catch {}
   }
 
+  public stop(): void {
+    this.pause();
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.playbackState = 'none';
+      } catch {}
+    }
+    if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.stopVideo === 'function') {
+      try {
+        this.ytPlayer.stopVideo();
+      } catch {}
+    }
+    try {
+      this.audio.currentTime = 0;
+      this.otherAudio.currentTime = 0;
+    } catch {}
+    this.currentTrack = null;
+    this.notifyState();
+  }
+
   public seek(seconds: number): void {
     if (this.crossfadeInterval) {
       clearInterval(this.crossfadeInterval);

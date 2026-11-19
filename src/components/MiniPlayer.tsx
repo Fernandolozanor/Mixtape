@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Rewind, FastForward, Heart, Loader2, Disc3 } from 'lucide-react';
+import { Play, Pause, Square, SkipBack, SkipForward, Rewind, FastForward, Heart, Loader2, Disc3 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -12,6 +12,7 @@ export const MiniPlayer: React.FC = () => {
     isPlaying,
     isLoading,
     togglePlay,
+    stopPlayback,
     nextTrack,
     prevTrack,
     fastForward,
@@ -158,17 +159,35 @@ export const MiniPlayer: React.FC = () => {
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black flex items-center justify-center transition shadow-lg border-t border-white/40 border-b-2 border-amber-900 active:translate-y-0.5"
+            className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black flex items-center justify-center transition shadow-lg border-t border-white/40 border-b-2 border-amber-900 active:translate-y-0.5"
             aria-label={isPlaying && !scrubDirection ? 'Pausar' : 'Reproducir'}
             title={scrubDirection ? 'PLAY ▶ (Velocidad normal)' : isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-black" />
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-black" />
             ) : isPlaying && !scrubDirection ? (
-              <Pause className="w-5 h-5 fill-black text-black" />
+              <Pause className="w-4 h-4 sm:w-5 sm:h-5 fill-black text-black" />
             ) : (
-              <Play className="w-5 h-5 fill-black text-black ml-0.5" />
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-black text-black ml-0.5" />
             )}
+          </button>
+
+          {/* Stop Button - Stops playback and hides both players */}
+          <button
+            onClick={stopPlayback}
+            className={`p-1.5 sm:p-2 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
+              isSteel
+                ? 'retro-btn-aluminum shadow-md text-rose-700 border-slate-400'
+                : 'bg-[#1d2330] hover:bg-rose-950/70 text-rose-400 border-white/20 border-black/80'
+            }`}
+            aria-label="Detener"
+            title="STOP ⏹ (Detener y ocultar)"
+          >
+            <Square
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                isSteel ? 'text-rose-700 fill-rose-700' : 'text-rose-500 fill-rose-500'
+              }`}
+            />
           </button>
 
           {/* Fast Forward (Adelantar) - 1,5x -> 2x -> 4x -> 8x -> 1,5x */}

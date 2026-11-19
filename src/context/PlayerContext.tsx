@@ -50,6 +50,7 @@ interface PlayerContextType {
     startTime?: number
   ) => Promise<void>;
   togglePlay: () => void;
+  stopPlayback: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
   fastForward: () => void;
@@ -494,6 +495,29 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const stopPlayback = () => {
+    saveCurrentTapeProgress();
+    if (scrubDirectionRef.current !== null) {
+      scrubDirectionRef.current = null;
+      scrubSpeedRef.current = null;
+      setScrubDirection(null);
+      setScrubSpeed(null);
+    }
+    audioEngine.stop();
+    setIsPlaying(false);
+    setIsLoading(false);
+    setCurrentTime(0);
+    currentTimeRef.current = 0;
+    setDuration(0);
+    durationRef.current = 0;
+    setBuffered(0);
+    setCurrentTrack(null);
+    currentTrackRef.current = null;
+    setFullScreenPlayerOpen(false);
+    setQueueOpen(false);
+    setLyricsOpen(false);
+  };
+
   const handleNextTrack = (isCrossfade: boolean = false) => {
     if (scrubDirectionRef.current !== null) {
       scrubDirectionRef.current = null;
@@ -654,6 +678,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         playTape,
         playTrack,
         togglePlay,
+        stopPlayback,
         nextTrack: handleNextTrack,
         prevTrack: handlePrevTrack,
         fastForward,

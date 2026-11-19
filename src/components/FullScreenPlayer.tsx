@@ -3,6 +3,7 @@ import {
   ChevronDown,
   Play,
   Pause,
+  Square,
   SkipBack,
   SkipForward,
   Rewind,
@@ -39,6 +40,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     isPlaying,
     isLoading,
     togglePlay,
+    stopPlayback,
     nextTrack,
     prevTrack,
     fastForward,
@@ -308,7 +310,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className={`w-12 h-12 sm:w-15 sm:h-15 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition shadow-2xl active:translate-y-1 shrink-0 ${
+            className={`w-11 h-11 sm:w-15 sm:h-15 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition shadow-2xl active:translate-y-1 shrink-0 ${
               isSteel
                 ? 'retro-btn-aluminum border-2 border-slate-300 ring-2 ring-amber-500/30'
                 : 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-t-2 border-white/50 border-b-4 border-amber-950 hover:brightness-110'
@@ -317,17 +319,42 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             title={scrubDirection ? 'PLAY ▶ (Velocidad normal)' : isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
-              <Loader2 className={`w-6 h-6 sm:w-7 sm:h-7 animate-spin ${isSteel ? 'text-slate-900' : 'text-black'}`} />
+              <Loader2 className={`w-5 h-5 sm:w-7 sm:h-7 animate-spin ${isSteel ? 'text-slate-900' : 'text-black'}`} />
             ) : isPlaying && !scrubDirection ? (
-              <Pause className={`w-6 h-6 sm:w-7 sm:h-7 ${isSteel ? 'fill-amber-600 text-amber-600' : 'fill-black text-black'}`} />
+              <Pause className={`w-5 h-5 sm:w-7 sm:h-7 ${isSteel ? 'fill-amber-600 text-amber-600' : 'fill-black text-black'}`} />
             ) : (
-              <Play className={`w-6 h-6 sm:w-7 sm:h-7 ml-0.5 ${isSteel ? 'fill-slate-900 text-slate-900' : 'fill-black text-black'}`} />
+              <Play className={`w-5 h-5 sm:w-7 sm:h-7 ml-0.5 ${isSteel ? 'fill-slate-900 text-slate-900' : 'fill-black text-black'}`} />
             )}
             {isSteel && (
-              <span className="text-[7px] font-mono-retro font-black text-slate-800 tracking-wider">
+              <span className="text-[6.5px] sm:text-[7px] font-mono-retro font-black text-slate-800 tracking-wider">
                 {isPlaying && !scrubDirection ? 'PAUSE' : 'PLAY'}
               </span>
             )}
+          </button>
+
+          {/* Stop Button - Stops music and hides both players */}
+          <button
+            onClick={stopPlayback}
+            className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+              isSteel
+                ? 'retro-btn-aluminum hover:border-rose-500/50'
+                : 'bg-[#1d2332] hover:bg-rose-950/70 text-rose-400 border-t border-white/25 border-b-2 border-black/90'
+            }`}
+            aria-label="Detener"
+            title="STOP ⏹ (Detener y ocultar reproductor)"
+          >
+            <Square
+              className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                isSteel ? 'text-rose-700 fill-rose-700' : 'fill-rose-500 text-rose-500'
+              }`}
+            />
+            <span
+              className={`text-[6.5px] sm:text-[7.5px] font-mono-retro font-black mt-0.5 leading-none ${
+                isSteel ? 'text-rose-800' : 'text-rose-400/90'
+              }`}
+            >
+              STOP
+            </span>
           </button>
 
           {/* Fast Forward (Adelantar) - 1,5x -> 2x -> 4x -> 8x -> 1,5x */}
