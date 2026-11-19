@@ -19,7 +19,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   className = '',
   forceMedia,
 }) => {
-  const { currentTrack, isPlaying, togglePlay, currentTime, volume, playbackRate, playbackMediaType } = usePlayer();
+  const { currentTrack, isPlaying, togglePlay, currentTime, volume, playbackRate, playbackMediaType, scrubDirection, scrubSpeed } = usePlayer();
   const { playlists, settings } = useLibrary();
   const { currentTheme } = useTheme();
   const isSteel = currentTheme.id === 'retro-rock-80s';
@@ -81,23 +81,26 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     // Explicitly enforce muted and inline attributes for iOS Safari / Mobile WebKit
     video.muted = true;
     video.playsInline = true;
-    video.playbackRate = playbackRate || 1;
+    const isScrubbing = scrubDirection !== null && scrubSpeed !== null;
+    video.playbackRate = isScrubbing ? Math.min(4, scrubSpeed) : playbackRate || 1;
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
     video.setAttribute('muted', '');
+
+    const shouldSpin = isPlaying || isScrubbing;
 
     const handleVisibility = () => {
       if (document.hidden) {
         // Crucial for mobile background audio: pause decorative video so iOS/Android doesn't terminate background audio!
         video.pause();
-      } else if (isPlaying) {
+      } else if (shouldSpin) {
         video.play().catch(() => {});
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
 
-    if (isPlaying && !document.hidden) {
+    if (shouldSpin && !document.hidden) {
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -111,7 +114,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isPlaying, videoSrc, playbackRate]);
+  }, [isPlaying, videoSrc, playbackRate, scrubDirection, scrubSpeed]);
 
   // Handwriting simulation on the cassette tape label
   useEffect(() => {

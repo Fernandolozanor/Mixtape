@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, SkipBack, SkipForward, Heart, Loader2, Disc3 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Rewind, FastForward, Heart, Loader2, Disc3 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
 import { useTheme } from '../context/ThemeContext';
@@ -14,6 +14,10 @@ export const MiniPlayer: React.FC = () => {
     togglePlay,
     nextTrack,
     prevTrack,
+    fastForward,
+    rewind,
+    scrubDirection,
+    scrubSpeed,
     currentTime,
     duration,
     setFullScreenPlayerOpen,
@@ -86,12 +90,12 @@ export const MiniPlayer: React.FC = () => {
 
         {/* 80s Rock Mechanical Transport Controls */}
         <div
-          className="flex items-center gap-1.5 sm:gap-2 shrink-0 pr-1"
+          className="flex items-center gap-1 sm:gap-1.5 shrink-0 pr-0.5 sm:pr-1"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={() => toggleLike(currentTrack)}
-            className="p-2 text-zinc-400 hover:text-amber-400 transition"
+            className="hidden sm:inline-flex p-1.5 text-zinc-400 hover:text-amber-400 transition"
             aria-label="Me gusta"
           >
             <Heart
@@ -106,51 +110,109 @@ export const MiniPlayer: React.FC = () => {
           {/* Previous Track Button - Mechanical bevel */}
           <button
             onClick={prevTrack}
-            className={`p-2.5 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
+            className={`p-1.5 sm:p-2 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
               isSteel
                 ? 'retro-btn-aluminum shadow-md text-amber-900 border-slate-400'
                 : 'bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-white/20 border-black/80'
             }`}
             aria-label="Canción anterior"
-            title="REW ⏪"
+            title="Anterior ⏮"
           >
             <SkipBack
-              className={`w-4 h-4 ${
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                 isSteel ? 'text-amber-900 fill-amber-900' : 'text-amber-400 fill-amber-400'
               }`}
             />
+          </button>
+
+          {/* Rewind (Retrasar) - 1,5x -> 2x -> 4x -> 8x -> 1,5x */}
+          <button
+            onClick={rewind}
+            className={`relative p-1.5 sm:p-2 rounded-xl border-t border-b-2 transition active:translate-y-0.5 flex flex-col items-center justify-center ${
+              scrubDirection === 'backward'
+                ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black border-white/40 border-amber-900 ring-1 ring-amber-400'
+                : isSteel
+                ? 'retro-btn-aluminum shadow-md text-amber-900 border-slate-400'
+                : 'bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-white/20 border-black/80'
+            }`}
+            aria-label="Retrasar"
+            title="Retrasar (1,5x / 2x / 4x / 8x)"
+          >
+            <Rewind
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                scrubDirection === 'backward'
+                  ? 'text-black fill-black'
+                  : isSteel
+                  ? 'text-amber-900 fill-amber-900'
+                  : 'text-amber-400 fill-amber-400'
+              }`}
+            />
+            {scrubDirection === 'backward' && scrubSpeed && (
+              <span className="text-[7px] font-mono font-black text-black leading-none mt-0.5">
+                {String(scrubSpeed).replace('.', ',')}x
+              </span>
+            )}
           </button>
 
           {/* Main Play / Pause Key */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className="w-11 h-11 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black flex items-center justify-center transition shadow-lg border-t border-white/40 border-b-2 border-amber-900 active:translate-y-0.5"
-            aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
-            title={isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
+            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-b from-amber-400 to-amber-600 hover:from-amber-300 hover:to-amber-500 text-black flex items-center justify-center transition shadow-lg border-t border-white/40 border-b-2 border-amber-900 active:translate-y-0.5"
+            aria-label={isPlaying && !scrubDirection ? 'Pausar' : 'Reproducir'}
+            title={scrubDirection ? 'PLAY ▶ (Velocidad normal)' : isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-black" />
-            ) : isPlaying ? (
+            ) : isPlaying && !scrubDirection ? (
               <Pause className="w-5 h-5 fill-black text-black" />
             ) : (
               <Play className="w-5 h-5 fill-black text-black ml-0.5" />
             )}
           </button>
 
+          {/* Fast Forward (Adelantar) - 1,5x -> 2x -> 4x -> 8x -> 1,5x */}
+          <button
+            onClick={fastForward}
+            className={`relative p-1.5 sm:p-2 rounded-xl border-t border-b-2 transition active:translate-y-0.5 flex flex-col items-center justify-center ${
+              scrubDirection === 'forward'
+                ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black border-white/40 border-amber-900 ring-1 ring-amber-400'
+                : isSteel
+                ? 'retro-btn-aluminum shadow-md text-amber-900 border-slate-400'
+                : 'bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-white/20 border-black/80'
+            }`}
+            aria-label="Adelantar"
+            title="Adelantar (1,5x / 2x / 4x / 8x)"
+          >
+            <FastForward
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
+                scrubDirection === 'forward'
+                  ? 'text-black fill-black'
+                  : isSteel
+                  ? 'text-amber-900 fill-amber-900'
+                  : 'text-amber-400 fill-amber-400'
+              }`}
+            />
+            {scrubDirection === 'forward' && scrubSpeed && (
+              <span className="text-[7px] font-mono font-black text-black leading-none mt-0.5">
+                {String(scrubSpeed).replace('.', ',')}x
+              </span>
+            )}
+          </button>
+
           {/* Next Track Button - Mechanical bevel */}
           <button
             onClick={nextTrack}
-            className={`p-2.5 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
+            className={`p-1.5 sm:p-2 rounded-xl border-t border-b-2 transition active:translate-y-0.5 ${
               isSteel
                 ? 'retro-btn-aluminum shadow-md text-amber-900 border-slate-400'
                 : 'bg-[#1d2330] hover:bg-[#252d3d] text-zinc-300 hover:text-white border-white/20 border-black/80'
             }`}
             aria-label="Siguiente"
-            title="FF ⏩"
+            title="Siguiente ⏭"
           >
             <SkipForward
-              className={`w-4 h-4 ${
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${
                 isSteel ? 'text-amber-900 fill-amber-900' : 'text-amber-400 fill-amber-400'
               }`}
             />

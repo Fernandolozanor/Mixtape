@@ -5,6 +5,8 @@ import {
   Pause,
   SkipBack,
   SkipForward,
+  Rewind,
+  FastForward,
   Shuffle,
   Repeat,
   Repeat1,
@@ -39,6 +41,10 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
     togglePlay,
     nextTrack,
     prevTrack,
+    fastForward,
+    rewind,
+    scrubDirection,
+    scrubSpeed,
     currentTime,
     duration,
     seek,
@@ -192,19 +198,26 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               className="retro-slider"
             />
           </div>
-          <div className="flex justify-between text-[11px] sm:text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider px-1 mt-2.5">
+          <div className="flex justify-between items-center text-[11px] sm:text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider px-1 mt-2.5">
             <span>{formatTime(currentTime)}</span>
-            <span className="text-zinc-500 font-mono text-[9px] sm:text-[10px] hidden xs:inline">HI-FI STEREO</span>
+            {scrubDirection && scrubSpeed ? (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-400 font-mono text-[10px] sm:text-[11px] font-black animate-pulse">
+                {scrubDirection === 'forward' ? '⏩' : '⏪'}{' '}
+                {String(scrubSpeed).replace('.', ',')}x • PULSA ▶
+              </span>
+            ) : (
+              <span className="text-zinc-500 font-mono text-[9px] sm:text-[10px] hidden xs:inline">HI-FI STEREO</span>
+            )}
             <span>-{formatTime(remainingTime)}</span>
           </div>
         </div>
 
         {/* Playback Controls - Vintage 80s Hi-Fi Mechanical Key Deck */}
-        <div className="flex items-center justify-between py-1 px-1">
+        <div className="flex items-center justify-between gap-1 sm:gap-2 py-1 px-0.5 sm:px-1">
           {/* Shuffle Button - Mechanical Toggle */}
           <button
             onClick={toggleShuffle}
-            className={`p-2 sm:p-2.5 rounded-xl transition border active:translate-y-0.5 flex flex-col items-center gap-0.5 ${
+            className={`p-1.5 sm:p-2.5 rounded-xl transition border active:translate-y-0.5 flex flex-col items-center gap-0.5 ${
               isSteel
                 ? 'retro-btn-aluminum shadow-md'
                 : 'border-white/10'
@@ -223,7 +236,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             aria-label="Aleatorio"
             title="SHUFFLE MODE"
           >
-            <Shuffle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Shuffle className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
             {isSteel && (
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
@@ -236,75 +249,149 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
           {/* Previous Track - Mechanical Milled Push Button */}
           <button
             onClick={prevTrack}
-            className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+            className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
               isSteel
                 ? 'retro-btn-aluminum'
                 : 'bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90'
             }`}
-            aria-label="Anterior"
-            title="REWIND ⏪"
+            aria-label="Canción anterior"
+            title="ANTERIOR ⏮"
           >
             <SkipBack
-              className={`w-5 h-5 sm:w-6 sm:h-6 ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 ${
                 isSteel ? 'text-slate-900 fill-slate-900' : 'fill-amber-400 text-amber-400'
               }`}
             />
             {isSteel && (
-              <span className="text-[7px] font-mono-retro font-black text-slate-700 mt-0.5">REW</span>
+              <span className="text-[6.5px] font-mono-retro font-black text-slate-700 mt-0.5">PREV</span>
             )}
+          </button>
+
+          {/* Rewind (Retrasar) - 1,5x -> 2x -> 4x -> 8x -> 1,5x */}
+          <button
+            onClick={rewind}
+            className={`relative p-2 sm:p-2.5 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+              scrubDirection === 'backward'
+                ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black border-t border-white/50 border-b-2 border-amber-900 ring-2 ring-amber-400/50'
+                : isSteel
+                ? 'retro-btn-aluminum'
+                : 'bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90'
+            }`}
+            aria-label="Retrasar"
+            title="Retrasar (1,5x / 2x / 4x / 8x)"
+          >
+            <Rewind
+              className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                scrubDirection === 'backward'
+                  ? 'fill-black text-black'
+                  : isSteel
+                  ? 'text-slate-900 fill-slate-900'
+                  : 'fill-amber-400 text-amber-400'
+              }`}
+            />
+            <span
+              className={`text-[6.5px] sm:text-[7.5px] font-mono-retro font-black mt-0.5 leading-none ${
+                scrubDirection === 'backward'
+                  ? 'text-black'
+                  : isSteel
+                  ? 'text-slate-700'
+                  : 'text-amber-300/80'
+              }`}
+            >
+              {scrubDirection === 'backward' && scrubSpeed
+                ? `${String(scrubSpeed).replace('.', ',')}x`
+                : 'REW'}
+            </span>
           </button>
 
           {/* Large Play/Pause Heavy Machined Switch */}
           <button
             onClick={togglePlay}
             disabled={isLoading}
-            className={`w-13 h-13 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition shadow-2xl active:translate-y-1 ${
+            className={`w-12 h-12 sm:w-15 sm:h-15 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center transition shadow-2xl active:translate-y-1 shrink-0 ${
               isSteel
                 ? 'retro-btn-aluminum border-2 border-slate-300 ring-2 ring-amber-500/30'
                 : 'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-black border-t-2 border-white/50 border-b-4 border-amber-950 hover:brightness-110'
             }`}
-            aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
-            title={isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
+            aria-label={isPlaying && !scrubDirection ? 'Pausar' : 'Reproducir'}
+            title={scrubDirection ? 'PLAY ▶ (Velocidad normal)' : isPlaying ? 'PAUSE ⏸' : 'PLAY ▶'}
           >
             {isLoading ? (
-              <Loader2 className={`w-7 h-7 sm:w-8 sm:h-8 animate-spin ${isSteel ? 'text-slate-900' : 'text-black'}`} />
-            ) : isPlaying ? (
-              <Pause className={`w-7 h-7 sm:w-8 sm:h-8 ${isSteel ? 'fill-amber-600 text-amber-600' : 'fill-black text-black'}`} />
+              <Loader2 className={`w-6 h-6 sm:w-7 sm:h-7 animate-spin ${isSteel ? 'text-slate-900' : 'text-black'}`} />
+            ) : isPlaying && !scrubDirection ? (
+              <Pause className={`w-6 h-6 sm:w-7 sm:h-7 ${isSteel ? 'fill-amber-600 text-amber-600' : 'fill-black text-black'}`} />
             ) : (
-              <Play className={`w-7 h-7 sm:w-8 sm:h-8 ml-0.5 ${isSteel ? 'fill-slate-900 text-slate-900' : 'fill-black text-black'}`} />
+              <Play className={`w-6 h-6 sm:w-7 sm:h-7 ml-0.5 ${isSteel ? 'fill-slate-900 text-slate-900' : 'fill-black text-black'}`} />
             )}
             {isSteel && (
               <span className="text-[7px] font-mono-retro font-black text-slate-800 tracking-wider">
-                {isPlaying ? 'PAUSE' : 'PLAY'}
+                {isPlaying && !scrubDirection ? 'PAUSE' : 'PLAY'}
               </span>
             )}
+          </button>
+
+          {/* Fast Forward (Adelantar) - 1,5x -> 2x -> 4x -> 8x -> 1,5x */}
+          <button
+            onClick={fastForward}
+            className={`relative p-2 sm:p-2.5 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+              scrubDirection === 'forward'
+                ? 'bg-gradient-to-b from-amber-400 to-amber-600 text-black border-t border-white/50 border-b-2 border-amber-900 ring-2 ring-amber-400/50'
+                : isSteel
+                ? 'retro-btn-aluminum'
+                : 'bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90'
+            }`}
+            aria-label="Adelantar"
+            title="Adelantar (1,5x / 2x / 4x / 8x)"
+          >
+            <FastForward
+              className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                scrubDirection === 'forward'
+                  ? 'fill-black text-black'
+                  : isSteel
+                  ? 'text-slate-900 fill-slate-900'
+                  : 'fill-amber-400 text-amber-400'
+              }`}
+            />
+            <span
+              className={`text-[6.5px] sm:text-[7.5px] font-mono-retro font-black mt-0.5 leading-none ${
+                scrubDirection === 'forward'
+                  ? 'text-black'
+                  : isSteel
+                  ? 'text-slate-700'
+                  : 'text-amber-300/80'
+              }`}
+            >
+              {scrubDirection === 'forward' && scrubSpeed
+                ? `${String(scrubSpeed).replace('.', ',')}x`
+                : 'FF'}
+            </span>
           </button>
 
           {/* Next Track - Mechanical Milled Push Button */}
           <button
             onClick={nextTrack}
-            className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
+            className={`p-2 sm:p-2.5 rounded-xl sm:rounded-2xl active:translate-y-0.5 shadow-lg transition flex flex-col items-center ${
               isSteel
                 ? 'retro-btn-aluminum'
                 : 'bg-[#1d2332] hover:bg-[#252e42] text-amber-400 border-t border-white/25 border-b-2 border-black/90'
             }`}
-            aria-label="Siguiente"
-            title="FAST FORWARD ⏩"
+            aria-label="Siguiente canción"
+            title="SIGUIENTE ⏭"
           >
             <SkipForward
-              className={`w-5 h-5 sm:w-6 sm:h-6 ${
+              className={`w-4 h-4 sm:w-5 sm:h-5 ${
                 isSteel ? 'text-slate-900 fill-slate-900' : 'fill-amber-400 text-amber-400'
               }`}
             />
             {isSteel && (
-              <span className="text-[7px] font-mono-retro font-black text-slate-700 mt-0.5">FF</span>
+              <span className="text-[6.5px] font-mono-retro font-black text-slate-700 mt-0.5">NEXT</span>
             )}
           </button>
 
           {/* Repeat Button - Mechanical Toggle */}
           <button
             onClick={toggleRepeat}
-            className={`p-2 sm:p-2.5 rounded-xl transition border active:translate-y-0.5 flex flex-col items-center gap-0.5 ${
+            className={`p-1.5 sm:p-2.5 rounded-xl transition border active:translate-y-0.5 flex flex-col items-center gap-0.5 ${
               isSteel
                 ? 'retro-btn-aluminum shadow-md'
                 : 'rounded-full'
@@ -323,7 +410,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             aria-label="Repetir"
             title="REPEAT MODE"
           >
-            {repeatMode === 'one' ? <Repeat1 className="w-4 h-4 sm:w-5 sm:h-5" /> : <Repeat className="w-4 h-4 sm:w-5 sm:h-5" />}
+            {repeatMode === 'one' ? <Repeat1 className="w-3.5 h-3.5 sm:w-5 sm:h-5" /> : <Repeat className="w-3.5 h-3.5 sm:w-5 sm:h-5" />}
             {isSteel && (
               <span
                 className={`w-1.5 h-1.5 rounded-full ${

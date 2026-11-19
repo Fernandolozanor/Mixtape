@@ -6,6 +6,10 @@ import { tapeProgressService } from '../services/tapeProgressService';
 import { playbackHistoryService } from '../services/playbackHistoryService';
 import { useLibrary } from './LibraryContext';
 
+export const SCRUB_SPEEDS = [1.5, 2, 4, 8] as const;
+export type ScrubSpeed = (typeof SCRUB_SPEEDS)[number];
+export type ScrubDirection = 'forward' | 'backward' | null;
+
 interface PlayerContextType {
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -15,6 +19,8 @@ interface PlayerContextType {
   buffered: number;
   volume: number;
   playbackRate: number;
+  scrubDirection: ScrubDirection;
+  scrubSpeed: ScrubSpeed | null;
   repeatMode: RepeatMode;
   isShuffle: boolean;
   queue: Track[];
@@ -46,6 +52,9 @@ interface PlayerContextType {
   togglePlay: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
+  fastForward: () => void;
+  rewind: () => void;
+  stopScrub: (resumePlay?: boolean) => void;
   seek: (seconds: number) => void;
   setVolume: (vol: number) => void;
   setPlaybackRate: (rate: number) => void;
@@ -71,6 +80,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [buffered, setBuffered] = useState<number>(0);
   const [volume, setVolumeState] = useState<number>(1);
   const [playbackRate, setPlaybackRateState] = useState<number>(1);
+  const [scrubDirection, setScrubDirection] = useState<ScrubDirection>(null);
+  const [scrubSpeed, setScrubSpeed] = useState<ScrubSpeed | null>(null);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [queue, setQueue] = useState<Track[]>([]);
@@ -113,6 +124,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const playbackMediaTypeRef = useRef<'tape' | 'vinyl' | null>(null);
   playbackMediaTypeRef.current = playbackMediaType;
   const lastSaveTimeRef = useRef<number>(0);
+  const scrubDirectionRef = useRef<ScrubDirection>(null);
+  scrubDirectionRef.current = scrubDirection;
+  const scrubSpeedRef = useRef<ScrubSpeed | null>(null);
+  scrubSpeedRef.current = scrubSpeed;
+  const scrubPosRef = useRef<number>(0);
+  const scrubLastSeekRef = useRef<number>(0);
 
   const saveCurrentTapeProgress = () => {
     const tapeId = activeTapeIdRef.current;
@@ -141,14 +158,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     // Setup AudioEngine event hooks
     audioEngine.onTimeUpdate((cur, dur, buf) => {
-      setCurrentTime(cur);
-      currentTimeRef.current = cur;
+      if (scrubDirectionRef.current === null) {
+        setCurrentTime(cur);
+        currentTimeRef.current = cur;
+      }
       setDuration(dur);
       durationRef.current = dur;
       setBuffered(buf);
 
       // Save tape progress throttled to every 2 seconds during playback
-      if (Math.abs(cur - lastSaveTimeRef.current) >= 2) {
+      if (scrubDirectionRef.current === null && Math.abs(cur - lastSaveTimeRef.current) >= 2) {
         lastSaveTimeRef.current = cur;
         saveCurrentTapeProgress();
       }
@@ -249,6 +268,104 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     playbackContext,
   ]);
 
+  // Fast-forward / Rewind scrubbing engine (1.5x -> 2x -> 4x -> 8x -> 1.5x)
+  useEffect(() => {
+    if (!scrubDirection || !scrubSpeed || !currentTrack) return;
+
+    scrubPosRef.current = currentTimeRef.current;
+    scrubLastSeekRef.current = 0;
+
+    const tickMs = 100;
+    const interval = window.setInterval(() => {
+      const dur = durationRef.current;
+      const delta = (scrubDirection === 'forward' ? 1 : -1) * scrubSpeed * (tickMs / 1000);
+      let nextPos = scrubPosRef.current + delta;
+
+      if (scrubDirection === 'backward' && nextPos <= 0) {
+        scrubPosRef.current = 0;
+        currentTimeRef.current = 0;
+        setCurrentTime(0);
+        audioEngine.seek(0);
+        scrubDirectionRef.current = null;
+        scrubSpeedRef.current = null;
+        setScrubDirection(null);
+        setScrubSpeed(null);
+        return;
+      }
+
+      if (scrubDirection === 'forward' && dur > 0 && nextPos >= dur - 0.5) {
+        scrubDirectionRef.current = null;
+        scrubSpeedRef.current = null;
+        setScrubDirection(null);
+        setScrubSpeed(null);
+        handleNextTrack(false);
+        return;
+      }
+
+      if (dur > 0) {
+        nextPos = Math.max(0, Math.min(dur, nextPos));
+      } else {
+        nextPos = Math.max(0, nextPos);
+      }
+
+      scrubPosRef.current = nextPos;
+      currentTimeRef.current = nextPos;
+      setCurrentTime(nextPos);
+
+      const now = performance.now();
+      if (now - scrubLastSeekRef.current >= 350) {
+        scrubLastSeekRef.current = now;
+        audioEngine.seek(nextPos);
+      }
+    }, tickMs);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [scrubDirection, scrubSpeed, currentTrack?.id]);
+
+  const stopScrub = (resumePlay: boolean = false) => {
+    if (scrubDirectionRef.current === null) return;
+    const finalPos = scrubPosRef.current;
+    scrubDirectionRef.current = null;
+    scrubSpeedRef.current = null;
+    setScrubDirection(null);
+    setScrubSpeed(null);
+    audioEngine.seek(finalPos);
+    currentTimeRef.current = finalPos;
+    setCurrentTime(finalPos);
+    saveCurrentTapeProgress();
+    if (resumePlay) {
+      audioEngine.play();
+    }
+  };
+
+  const fastForward = () => {
+    if (!currentTrack) return;
+    if (scrubDirectionRef.current === 'forward' && scrubSpeedRef.current !== null) {
+      const idx = SCRUB_SPEEDS.indexOf(scrubSpeedRef.current);
+      const next = SCRUB_SPEEDS[(idx + 1) % SCRUB_SPEEDS.length];
+      setScrubSpeed(next);
+    } else {
+      scrubPosRef.current = currentTimeRef.current;
+      setScrubDirection('forward');
+      setScrubSpeed(1.5);
+    }
+  };
+
+  const rewind = () => {
+    if (!currentTrack) return;
+    if (scrubDirectionRef.current === 'backward' && scrubSpeedRef.current !== null) {
+      const idx = SCRUB_SPEEDS.indexOf(scrubSpeedRef.current);
+      const next = SCRUB_SPEEDS[(idx + 1) % SCRUB_SPEEDS.length];
+      setScrubSpeed(next);
+    } else {
+      scrubPosRef.current = currentTimeRef.current;
+      setScrubDirection('backward');
+      setScrubSpeed(1.5);
+    }
+  };
+
   const playTrack = async (
     track: Track,
     newQueue?: Track[],
@@ -258,6 +375,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     playlistId?: string | null,
     startTime?: number
   ) => {
+    // Cancel any active FF/REW scrubbing when switching tracks
+    if (scrubDirectionRef.current !== null) {
+      scrubDirectionRef.current = null;
+      scrubSpeedRef.current = null;
+      setScrubDirection(null);
+      setScrubSpeed(null);
+    }
     // If playing from a different context or switching away from an active tape, save previous tape progress
     if (activeTapeIdRef.current && (mediaType !== 'tape' || (playlistId && playlistId !== activeTapeIdRef.current))) {
       saveCurrentTapeProgress();
@@ -358,6 +482,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const togglePlay = () => {
     if (!currentTrack) return;
+    if (scrubDirectionRef.current !== null) {
+      stopScrub(true);
+      return;
+    }
     if (isPlaying) {
       saveCurrentTapeProgress();
       audioEngine.pause();
@@ -367,6 +495,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const handleNextTrack = (isCrossfade: boolean = false) => {
+    if (scrubDirectionRef.current !== null) {
+      scrubDirectionRef.current = null;
+      scrubSpeedRef.current = null;
+      setScrubDirection(null);
+      setScrubSpeed(null);
+    }
     const q = queueRef.current;
     const curIdx = queueIndexRef.current;
     const rMode = repeatModeRef.current;
@@ -406,6 +540,12 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const handlePrevTrack = () => {
+    if (scrubDirectionRef.current !== null) {
+      scrubDirectionRef.current = null;
+      scrubSpeedRef.current = null;
+      setScrubDirection(null);
+      setScrubSpeed(null);
+    }
     if (currentTime > 3) {
       audioEngine.seek(0);
       return;
@@ -425,9 +565,16 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const seek = (seconds: number) => {
+    if (scrubDirectionRef.current !== null) {
+      scrubDirectionRef.current = null;
+      scrubSpeedRef.current = null;
+      setScrubDirection(null);
+      setScrubSpeed(null);
+    }
     audioEngine.seek(seconds);
     setCurrentTime(seconds);
     currentTimeRef.current = seconds;
+    scrubPosRef.current = seconds;
     saveCurrentTapeProgress();
   };
 
@@ -484,6 +631,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         buffered,
         volume,
         playbackRate,
+        scrubDirection,
+        scrubSpeed,
         repeatMode,
         isShuffle,
         queue,
@@ -507,6 +656,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         togglePlay,
         nextTrack: handleNextTrack,
         prevTrack: handlePrevTrack,
+        fastForward,
+        rewind,
+        stopScrub,
         seek,
         setVolume,
         setPlaybackRate,
