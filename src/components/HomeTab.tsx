@@ -377,7 +377,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
                   key={win.id}
                   onClick={() => setExpandedWindowId(win.id)}
                   style={isMobile && mobileCardWidth ? { width: `${mobileCardWidth}px` } : undefined}
-                  className="group relative aspect-square shrink-0 sm:w-auto sm:shrink snap-start rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-2.5 sm:p-3 select-none"
+                  className="group relative aspect-[3/4] shrink-0 sm:w-auto sm:shrink snap-start rounded-2xl overflow-hidden cursor-pointer glass-card glass-card-hover border border-white/10 hover:border-amber-400/50 transition-all duration-300 hover:scale-[1.03] shadow-lg flex flex-col justify-end p-3 sm:p-3.5 select-none"
                   title={`Toca para abrir ${win.title}`}
                 >
                   {/* Weekly Cover Image (changes once a week deterministically) */}
