@@ -515,8 +515,30 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,webp,svg,woff2}'],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/.*\.(?:webp|png|jpg|jpeg|svg)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'local-visual-assets',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 60, // 60 days
+              },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/i\.ytimg\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'youtube-thumbnails',
+              expiration: {
+                maxEntries: 250,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
             handler: 'CacheFirst',

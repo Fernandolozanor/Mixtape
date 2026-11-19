@@ -72,8 +72,10 @@ export const CassetteRack: React.FC<CassetteRackProps> = ({
       <div className="w-full relative aspect-[2530/1536]">
         {/* Background Image: Authentic Wooden Cassette Rack with 48 Tapes */}
         <img
-          src="./assets/cintas.jpg"
+          src="./assets/cintas.webp"
           alt="Estantería de cintas de casette analógicas"
+          decoding="async"
+          fetchPriority="high"
           className="w-full h-full object-cover select-none pointer-events-none filter contrast-105 brightness-95"
         />
 

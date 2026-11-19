@@ -452,8 +452,9 @@ export const VinylCoverFlow: React.FC<VinylCoverFlowProps> = ({
                         }}
                       >
                         <img
-                          src="./assets/vinilo.png"
+                          src="./assets/vinilo.webp"
                           alt="Vinyl Record"
+                          decoding="async"
                           className="w-full h-full object-cover rounded-full pointer-events-none select-none"
                         />
                         {/* Center Spindle Label with Album Cover Artwork */}

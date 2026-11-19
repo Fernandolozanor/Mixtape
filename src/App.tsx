@@ -49,6 +49,40 @@ const AppContent: React.FC = () => {
       setFullScreenPlayerOpen(false);
     }
   }, [activeTab, setActiveNavigationTab, setFullScreenPlayerOpen]);
+
+  // Preload core retro visual assets (cintas, vinilos, jukebox, sintonizador) in background when idle
+  React.useEffect(() => {
+    const coreVisuals = [
+      './assets/cintas.webp',
+      './assets/juke-box.webp',
+      './assets/vinilo.webp',
+      './assets/funda.webp',
+      './assets/disco.webp',
+      './assets/cassette-poster.webp',
+      './assets/sintonizador.webp',
+    ];
+
+    const preload = () => {
+      coreVisuals.forEach((src) => {
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = src;
+      });
+    };
+
+    const win = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+
+    if (typeof win.requestIdleCallback === 'function') {
+      const id = win.requestIdleCallback(preload, { timeout: 1500 });
+      return () => win.cancelIdleCallback?.(id);
+    }
+
+    const timer = window.setTimeout(preload, 800);
+    return () => window.clearTimeout(timer);
+  }, []);
   const { isKidsMode } = useKidsMode();
   const {
     deviceId,

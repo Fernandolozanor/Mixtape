@@ -58,7 +58,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
   }, [forceMedia, playbackMediaType, currentTrack, playlists]);
 
   const videoSrc = isVinyl ? './assets/disco.mp4' : './assets/cassette.mp4';
-  const videoPoster = isVinyl ? './assets/disco.png' : './assets/cassette-poster.webp';
+  const videoPoster = isVinyl ? './assets/disco.webp' : './assets/cassette-poster.webp';
 
   // Moving analog VU needles for Left and Right channels (direct DOM refs for 60fps physics)
   const needleLeftRef = useRef<HTMLDivElement>(null);

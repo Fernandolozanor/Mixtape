@@ -398,18 +398,20 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
             : '0 20px 50px rgba(0,0,0,0.8)',
         }}
       >
-        {/* Base Photo: JUKE-BOX.jpg */}
+        {/* Base Photo: juke-box.webp */}
         <img
-          src="./assets/juke-box.jpg"
+          src="./assets/juke-box.webp"
           alt="Vintage Retro Jukebox"
+          decoding="async"
+          fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
         />
 
         {/* NEON BUBBLE TUBES CANVAS OVERLAY */}
         <canvas
           ref={canvasRef}
-          width={1696}
-          height={2528}
+          width={848}
+          height={1264}
           className="absolute inset-0 w-full h-full pointer-events-none z-20"
           style={{ mixBlendMode: 'screen' }}
         />

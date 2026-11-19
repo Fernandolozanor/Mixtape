@@ -195,8 +195,9 @@ export const RadioTunerDial: React.FC<RadioTunerDialProps> = ({
       >
         {/* Background Image: Cleaned Vintage Radio Scale */}
         <img
-          src="./assets/sintonizador.jpg"
+          src="./assets/sintonizador.webp"
           alt="Vintage Radio Tuner Scale"
+          decoding="async"
           className="w-full h-full object-cover select-none pointer-events-none filter contrast-110 brightness-95"
         />
 

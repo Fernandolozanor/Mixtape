@@ -68,10 +68,12 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
               transformOrigin: 'center center',
             }}
           >
-            {/* Real Full Vinyl Texture (VINILO.png) */}
+            {/* Real Full Vinyl Texture (vinilo.webp) */}
             <img
-              src="./assets/vinilo.png"
+              src="./assets/vinilo.webp"
               alt="Vinyl Record"
+              loading="lazy"
+              decoding="async"
               className={`w-full h-full object-cover rounded-full pointer-events-none select-none ${
                 isCurrent && isPlaying ? 'filter brightness-105' : ''
               }`}
@@ -113,10 +115,12 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
               : 'border-white/10 group-hover:border-white/20'
           }`}
         >
-          {/* Cardboard Sleeve Base Texture (FUNDA.jpg) */}
+          {/* Cardboard Sleeve Base Texture (funda.webp) */}
           <img
-            src="./assets/funda.jpg"
+            src="./assets/funda.webp"
             alt="Funda"
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none z-0"
           />
 
@@ -126,6 +130,8 @@ export const VinylRecordCard: React.FC<VinylRecordCardProps> = ({
               <img
                 src={track.thumbnail}
                 alt={track.title}
+                loading="lazy"
+                decoding="async"
                 onError={() => setImageError(true)}
                 className="w-full h-full object-cover select-none pointer-events-none transition-transform duration-500 group-hover:scale-105"
               />
