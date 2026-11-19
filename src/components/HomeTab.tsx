@@ -60,7 +60,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   // Active expanded window ID (only one subsección open at any time)
   const [expandedWindowId, setExpandedWindowId] = useState<string | null>(null);
 
-  // 4 or 5 Content windows for each main section
+  // Up to 10 Content windows for each main section
   const [selectedWindows, setSelectedWindows] = useState<ContentWindow[]>([]);
   const [discoveryWindows, setDiscoveryWindows] = useState<ContentWindow[]>([]);
   const [recentWindows, setRecentWindows] = useState<ContentWindow[]>([]);
@@ -108,41 +108,41 @@ export const HomeTab: React.FC<HomeTabProps> = ({
     setIsLoadingChannels(true);
 
     try {
-      const recents = playbackHistoryService.getRecentTracks(15);
+      const recents = playbackHistoryService.getRecentTracks(25);
 
-      // 1. Seleccionado para ti (4-5 windows)
+      // 1. Seleccionado para ti (hasta 10 ventanas)
       const recs = await recommendationService.getPersonalizedRecommendations(
         likedTracks,
         playlists,
         force
       );
-      const selWins: ContentWindow[] = recs.slice(0, 5).map((g) => ({
+      const selWins: ContentWindow[] = recs.slice(0, 10).map((g) => ({
         id: g.id,
         title: g.reason,
         subtitle: g.artistOrGenre,
         tracks: g.tracks,
       }));
-      setSelectedWindows(selWins);
+      setSelectedWindows(selWins.slice(0, 10));
 
-      // 2. Descubriendo para ti (4-5 windows de grupos afines que NO están en tus listas)
+      // 2. Descubriendo para ti (hasta 10 ventanas de grupos afines que NO están en tus listas)
       const discWins = await recommendationService.getDiscoveryForYouWindows(
         likedTracks,
         playlists,
         recents
       );
-      setDiscoveryWindows(discWins);
+      setDiscoveryWindows(discWins.slice(0, 10));
 
-      // 3. Reproducciones recientes (4-5 windows)
+      // 3. Reproducciones recientes (hasta 10 ventanas)
       const recWins = await recommendationService.getRecentPlaybackWindows(recents);
-      setRecentWindows(recWins);
+      setRecentWindows(recWins.slice(0, 10));
 
-      // 4. Novedades para ti (4-5 windows)
+      // 4. Novedades para ti (hasta 10 ventanas)
       const newsWins = await recommendationService.getNewReleasesWindows(
         likedTracks,
         playlists,
         recents
       );
-      setNewReleasesWindows(newsWins);
+      setNewReleasesWindows(newsWins.slice(0, 10));
 
       // 5. Featured Collections & Channels
       const cols = recommendationService.getPersonalizedCollections(likedTracks, playlists);
@@ -167,8 +167,8 @@ export const HomeTab: React.FC<HomeTabProps> = ({
 
   // Keep recent windows synchronized when user plays any song
   useEffect(() => {
-    const recents = playbackHistoryService.getRecentTracks(15);
-    recommendationService.getRecentPlaybackWindows(recents).then(setRecentWindows);
+    const recents = playbackHistoryService.getRecentTracks(25);
+    recommendationService.getRecentPlaybackWindows(recents).then((wins) => setRecentWindows(wins.slice(0, 10)));
   }, [currentTrack?.id]);
 
   const formatDuration = (seconds: number) => {
@@ -365,7 +365,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
             </div>
           </div>
         ) : (
-          /* FOLDED STATE: 4 or 5 Content Windows (Cards) */
+          /* FOLDED STATE: Up to 10 Content Windows (Cards) */
           /* Mobile: Single horizontal row calculated to screen width, aligned flush on the left with 3rd card peeking right */
           /* PC / Desktop: Preserved grid layout untouched (sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5) */
           <div className="flex sm:grid sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible pb-2.5 sm:pb-0 scrollbar-none snap-x snap-mandatory">

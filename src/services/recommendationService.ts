@@ -260,7 +260,7 @@ class RecommendationService {
 
     // Case 1: User has tastes detected
     if (tastes.length > 0) {
-      const topArtists = tastes.slice(0, 3);
+      const topArtists = tastes.slice(0, 6);
 
       // 2. Mix de mis grupos favoritos (combinación de tus artistas top)
       if (topArtists.length >= 2) {
@@ -273,7 +273,7 @@ class RecommendationService {
               id: 'mix_favorite_bands',
               reason: 'Mix de mis grupos favoritos',
               artistOrGenre: topArtists.map((a) => a.artist).slice(0, 3).join(', '),
-              tracks: mixResults.slice(0, 9),
+              tracks: mixResults.slice(0, 10),
             });
           }
         } catch (e) {
@@ -283,6 +283,7 @@ class RecommendationService {
 
       // 3. Más cosas de mis grupos favoritos (canciones que aún no tienes guardadas)
       for (const item of topArtists) {
+        if (groups.length >= 10) break;
         try {
           const query = `${item.artist} greatest hits full songs`;
           const results = await streamResolver.search(query, 'youtube');
@@ -293,7 +294,7 @@ class RecommendationService {
             ...playlists.flatMap((p) => p.tracks.map((t) => t.id)),
           ]);
 
-          const freshTracks = results.filter((t) => !knownIds.has(t.id)).slice(0, 6);
+          const freshTracks = results.filter((t) => !knownIds.has(t.id)).slice(0, 10);
 
           if (freshTracks.length > 0) {
             groups.push({
@@ -318,7 +319,7 @@ class RecommendationService {
             id: 'popular_discovery',
             reason: 'Himnos Legendarios para estrenar tu pletina',
             artistOrGenre: 'Grandes Clásicos del Rock 80s',
-            tracks: rockClassics.slice(0, 8),
+            tracks: rockClassics.slice(0, 10),
           });
         }
       } catch (e) {
@@ -326,16 +327,22 @@ class RecommendationService {
       }
     }
 
-    // Ensure we have 4 or 5 groups in "Seleccionado para ti"
+    // Ensure we have up to 10 groups in "Seleccionado para ti"
     const discoveryFillers = [
       { id: 'fill_rock_80', reason: 'Himnos Legendarios del Rock', genre: 'Grandes Clásicos del Rock 80s', query: '80s Rock Classics Greatest Hits' },
       { id: 'fill_ballads', reason: 'Grandes Baladas del Rock', genre: 'Baladas Inmortales', query: 'Classic Rock Ballads Greatest Hits' },
       { id: 'fill_rock_es', reason: 'Rock en Español Legendario', genre: 'Clásicos en Español', query: 'Rock en Español Grandes Exitos' },
       { id: 'fill_hard_rock', reason: 'Lo Mejor del Hard Rock', genre: 'Hard Rock & Metal 80s', query: 'Hard Rock 80s 90s Greatest Hits' },
+      { id: 'fill_70s_rock', reason: 'Rock Setentero Inmortal', genre: 'Pioneros del Rock 70s', query: '70s Classic Rock Greatest Hits' },
+      { id: 'fill_guitar_heroes', reason: 'Guitar Heroes y Solos Épicos', genre: 'Guitarras Legendarias', query: 'Rock Guitar Heroes Solos Anthems' },
+      { id: 'fill_pop_rock', reason: 'Grandes Éxitos Pop Rock', genre: 'Pop Rock Clásico', query: 'Pop Rock 80s 90s Greatest Hits' },
+      { id: 'fill_blues_rock', reason: 'Puro Blues Rock con Alma', genre: 'Blues Rock & Riffs', query: 'Blues Rock Greatest Hits' },
+      { id: 'fill_live_anthems', reason: 'Himnos de Concierto en Directo', genre: 'Directos Legendarios', query: 'Classic Rock Live Concert Anthems' },
+      { id: 'fill_acoustic_rock', reason: 'Sesión Acústica Esencial', genre: 'Rock Desenroscado Acústico', query: 'Acoustic Rock Hits Classics' },
     ];
 
     for (const item of discoveryFillers) {
-      if (groups.length >= 5) break;
+      if (groups.length >= 10) break;
       if (groups.some((g) => g.id === item.id || g.reason === item.reason)) continue;
       try {
         const res = await streamResolver.search(item.query, 'youtube');
@@ -344,7 +351,7 @@ class RecommendationService {
             id: item.id,
             reason: item.reason,
             artistOrGenre: item.genre,
-            tracks: res.slice(0, 8),
+            tracks: res.slice(0, 10),
           });
         }
       } catch (e) {
@@ -352,7 +359,7 @@ class RecommendationService {
       }
     }
 
-    this.cachedRecommendations = groups.slice(0, 5);
+    this.cachedRecommendations = groups.slice(0, 10);
     this.lastAnalyzedSignature = signature;
     return this.cachedRecommendations;
   }
@@ -398,7 +405,7 @@ class RecommendationService {
 
     // 2. Discover related bands based on top tastes
     for (const item of tastes) {
-      if (windows.length >= 4) break;
+      if (windows.length >= 8) break;
       const cleanTop = this.cleanArtistName(item.artist).toLowerCase();
 
       // Find candidates from affinity map
@@ -419,7 +426,7 @@ class RecommendationService {
       );
 
       for (const candidate of freshCandidates) {
-        if (windows.length >= 4) break;
+        if (windows.length >= 8) break;
         try {
           const res = await streamResolver.search(`${candidate} greatest hits full`, 'youtube');
           // Strict filter: make sure track is not already known and artist is candidate
@@ -427,7 +434,7 @@ class RecommendationService {
             (t) =>
               !knownTrackIds.has(t.id) &&
               !knownArtists.has(this.cleanArtistName(t.artist).toLowerCase())
-          ).slice(0, 8);
+          ).slice(0, 10);
 
           if (freshTracks.length >= 3) {
             usedNewArtists.add(candidate.toLowerCase());
@@ -446,15 +453,15 @@ class RecommendationService {
     }
 
     // 3. Add a mix window: "Mix de bandas afines a tu estilo"
-    if (tastes.length > 0 && windows.length < 5) {
+    if (tastes.length > 0 && windows.length < 10) {
       try {
-        const topNames = tastes.slice(0, 2).map((t) => t.artist).join(' ');
+        const topNames = tastes.slice(0, 3).map((t) => t.artist).join(' ');
         const mixRes = await streamResolver.search(`bands like ${topNames} rock greatest hits mix`, 'youtube');
         const freshMix = mixRes.filter(
           (t) =>
             !knownTrackIds.has(t.id) &&
             !knownArtists.has(this.cleanArtistName(t.artist).toLowerCase())
-        ).slice(0, 8);
+        ).slice(0, 10);
 
         if (freshMix.length >= 3) {
           windows.push({
@@ -469,7 +476,7 @@ class RecommendationService {
       }
     }
 
-    // 4. Fillers for cold-start or when fewer than 4-5 windows found
+    // 4. Fillers for cold-start or when fewer than 10 windows found
     const starterBands = [
       { name: 'Airbourne', ref: 'Hard Rock clásico y potente', query: 'Airbourne greatest hits full' },
       { name: 'Marea', ref: 'Rock urbano con poesía callejera', query: 'Marea mejores canciones hits' },
@@ -478,10 +485,19 @@ class RecommendationService {
       { name: 'Judas Priest', ref: 'Pioneros del heavy metal melódico', query: 'Judas Priest greatest hits full' },
       { name: 'The Darkness', ref: 'Glam Rock y falsetes épicos', query: 'The Darkness greatest hits' },
       { name: 'Rival Sons', ref: 'Blues Rock moderno de alta fidelidad', query: 'Rival Sons greatest hits' },
+      { name: 'Ghost', ref: 'Hard Rock teatral y melódico', query: 'Ghost greatest hits full' },
+      { name: 'Halestorm', ref: 'Hard rock moderno y voz arrolladora', query: 'Halestorm greatest hits' },
+      { name: 'Alter Bridge', ref: 'Riffs demoledores y solos virtuosos', query: 'Alter Bridge greatest hits full' },
+      { name: 'Extremoduro', ref: 'Rock transgresivo e inmortal', query: 'Extremoduro grandes exitos' },
+      { name: 'Platero y Tú', ref: 'Rock and roll callejero y directo', query: 'Platero y Tu grandes exitos' },
+      { name: 'The Black Keys', ref: 'Garage rock y blues contemporáneo', query: 'The Black Keys greatest hits' },
+      { name: 'Wolfmother', ref: 'Hard rock psicodélico vintage', query: 'Wolfmother greatest hits' },
+      { name: 'Whitesnake', ref: 'Hard rock melódico e himnos eternos', query: 'Whitesnake greatest hits full' },
+      { name: 'Thin Lizzy', ref: 'Twin guitars y alma poética irlandesa', query: 'Thin Lizzy greatest hits' },
     ];
 
     for (const b of starterBands) {
-      if (windows.length >= 5) break;
+      if (windows.length >= 10) break;
       if (knownArtists.has(b.name.toLowerCase()) || usedNewArtists.has(b.name.toLowerCase())) continue;
 
       try {
@@ -490,7 +506,7 @@ class RecommendationService {
           (t) =>
             !knownTrackIds.has(t.id) &&
             !knownArtists.has(this.cleanArtistName(t.artist).toLowerCase())
-        ).slice(0, 8);
+        ).slice(0, 10);
 
         if (fresh.length >= 3) {
           usedNewArtists.add(b.name.toLowerCase());
@@ -506,22 +522,22 @@ class RecommendationService {
       }
     }
 
-    return windows.slice(0, 5);
+    return windows.slice(0, 10);
   }
 
   /**
-   * Generates 4 or 5 content windows for "Reproducciones recientes"
+   * Generates up to 10 content windows for "Reproducciones recientes"
    */
   async getRecentPlaybackWindows(recentTracks: Track[] = []): Promise<ContentWindow[]> {
     const windows: ContentWindow[] = [];
 
-    // Window 1: Últimas canciones escuchadas (las últimas 4 o 5)
+    // Window 1: Últimas canciones escuchadas (hasta 10 canciones recientes)
     if (recentTracks.length > 0) {
       windows.push({
-        id: 'recent_top5',
+        id: 'recent_top10',
         title: 'Últimas canciones escuchadas',
-        subtitle: `${recentTracks.slice(0, 5).length} canciones recientes`,
-        tracks: recentTracks.slice(0, 5),
+        subtitle: `${recentTracks.slice(0, 10).length} canciones recientes`,
+        tracks: recentTracks.slice(0, 10),
       });
     }
 
@@ -534,17 +550,18 @@ class RecommendationService {
       )
     );
 
-    // Window 2: Más de recentArtist[0]
-    if (recentArtists.length > 0) {
+    // Windows 2 to 5: Más de tus artistas recientes
+    for (let i = 0; i < Math.min(recentArtists.length, 4); i++) {
+      if (windows.length >= 10) break;
+      const artist = recentArtists[i];
       try {
-        const artist = recentArtists[0];
         const res = await streamResolver.search(`${artist} greatest hits full`, 'youtube');
         if (res.length > 0) {
           windows.push({
             id: `recent_artist_${artist.replace(/\s+/g, '_')}`,
             title: `Más de ${artist}`,
-            subtitle: 'Inspirado en tu última escucha',
-            tracks: res.slice(0, 8),
+            subtitle: i === 0 ? 'Inspirado en tu última escucha' : 'Inspirado en tus reproducciones recientes',
+            tracks: res.slice(0, 10),
           });
         }
       } catch (e) {
@@ -552,35 +569,17 @@ class RecommendationService {
       }
     }
 
-    // Window 3: Más de recentArtist[1]
-    if (recentArtists.length > 1) {
+    // Window: Mix de tu última sesión
+    if (recentArtists.length >= 1 && windows.length < 10) {
       try {
-        const artist = recentArtists[1];
-        const res = await streamResolver.search(`${artist} greatest hits full`, 'youtube');
-        if (res.length > 0) {
-          windows.push({
-            id: `recent_artist_${artist.replace(/\s+/g, '_')}`,
-            title: `Más de ${artist}`,
-            subtitle: 'Inspirado en tus reproducciones',
-            tracks: res.slice(0, 8),
-          });
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
-
-    // Window 4: Mix de tu última sesión
-    if (recentArtists.length >= 1) {
-      try {
-        const query = `${recentArtists.slice(0, 2).join(' ')} session mix rock`;
+        const query = `${recentArtists.slice(0, 3).join(' ')} session mix rock`;
         const res = await streamResolver.search(query, 'youtube');
         if (res.length > 0) {
           windows.push({
             id: 'recent_session_mix',
             title: 'Mix de tu última sesión',
             subtitle: 'Pistas similares a tus recientes',
-            tracks: res.slice(0, 8),
+            tracks: res.slice(0, 10),
           });
         }
       } catch (e) {
@@ -588,9 +587,26 @@ class RecommendationService {
       }
     }
 
-    // Window 5: Historial completo de escuchas
-    const fullHistory = playbackHistoryService.getRecentTracks(20);
-    if (fullHistory.length > 0) {
+    // Window: Directos de tus artistas recientes
+    if (recentArtists.length > 0 && windows.length < 10) {
+      try {
+        const res = await streamResolver.search(`${recentArtists[0]} live concert full show`, 'youtube');
+        if (res.length > 0) {
+          windows.push({
+            id: 'recent_live_concerts',
+            title: `En Directo: ${recentArtists[0]}`,
+            subtitle: 'Conciertos y directos de tus artistas recientes',
+            tracks: res.slice(0, 10),
+          });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Window: Historial completo de escuchas
+    const fullHistory = playbackHistoryService.getRecentTracks(30);
+    if (fullHistory.length > 0 && windows.length < 10) {
       windows.push({
         id: 'recent_history_full',
         title: 'Historial completo de escuchas',
@@ -599,17 +615,24 @@ class RecommendationService {
       });
     }
 
-    // Fallbacks if fewer than 4 windows (e.g. brand new user)
+    // Fallbacks if fewer than 10 windows (e.g. brand new user)
     const starterDefaults = [
       { id: 'recent_starter_1', title: 'Últimas canciones escuchadas', query: '80s Rock Greatest Hits' },
       { id: 'recent_starter_2', title: 'Sesión Rock de los 80', query: 'Classic 80s Rock Anthems' },
       { id: 'recent_starter_3', title: 'Sesión Baladas Legendarias', query: 'Legendary Rock Ballads' },
       { id: 'recent_starter_4', title: 'Sesión Hard Rock Clásico', query: 'Hard Rock 80s Classics' },
       { id: 'recent_starter_5', title: 'Sesión Grandes Himnos', query: 'Greatest Rock Anthems of all time' },
+      { id: 'recent_starter_6', title: 'Sesión Rock en Español', query: 'Grandes Exitos Rock Español' },
+      { id: 'recent_starter_7', title: 'Sesión Guitar Heroes', query: 'Legendary Guitar Solos Rock' },
+      { id: 'recent_starter_8', title: 'Sesión Acústica Vintage', query: 'Classic Rock Acoustic Hits' },
+      { id: 'recent_starter_9', title: 'Sesión Directos Míticos', query: 'Live Rock Concert Anthems' },
+      { id: 'recent_starter_10', title: 'Sesión Rock Setentero', query: '70s Classic Rock Anthems' },
+      { id: 'recent_starter_11', title: 'Sesión Blues & Soul Rock', query: 'Blues Rock Classics Hits' },
+      { id: 'recent_starter_12', title: 'Sesión Conciertos Inolvidables', query: 'Classic Rock Stadium Anthems' },
     ];
 
     for (const def of starterDefaults) {
-      if (windows.length >= 5) break;
+      if (windows.length >= 10) break;
       if (windows.some((w) => w.id === def.id || w.title === def.title)) continue;
       try {
         const res = await streamResolver.search(def.query, 'youtube');
@@ -618,7 +641,7 @@ class RecommendationService {
             id: def.id,
             title: def.title,
             subtitle: 'Selección de bienvenida',
-            tracks: res.slice(0, 6),
+            tracks: res.slice(0, 10),
           });
         }
       } catch (e) {
@@ -626,11 +649,11 @@ class RecommendationService {
       }
     }
 
-    return windows.slice(0, 5);
+    return windows.slice(0, 10);
   }
 
   /**
-   * Generates 4 or 5 content windows for "Novedades para ti"
+   * Generates up to 10 content windows for "Novedades para ti"
    */
   async getNewReleasesWindows(
     likedTracks: Track[],
@@ -642,8 +665,9 @@ class RecommendationService {
     const windows: ContentWindow[] = [];
 
     if (tastes.length > 0) {
-      const topArtists = tastes.slice(0, 3);
+      const topArtists = tastes.slice(0, 6);
       for (const item of topArtists) {
+        if (windows.length >= 10) break;
         try {
           const res = await streamResolver.search(`${item.artist} new single official latest release`, 'youtube');
           if (res.length > 0) {
@@ -651,7 +675,7 @@ class RecommendationService {
               id: `news_${item.artist.replace(/\s+/g, '_')}`,
               title: `Novedades de ${item.artist}`,
               subtitle: 'Últimos singles y directos',
-              tracks: res.slice(0, 8),
+              tracks: res.slice(0, 10),
             });
           }
         } catch (e) {
@@ -666,10 +690,17 @@ class RecommendationService {
       { id: 'news_rock_es', title: 'Novedades de Rock en Español', query: 'rock en español nuevo single oficial 2025 2026' },
       { id: 'news_acoustic', title: 'Sesiones Acústicas Recientes', query: 'rock acoustic live session recent official' },
       { id: 'news_anthems', title: 'Lanzamientos del Mes', query: 'rock metal new releases monthly compilation' },
+      { id: 'news_rarities', title: 'Nuevas Versiones y Rarezas', query: 'rock official new version rarities 2025 2026' },
+      { id: 'news_hard_rock', title: 'Lo Nuevo del Hard Rock & Metal', query: 'hard rock heavy metal new releases official 2025 2026' },
+      { id: 'news_deluxe', title: 'Grandes Ediciones Deluxe', query: 'rock deluxe edition remasters new' },
+      { id: 'news_festivals', title: 'Festivales y Shows Recientes', query: 'rock festival live full show recent' },
+      { id: 'news_modern_rock', title: 'Nuevas Bandas del Panorama Rock', query: 'new modern rock bands releases 2025 2026' },
+      { id: 'news_studio', title: 'Sesiones de Estudio Recientes', query: 'in studio live rock session recent' },
+      { id: 'news_full_albums', title: 'Álbumes Completos del Año', query: 'rock album full new release official' },
     ];
 
     for (const gen of thematicNews) {
-      if (windows.length >= 5) break;
+      if (windows.length >= 10) break;
       if (windows.some((w) => w.id === gen.id || w.title === gen.title)) continue;
       try {
         const res = await streamResolver.search(gen.query, 'youtube');
@@ -678,7 +709,7 @@ class RecommendationService {
             id: gen.id,
             title: gen.title,
             subtitle: 'Últimas publicaciones',
-            tracks: res.slice(0, 8),
+            tracks: res.slice(0, 10),
           });
         }
       } catch (e) {
@@ -686,7 +717,7 @@ class RecommendationService {
       }
     }
 
-    return windows.slice(0, 5);
+    return windows.slice(0, 10);
   }
 
   /**
