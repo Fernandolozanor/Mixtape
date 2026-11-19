@@ -439,7 +439,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48 relative">
+    <div className="space-y-4 sm:space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-6 relative">
       {/* Header and Direct Search Box */}
       <div className="retro-tape-chassis rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl border-2 border-[#262f40] relative w-full min-w-0 overflow-hidden space-y-2.5">
         <div className="flex items-center justify-between flex-wrap gap-2">

@@ -409,7 +409,7 @@ export const HomeTab: React.FC<HomeTabProps> = ({
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
+    <div className="space-y-6 sm:space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-6">
       {/* Compact Header Bar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">

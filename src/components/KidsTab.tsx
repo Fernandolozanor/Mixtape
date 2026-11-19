@@ -100,7 +100,7 @@ export const KidsTab: React.FC<KidsTabProps> = ({ onOpenExitModal }) => {
   );
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 pb-20 select-none">
+    <div className="w-full max-w-5xl mx-auto space-y-6 pb-6 select-none">
       {/* Top Friendly Header Bar */}
       <div className="rounded-3xl p-4 sm:p-6 bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 text-white shadow-2xl relative overflow-hidden">
         {/* Floating playful background stars */}

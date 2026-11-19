@@ -469,8 +469,8 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       <div
         className={`w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden ${
           isJukebox
-            ? 'space-y-1.5 sm:space-y-2.5 pb-20 sm:pb-28'
-            : 'space-y-5 sm:space-y-6 pb-40 sm:pb-48'
+            ? 'space-y-1.5 sm:space-y-2.5 pb-2 sm:pb-4'
+            : 'space-y-5 sm:space-y-6 pb-4 sm:pb-6'
         }`}
       >
         {/* Header: Ultra-compact when in Jukebox mode to gain maximum vertical space */}
@@ -887,7 +887,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   // 2. Playlist Detail view
   if (selectedPlaylist) {
     return (
-      <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48">
+      <div className="space-y-6 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-6">
         <button
           onClick={() => {
             setSelectedPlaylistId(null);
@@ -1323,7 +1323,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       : [...tapePlaylists, ...vinylPlaylists];
 
   return (
-    <div className="space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-48 select-none">
+    <div className="space-y-8 w-full max-w-5xl mx-auto min-w-0 overflow-x-hidden pb-6 select-none">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2 mb-1">
