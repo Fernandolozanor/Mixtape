@@ -463,11 +463,11 @@ class AudioEngine {
         this.notifyState();
       }
       const cur = deck.currentTime;
-      const dur = deck.duration || 0;
+      const dur = this.resolveEffectiveDuration(deck.duration || 0, cur);
       this.checkSponsorSkip(cur);
       let buf = 0;
       if (deck.buffered.length > 0) {
-        buf = deck.buffered.end(deck.buffered.length - 1);
+        buf = Math.min(dur || Infinity, deck.buffered.end(deck.buffered.length - 1));
       }
       this.updateMediaSessionPosition(cur, dur);
       this.onTimeUpdateCallbacks.forEach((cb) => cb(cur, dur, buf));
@@ -763,7 +763,7 @@ class AudioEngine {
         this.notifyState();
 
         const cur = this.ytPlayer.getCurrentTime() || 0;
-        const dur = this.ytPlayer.getDuration() || 0;
+        const dur = this.resolveEffectiveDuration(this.ytPlayer.getDuration() || 0, cur);
         this.checkSponsorSkip(cur);
         const loaded = this.ytPlayer.getVideoLoadedFraction() || 0;
         const buf = dur * loaded;
@@ -1268,9 +1268,10 @@ class AudioEngine {
       }
       return;
     }
-    if (this.audio.duration && !isNaN(this.audio.duration)) {
-      this.audio.currentTime = Math.max(0, Math.min(seconds, this.audio.duration));
-      if (this.audio.currentTime < this.audio.duration - this.crossfadeDuration) {
+    const effectiveDur = this.getDuration();
+    if (effectiveDur > 0) {
+      this.audio.currentTime = Math.max(0, Math.min(seconds, effectiveDur));
+      if (this.audio.currentTime < effectiveDur - this.crossfadeDuration) {
         this.crossfadeTriggeredForCurrent = false;
       }
     }
@@ -1335,11 +1336,39 @@ class AudioEngine {
     return this.audio.currentTime || 0;
   }
 
+  /**
+   * Resolves the true track duration, compensating for the iOS Safari / WebKit
+   * bug where proxied DASH M4A/AAC streams (e.g. YouTube itag=140) report
+   * audio.duration as ~2x the actual duration while currentTime runs at 1x.
+   */
+  private resolveEffectiveDuration(rawDur: number, cur: number): number {
+    const expectedDur = this.currentTrack?.duration || 0;
+    const validRaw = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : 0;
+
+    if (!validRaw) {
+      return expectedDur;
+    }
+
+    if (!this.isUsingYouTube && expectedDur > 20) {
+      const ratio = validRaw / expectedDur;
+      // Classic iOS Safari 2x duration doubling on M4A/AAC/VBR proxy streams
+      if (ratio >= 1.85 && ratio <= 2.15 && cur <= expectedDur + 5) {
+        return Math.round(validRaw / 2);
+      }
+      // Fallback: wildly inflated duration on proxied local=true streams
+      if (ratio > 1.8 && cur <= expectedDur + 5 && this.audio.src.includes('local=true')) {
+        return expectedDur;
+      }
+    }
+
+    return validRaw;
+  }
+
   public getDuration(): number {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getDuration === 'function') {
-      return this.ytPlayer.getDuration() || 0;
+      return this.resolveEffectiveDuration(this.ytPlayer.getDuration() || 0, this.getCurrentTime());
     }
-    return this.audio.duration || 0;
+    return this.resolveEffectiveDuration(this.audio.duration || 0, this.getCurrentTime());
   }
 
   public getCurrentTrack(): Track | null {

@@ -446,7 +446,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (startTime && startTime > 0) {
       setCurrentTime(startTime);
       currentTimeRef.current = startTime;
+    } else {
+      setCurrentTime(0);
+      currentTimeRef.current = 0;
     }
+    const initialDur = track.duration && track.duration > 0 ? track.duration : 0;
+    setDuration(initialDur);
+    durationRef.current = initialDur;
 
     // Fetch lyrics in background
     lyricsService.getLyrics(track.title, track.artist, track.duration).then((lrc) => {
