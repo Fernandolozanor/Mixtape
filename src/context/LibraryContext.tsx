@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import type { Playlist, Track, UserSettings } from '../types/music';
+import type { Playlist, PodcastShow, Track, UserSettings } from '../types/music';
 import { firebaseService } from '../services/firebase';
 import { syncService, type SyncStateInfo } from '../services/syncService';
 import { audioEngine } from '../services/audioEngine';
 
+const FOLLOWED_PODCASTS_KEY = 'mixtape_followed_podcasts_v1';
+
 interface LibraryContextType {
   playlists: Playlist[];
   likedTracks: Track[];
+  followedPodcasts: PodcastShow[];
   settings: UserSettings;
   syncState: SyncStateInfo;
   createPlaylist: (
@@ -40,6 +43,8 @@ interface LibraryContextType {
   removeLikedTrack: (trackId: string) => void;
   clearLikedTracks: () => void;
   isLiked: (trackId: string) => boolean;
+  isPodcastFollowed: (showId: string) => boolean;
+  toggleFollowPodcast: (show: PodcastShow) => void;
   updateSettings: (newSettings: Partial<UserSettings>) => void;
   saveFirebaseCredentials: (config: any) => Promise<boolean>;
   linkSyncCode: (code: string) => Promise<{ success: boolean; error?: string }>;
@@ -545,11 +550,38 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return likedTracks.some((t) => t.id === trackId);
   };
 
+  const [followedPodcasts, setFollowedPodcasts] = useState<PodcastShow[]>(() => {
+    try {
+      const raw = localStorage.getItem(FOLLOWED_PODCASTS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const isPodcastFollowed = (showId: string): boolean => {
+    return followedPodcasts.some((p) => p.id === showId);
+  };
+
+  const toggleFollowPodcast = (show: PodcastShow) => {
+    setFollowedPodcasts((prev) => {
+      const exists = prev.some((p) => p.id === show.id);
+      const updated = exists
+        ? prev.filter((p) => p.id !== show.id)
+        : [{ ...show, followedAt: Date.now() }, ...prev];
+      try {
+        localStorage.setItem(FOLLOWED_PODCASTS_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
   return (
     <LibraryContext.Provider
       value={{
         playlists,
         likedTracks,
+        followedPodcasts,
         settings,
         syncState,
         createPlaylist,
@@ -565,6 +597,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         removeLikedTrack,
         clearLikedTracks,
         isLiked,
+        isPodcastFollowed,
+        toggleFollowPodcast,
         updateSettings,
         saveFirebaseCredentials,
         linkSyncCode,

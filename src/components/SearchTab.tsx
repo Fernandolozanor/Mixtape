@@ -20,10 +20,14 @@ import {
   Music2,
   Disc3,
   CheckCircle2,
+  Podcast,
+  BookmarkCheck,
+  BookmarkPlus,
 } from 'lucide-react';
-import type { Track, AudioSourceType, YouTubeRelease } from '../types/music';
+import type { Track, AudioSourceType, YouTubeRelease, PodcastShow } from '../types/music';
 import { streamResolver } from '../services/streamResolver';
 import { youtubeReleaseService } from '../services/youtubeReleaseService';
+import { podcastService } from '../services/podcastService';
 import { recommendationService } from '../services/recommendationService';
 import { usePlayer } from '../context/PlayerContext';
 import { useLibrary } from '../context/LibraryContext';
@@ -34,7 +38,19 @@ import { playRadioTuningSound } from '../utils/radioAudio';
 import { ReggaetonPrankModal } from './ReggaetonPrankModal';
 import { AlbumDetailModal } from './AlbumDetailModal';
 import { MultiAlbumRecordModal } from './MultiAlbumRecordModal';
+import { PodcastDetailModal } from './PodcastDetailModal';
 import { isReggaetonTag, shouldTriggerReggaetonJoke } from '../services/prankService';
+
+const PODCAST_TAGS = [
+  'Nadie Sabe Nada',
+  'The Wild Project',
+  'La Ruina',
+  'Rock y Música',
+  'Historia',
+  'Misterio',
+  'Tecnología',
+  'Cine y Series',
+];
 
 const GENRE_TAGS = [
   'Éxitos Globales',
@@ -73,10 +89,15 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [visibleCount, setVisibleCount] = useState<number>(25);
 
-  const [searchContentType, setSearchContentType] = useState<'tracks' | 'releases'>('tracks');
+  const [searchContentType, setSearchContentType] = useState<'tracks' | 'releases' | 'podcasts'>('tracks');
   const [releases, setReleases] = useState<YouTubeRelease[]>([]);
   const [isSearchingReleases, setIsSearchingReleases] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<YouTubeRelease | null>(null);
+
+  // Podcast search states
+  const [podcasts, setPodcasts] = useState<PodcastShow[]>([]);
+  const [isSearchingPodcasts, setIsSearchingPodcasts] = useState(false);
+  const [selectedPodcast, setSelectedPodcast] = useState<PodcastShow | null>(null);
 
   // Multi-album tape recording states
   const [isMultiAlbumMode, setIsMultiAlbumMode] = useState(false);
@@ -98,7 +119,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const [prankPendingAction, setPrankPendingAction] = useState<(() => void) | null>(null);
 
   const { playTrack, currentTrack } = usePlayer();
-  const { isLiked, toggleLike, addMultipleToLiked, createPlaylist, addTracksToPlaylist, settings } = useLibrary();
+  const { isLiked, toggleLike, addMultipleToLiked, createPlaylist, addTracksToPlaylist, settings, isPodcastFollowed, toggleFollowPodcast } = useLibrary();
   const { currentTheme } = useTheme();
   const isLight = settings.themeMode === 'light';
 
@@ -246,19 +267,23 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 
     setIsSearching(true);
     setIsSearchingReleases(true);
+    setIsSearchingPodcasts(true);
     setCurrentPage(1);
     setVisibleCount(25); // initial generous batch
 
     const tracksPromise = streamResolver.search(term, filter, 1);
     const releasesPromise = youtubeReleaseService.searchReleases(term);
+    const podcastsPromise = podcastService.searchPodcasts(term, 20);
 
     try {
-      const [tracks, foundReleases] = await Promise.all([
+      const [tracks, foundReleases, foundPodcasts] = await Promise.all([
         tracksPromise.catch(() => []),
         releasesPromise.catch(() => []),
+        podcastsPromise.catch(() => []),
       ]);
       setResults(tracks);
       setReleases(foundReleases);
+      setPodcasts(foundPodcasts);
       setSelectedIds(new Set()); // reset selection on new search
     } catch (e) {
       console.error('Search failed:', e);
@@ -282,6 +307,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       }
       setIsSearching(false);
       setIsSearchingReleases(false);
+      setIsSearchingPodcasts(false);
     }
   };
 
@@ -646,6 +672,31 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               <span className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
             )}
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSearchContentType('podcasts');
+              if (podcasts.length === 0) {
+                const targetQ = query.trim() || 'podcast español';
+                setIsSearchingPodcasts(true);
+                podcastService
+                  .searchPodcasts(targetQ, 20)
+                  .then(setPodcasts)
+                  .finally(() => setIsSearchingPodcasts(false));
+              }
+            }}
+            className={`px-3 py-1.5 rounded-xl font-mono-retro text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
+              searchContentType === 'podcasts'
+                ? 'bg-indigo-600 text-white shadow-md border-indigo-400'
+                : isLight
+                ? 'bg-[#a4aebb] text-slate-800 hover:bg-[#b0bac7] border-[#7c899a]'
+                : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 border-transparent'
+            }`}
+          >
+            <Podcast className={`w-3.5 h-3.5 ${isSearchingPodcasts ? 'animate-pulse' : ''}`} />
+            <span>Podcasts {podcasts.length > 0 ? `(${podcasts.length})` : ''}</span>
+          </button>
         </div>
 
         {/* Sort By Dropdown (Only shown when there are results) */}
@@ -679,6 +730,146 @@ export const SearchTab: React.FC<SearchTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Podcasts View */}
+      {searchContentType === 'podcasts' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Podcast className={`w-4 h-4 ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`} />
+              <h2
+                className={`text-xs sm:text-sm font-bold uppercase tracking-wider font-mono-retro ${
+                  isLight ? 'text-slate-900' : 'text-white'
+                }`}
+              >
+                Podcasts {query.trim() ? `para "${query.trim()}"` : 'Destacados'} ({podcasts.length})
+              </h2>
+            </div>
+          </div>
+
+          {/* Quick Podcast Topic Chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {PODCAST_TAGS.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => {
+                  setQuery(tag);
+                  setIsSearchingPodcasts(true);
+                  podcastService
+                    .searchPodcasts(tag, 20)
+                    .then(setPodcasts)
+                    .finally(() => setIsSearchingPodcasts(false));
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
+                  isLight
+                    ? 'bg-[#bcc4d0] hover:bg-[#c8d0dc] text-slate-900 border-[#8591a2]'
+                    : 'bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border-white/10'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+
+          {isSearchingPodcasts ? (
+            <div className="py-12 flex flex-col items-center justify-center gap-3 text-zinc-400 font-mono text-xs">
+              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+              <span>Buscando podcasts...</span>
+            </div>
+          ) : podcasts.length === 0 ? (
+            <div className="p-8 text-center glass-card rounded-3xl border border-white/10 space-y-1.5">
+              <Podcast className="w-8 h-8 text-indigo-400/60 mx-auto" />
+              <p className="text-sm font-semibold">No se encontraron podcasts</p>
+              <p className="text-xs text-zinc-400">
+                Prueba con el nombre de un programa o tema (ej: Nadie Sabe Nada, Rock, Historia, Ciencia...)
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
+              {podcasts.map((show) => {
+                const followed = isPodcastFollowed(show.id);
+                return (
+                  <div
+                    key={show.id}
+                    onClick={() => setSelectedPodcast(show)}
+                    className={`group cursor-pointer p-3 rounded-2xl border transition-all duration-200 flex flex-col relative select-none ${
+                      isLight
+                        ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] hover:from-[#c5cdd8] hover:to-[#b6c0cd] border-[#8591a2] text-slate-900 hover:border-indigo-600 hover:shadow-xl active:scale-[0.98]'
+                        : 'bg-[#131822] hover:bg-[#1b2333] border-white/10 hover:border-indigo-400/50 hover:shadow-xl active:scale-[0.98]'
+                    }`}
+                  >
+                    <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow-lg bg-black/40">
+                      {show.artwork ? (
+                        <img
+                          src={show.artwork}
+                          alt={show.title}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-indigo-950/60">
+                          <Podcast className="w-10 h-10 text-indigo-400" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 left-2 bg-indigo-600/95 text-white font-mono text-[9px] font-black px-2 py-0.5 rounded shadow-md uppercase tracking-wider pointer-events-none">
+                        Podcast
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFollowPodcast(show);
+                        }}
+                        className={`absolute top-2 right-2 w-7 h-7 rounded-xl flex items-center justify-center transition shadow-lg cursor-pointer ${
+                          followed
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-black/70 text-white/80 hover:text-white border border-white/20'
+                        }`}
+                        title={followed ? 'Siguiendo podcast' : 'Seguir podcast'}
+                      >
+                        {followed ? (
+                          <BookmarkCheck className="w-4 h-4" />
+                        ) : (
+                          <BookmarkPlus className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    <h3
+                      className={`font-bold text-xs sm:text-sm truncate mt-2.5 ${
+                        isLight
+                          ? 'text-slate-950 group-hover:text-indigo-800'
+                          : 'text-white group-hover:text-indigo-300'
+                      }`}
+                    >
+                      {show.title}
+                    </h3>
+                    <p
+                      className={`text-[11px] font-mono truncate ${
+                        isLight ? 'text-slate-700' : 'text-zinc-400'
+                      }`}
+                    >
+                      {show.author}
+                    </p>
+                    <div
+                      className={`mt-2 pt-2 border-t flex items-center justify-between text-[10px] font-mono ${
+                        isLight ? 'border-black/10 text-slate-700' : 'border-white/5 text-zinc-400'
+                      }`}
+                    >
+                      <span className="truncate">{show.genre || 'Podcast'}</span>
+                      <span className={`font-bold shrink-0 ml-1 ${isLight ? 'text-indigo-800' : 'text-indigo-400'}`}>
+                        Episodios →
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Releases View (Álbumes y Lanzamientos Oficiales) */}
       {searchContentType === 'releases' && (
@@ -1439,6 +1630,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         release={selectedRelease}
         onOpenAddToPlaylist={onSelectTrackForPlaylist}
         onOpenAddMultipleToPlaylist={onSelectMultipleForPlaylist}
+      />
+
+      {/* Podcast Episodes Modal */}
+      <PodcastDetailModal
+        isOpen={Boolean(selectedPodcast)}
+        onClose={() => setSelectedPodcast(null)}
+        show={selectedPodcast}
+        onOpenAddToPlaylist={onSelectTrackForPlaylist}
       />
     </div>
   );

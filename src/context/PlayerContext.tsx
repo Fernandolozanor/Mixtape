@@ -4,6 +4,7 @@ import { audioEngine } from '../services/audioEngine';
 import { lyricsService } from '../services/lyricsService';
 import { tapeProgressService } from '../services/tapeProgressService';
 import { playbackHistoryService } from '../services/playbackHistoryService';
+import { podcastService } from '../services/podcastService';
 import { useLibrary } from './LibraryContext';
 
 export const SCRUB_SPEEDS = [1.5, 2, 4, 8] as const;
@@ -159,6 +160,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const dur = durationRef.current;
     const qIdx = queueIndexRef.current;
     const tapeName = activeTapeNameRef.current;
+
+    if (track && track.source === 'podcast' && curTime >= 5) {
+      podcastService.saveEpisodeProgress(track.id, curTime, dur);
+    }
 
     if (tapeId && media === 'tape' && track) {
       tapeProgressService.saveProgress({
@@ -462,9 +467,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     }
 
-    if (startTime && startTime > 0) {
-      setCurrentTime(startTime);
-      currentTimeRef.current = startTime;
+    // Auto-resume podcast episodes from saved timestamp if no explicit startTime was provided
+    let effectiveStartTime = startTime;
+    if (track.source === 'podcast' && (effectiveStartTime === undefined || effectiveStartTime <= 0)) {
+      const savedEp = podcastService.getEpisodeProgress(track.id);
+      if (savedEp && savedEp.currentTime > 5) {
+        effectiveStartTime = savedEp.currentTime;
+      }
+    }
+
+    if (effectiveStartTime && effectiveStartTime > 0) {
+      setCurrentTime(effectiveStartTime);
+      currentTimeRef.current = effectiveStartTime;
     } else {
       setCurrentTime(0);
       currentTimeRef.current = 0;
@@ -473,20 +487,24 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setDuration(initialDur);
     durationRef.current = initialDur;
 
-    // Fetch lyrics in background
-    lyricsService.getLyrics(track.title, track.artist, track.duration).then((lrc) => {
-      setLyrics(lrc);
-    });
+    // Fetch lyrics in background (skip for podcasts)
+    if (track.source === 'podcast') {
+      setLyrics([]);
+    } else {
+      lyricsService.getLyrics(track.title, track.artist, track.duration).then((lrc) => {
+        setLyrics(lrc);
+      });
+    }
 
-    const success = await audioEngine.playTrack(track, isCrossfade, startTime);
+    const success = await audioEngine.playTrack(track, isCrossfade, effectiveStartTime);
     setIsLoading(false);
     setIsPlaying(success);
 
-    if (success && startTime && startTime > 0) {
+    if (success && effectiveStartTime && effectiveStartTime > 0) {
       setTimeout(() => {
-        audioEngine.seek(startTime);
-        setCurrentTime(startTime);
-        currentTimeRef.current = startTime;
+        audioEngine.seek(effectiveStartTime!);
+        setCurrentTime(effectiveStartTime!);
+        currentTimeRef.current = effectiveStartTime!;
       }, 150);
     }
 

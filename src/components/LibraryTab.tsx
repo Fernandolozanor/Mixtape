@@ -22,12 +22,14 @@ import {
   Sparkles,
   CassetteTape,
   RotateCcw,
+  Podcast,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { usePlayer } from '../context/PlayerContext';
 import { useTheme } from '../context/ThemeContext';
 import { EditPlaylistModal } from './EditPlaylistModal';
 import { ResumeTapeModal } from './ResumeTapeModal';
+import { PodcastDetailModal } from './PodcastDetailModal';
 import { CassetteRack } from './CassetteRack';
 import { VinylRecordCard } from './VinylRecordCard';
 import { VinylCoverFlow } from './VinylCoverFlow';
@@ -35,7 +37,7 @@ import { JukeboxView } from './JukeboxView';
 import { bpmService } from '../services/bpmService';
 import { tapeProgressService, type TapeProgress } from '../services/tapeProgressService';
 import { SourceBadge } from './SourceBadge';
-import type { Playlist, Track } from '../types/music';
+import type { Playlist, PodcastShow, Track } from '../types/music';
 
 interface GenreDefinition {
   id: string;
@@ -161,6 +163,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const {
     playlists,
     likedTracks,
+    followedPodcasts,
     deletePlaylist,
     removeTrackFromPlaylist,
     reorderPlaylistTracks,
@@ -183,6 +186,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   const [showFavoritesSearch, setShowFavoritesSearch] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string>('all');
   const [selectedArtist, setSelectedArtist] = useState<string>('all');
+  const [selectedPodcastShow, setSelectedPodcastShow] = useState<PodcastShow | null>(null);
   const [showMatchingTracks, setShowMatchingTracks] = useState(true);
 
   // Favorites view mode: 'jukebox' (Gramola Jukebox interactiva con neones y burbujas), 'vinyl' o 'list'
@@ -1883,11 +1887,80 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         </div>
       )}
 
+      {/* Podcasts Seguidos Shelf */}
+      {followedPodcasts.length > 0 && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Podcast className={`w-5 h-5 ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`} />
+              <div>
+                <h2
+                  className={`text-base sm:text-lg font-bold tracking-tight uppercase ${
+                    isLight ? 'text-slate-900' : 'text-white'
+                  }`}
+                >
+                  Podcasts Seguidos ({followedPodcasts.length})
+                </h2>
+                <p className={`text-xs ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                  Toca cualquier programa para escuchar sus últimos episodios
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            {followedPodcasts.map((show) => (
+              <div
+                key={show.id}
+                onClick={() => setSelectedPodcastShow(show)}
+                className={`group cursor-pointer p-3 rounded-2xl border transition flex flex-col select-none ${
+                  isLight
+                    ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] hover:from-[#c5cdd8] hover:to-[#b6c0cd] border-[#8591a2] text-slate-900 hover:border-indigo-600 shadow-md'
+                    : 'retro-tape-chassis border-white/10 hover:border-indigo-400/50 shadow-lg'
+                }`}
+              >
+                <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow bg-black/40 mb-2">
+                  {show.artwork ? (
+                    <img
+                      src={show.artwork}
+                      alt={show.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-indigo-950/60">
+                      <Podcast className="w-8 h-8 text-indigo-400" />
+                    </div>
+                  )}
+                  <div className="absolute top-1.5 left-1.5 bg-indigo-600/95 text-white font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow">
+                    🎙️ PODCAST
+                  </div>
+                </div>
+                <p className={`text-xs sm:text-sm font-bold truncate ${isLight ? 'text-slate-950' : 'text-white'}`}>
+                  {show.title}
+                </p>
+                <p className={`text-[11px] font-mono truncate ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                  {show.author}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Modal to edit playlist metadata */}
       <EditPlaylistModal
         playlist={playlistToEdit}
         isOpen={playlistToEdit !== null}
         onClose={() => setPlaylistToEdit(null)}
+      />
+
+      {/* Modal de Episodios de Podcast */}
+      <PodcastDetailModal
+        isOpen={selectedPodcastShow !== null}
+        onClose={() => setSelectedPodcastShow(null)}
+        show={selectedPodcastShow}
       />
 
       {/* Modal para reanudar cinta interrumpida */}

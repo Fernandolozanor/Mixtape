@@ -44,6 +44,18 @@ export const SourceBadge: React.FC<SourceBadgeProps> = ({
     );
   }
 
+  if (normSource === 'podcast') {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 shrink-0 border border-indigo-500/40 bg-indigo-500/20 text-indigo-300 ${sizeClasses} ${className}`}
+        title="Fuente: Podcast"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+        <span>Podcast</span>
+      </span>
+    );
+  }
+
   if (normSource === 'custom' || normSource === 'local') {
     return (
       <span

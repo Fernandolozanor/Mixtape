@@ -1,4 +1,15 @@
-export type AudioSourceType = 'youtube' | 'audius' | 'radio' | 'custom';
+export type AudioSourceType = 'youtube' | 'audius' | 'radio' | 'podcast' | 'custom';
+
+export interface PodcastShow {
+  id: string;
+  title: string;
+  author: string;
+  artwork: string;
+  genre?: string;
+  trackCount?: number;
+  feedUrl?: string;
+  followedAt?: number;
+}
 
 export interface Track {
   id: string;
@@ -15,6 +26,9 @@ export interface Track {
   streamExpiry?: number;
   addedAt?: number;
   bpm?: number;
+  releaseDate?: string;
+  podcastDescription?: string;
+  showId?: string;
 }
 
 export type MediaFormat = 'tape' | 'vinyl';
