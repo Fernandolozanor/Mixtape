@@ -1248,8 +1248,15 @@ class AudioEngine {
     };
 
     if (track.source === 'youtube' && track.youtubeId) {
-      const directUrl = streamResolver.getDirectStreamUrl(track.youtubeId, 140);
-      bufferInInactiveDeck(directUrl);
+      // Resolve the final verified ad-free videoplayback URL in background and buffer it in the inactive deck
+      streamResolver
+        .resolveDirectAudioStream(track.youtubeId, undefined, track.title, track.artist)
+        .then((directUrl) => {
+          if (directUrl && this.preloadedTrackId === track.id) {
+            bufferInInactiveDeck(directUrl);
+          }
+        })
+        .catch(() => {});
     } else if (track.audioUrl) {
       bufferInInactiveDeck(track.audioUrl);
     }

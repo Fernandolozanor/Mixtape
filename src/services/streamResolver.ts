@@ -307,17 +307,17 @@ class StreamResolver {
   }
 
   /**
-   * Direct ad-free audio stream URL for a YouTube ID (itag 140 = M4A/AAC, compatible with iOS Safari & all browsers).
+   * Direct dispatcher URL for a YouTube ID (itag 140 = M4A/AAC, itag 251 = WebM/Opus).
    */
   getDirectStreamUrl(youtubeId: string, itag: 140 | 251 = 140): string {
     return `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=${itag}&local=true`;
   }
 
   /**
-   * Resolves direct, ad-free audio stream URL for a YouTube ID.
-   * Returns the direct progressive M4A stream immediately (0ms pre-probe delay) so native
-   * HTMLAudioElement starts buffering on the very first packet. When excludeOrigin is passed
-   * (after a stream error), falls back to Audius direct stream matching title & artist.
+   * Resolves direct, ad-free verified videoplayback stream URL for a YouTube ID.
+   * Follows the companion dispatcher 302 redirects to obtain the final direct videoplayback URL
+   * (crucial on iOS Safari so <audio> doesn't fail on double cross-subdomain redirects and fall
+   * back to YouTube IFrame with ads). Cached for 20 minutes and preloaded in the inactive deck.
    */
   async resolveDirectAudioStream(
     youtubeId: string,
@@ -330,29 +330,20 @@ class StreamResolver {
     // 1. Return immediately if a valid verified stream URL is already cached in memory
     const cached = this.streamCache.get(youtubeId);
     if (cached && cached.expiresAt > Date.now()) {
-      if (!excludeOrigin || !cached.url.startsWith(excludeOrigin)) {
+      if (!excludeOrigin || !cached.url.includes(excludeOrigin)) {
         return cached.url;
       }
     }
 
-    // 2. Fast path (0ms): hand the direct ad-free M4A stream straight to <audio>
-    // Avoids doing a redundant 2-4.5s fetch(GET) before <audio> opens its own connection.
-    if (!excludeOrigin) {
-      const directUrl = this.getDirectStreamUrl(youtubeId, 140);
-      this.streamCache.set(youtubeId, {
-        url: directUrl,
-        expiresAt: Date.now() + 20 * 60 * 1000,
-      });
-      return directUrl;
-    }
-
-    // 3. Fallback path (only when direct stream failed): try Audius direct audio stream
-    if (this.pendingResolutions.has(youtubeId)) {
+    // 2. If this track is already being resolved (e.g. via preloadNextTrack), reuse the in-flight Promise
+    if (!excludeOrigin && this.pendingResolutions.has(youtubeId)) {
       return this.pendingResolutions.get(youtubeId)!;
     }
 
-    const resolutionPromise = this.performAudiusFallback(title, artist);
-    this.pendingResolutions.set(youtubeId, resolutionPromise);
+    const resolutionPromise = this.performStreamResolution(youtubeId, excludeOrigin, title, artist);
+    if (!excludeOrigin) {
+      this.pendingResolutions.set(youtubeId, resolutionPromise);
+    }
 
     try {
       const resolvedUrl = await resolutionPromise;
@@ -364,8 +355,111 @@ class StreamResolver {
       }
       return resolvedUrl;
     } finally {
-      this.pendingResolutions.delete(youtubeId);
+      if (!excludeOrigin) {
+        this.pendingResolutions.delete(youtubeId);
+      }
     }
+  }
+
+  private async performStreamResolution(
+    youtubeId: string,
+    excludeOrigin?: string,
+    title?: string,
+    artist?: string
+  ): Promise<string | null> {
+    // 1. Resolve verified direct videoplayback URL from companion nodes (ad-free)
+    try {
+      const companionUrl = await this.performCompanionStreamRace(youtubeId, excludeOrigin);
+      if (companionUrl) return companionUrl;
+    } catch {
+      // Ignored
+    }
+
+    // 2. Fallback to Audius direct audio stream matching title and artist
+    return this.performAudiusFallback(title, artist);
+  }
+
+  private async performCompanionStreamRace(
+    youtubeId: string,
+    excludeOrigin?: string
+  ): Promise<string | null> {
+    // Only race itag=251 (WebM/Opus) on browsers that actually support it; on iOS Safari use itag=140 only
+    const supportsOpus =
+      typeof document !== 'undefined' &&
+      !!document.createElement('audio').canPlayType('audio/webm; codecs="opus"');
+
+    const endpoints = supportsOpus
+      ? [
+          this.getDirectStreamUrl(youtubeId, 140),
+          this.getDirectStreamUrl(youtubeId, 251),
+        ]
+      : [this.getDirectStreamUrl(youtubeId, 140)];
+
+    const controllers: AbortController[] = [];
+
+    try {
+      const winningUrl = await Promise.any(
+        endpoints.map(async (endpoint) => {
+          if (excludeOrigin && endpoint.includes(excludeOrigin)) {
+            throw new Error('Excluded endpoint');
+          }
+
+          const controller = new AbortController();
+          controllers.push(controller);
+          const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+          try {
+            // Simple GET (no custom headers -> no CORS preflight) follows 302s to the final videoplayback URL
+            const res = await fetch(endpoint, {
+              method: 'GET',
+              redirect: 'follow',
+              signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
+            const contentType = (res.headers.get('content-type') || '').toLowerCase();
+            if (
+              res.ok &&
+              res.url &&
+              (contentType.includes('audio') ||
+                contentType.includes('mp4') ||
+                contentType.includes('webm') ||
+                contentType.includes('octet-stream'))
+            ) {
+              const verifiedUrl = res.url;
+              if (res.body) {
+                res.body.cancel().catch(() => {});
+              }
+              controller.abort();
+              return verifiedUrl;
+            }
+            throw new Error(`Invalid stream response (${res.status}) from ${endpoint}`);
+          } catch (err) {
+            clearTimeout(timeoutId);
+            throw err;
+          }
+        })
+      );
+
+      for (const c of controllers) {
+        try {
+          c.abort();
+        } catch {}
+      }
+
+      return winningUrl;
+    } catch {
+      for (const c of controllers) {
+        try {
+          c.abort();
+        } catch {}
+      }
+    }
+
+    if (!excludeOrigin) {
+      return this.getDirectStreamUrl(youtubeId, 140);
+    }
+    return null;
   }
 
   private async performAudiusFallback(
