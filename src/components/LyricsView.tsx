@@ -1,8 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { usePlayer } from '../context/PlayerContext';
+import { useLibrary } from '../context/LibraryContext';
 
 export const LyricsView: React.FC = () => {
   const { lyrics, activeLyricIndex, seek } = usePlayer();
+  const { settings } = useLibrary();
+  const isLight = settings.themeMode === 'light';
   const activeLineRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -42,9 +45,15 @@ export const LyricsView: React.FC = () => {
             onClick={() => seek(line.time)}
             className={`cursor-pointer transition-all duration-300 font-bold ${
               isActive
-                ? 'text-white text-2xl md:text-3xl scale-102 opacity-100 filter drop-shadow-lg'
+                ? isLight
+                  ? 'text-slate-950 text-2xl md:text-3xl scale-102 opacity-100 drop-shadow-xs'
+                  : 'text-white text-2xl md:text-3xl scale-102 opacity-100 filter drop-shadow-lg'
                 : isPast
-                ? 'text-zinc-500 text-xl md:text-2xl opacity-60 hover:opacity-90'
+                ? isLight
+                  ? 'text-slate-700 text-xl md:text-2xl opacity-75 hover:opacity-100'
+                  : 'text-zinc-500 text-xl md:text-2xl opacity-60 hover:opacity-90'
+                : isLight
+                ? 'text-slate-800 text-xl md:text-2xl opacity-65 hover:opacity-100'
                 : 'text-zinc-400 text-xl md:text-2xl opacity-40 hover:opacity-80'
             }`}
           >

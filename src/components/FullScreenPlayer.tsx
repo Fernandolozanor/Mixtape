@@ -73,7 +73,8 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
   const [showPitchControl, setShowPitchControl] = useState(false);
 
   const liked = currentTrack ? isLiked(currentTrack.id) : false;
-  const isSteel = currentTheme.id === 'retro-rock-80s' || settings.themeMode === 'light';
+  const isLight = settings.themeMode === 'light';
+  const isSteel = currentTheme.id === 'retro-rock-80s' || isLight;
 
   // Ensure retro deck (cassette or vinyl as appropriate) is activated when track changes or 3-second auto-trigger fires
   useEffect(() => {
@@ -104,23 +105,39 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         <img
           src={currentTrack.thumbnail}
           alt=""
-          className="w-full h-full object-cover scale-150 blur-3xl opacity-40 brightness-75"
+          className={`w-full h-full object-cover scale-150 blur-3xl ${
+            isLight ? 'opacity-25 brightness-105' : 'opacity-40 brightness-75'
+          }`}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+        <div
+          className={`absolute inset-0 ${
+            isLight
+              ? 'bg-gradient-to-b from-[#cbd2dc]/82 via-[#c2cad6]/78 to-[#b2bcc9]/94'
+              : 'bg-gradient-to-b from-black/60 via-black/40 to-black/80'
+          }`}
+        />
       </div>
 
       {/* Top Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-1.5 sm:py-2.5 shrink-0">
         <button
           onClick={() => setFullScreenPlayerOpen(false)}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition active:scale-95"
+          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition active:scale-95 ${
+            isLight
+              ? 'bg-[#a4aebb] border border-[#7c899a] text-slate-900 hover:bg-[#b6c0cd] shadow-sm'
+              : 'bg-white/10 text-white hover:bg-white/20'
+          }`}
           aria-label="Cerrar reproductor"
         >
           <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
         <div className="flex flex-col items-center">
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+          <span
+            className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest mb-1 ${
+              isLight ? 'text-slate-800 font-extrabold' : 'text-zinc-400'
+            }`}
+          >
             FUENTE DE AUDIO
           </span>
           <SourceBadge source={currentTrack.source} size="md" />
@@ -128,7 +145,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
         <button
           onClick={onOpenAddToPlaylist}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition active:scale-95"
+          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition active:scale-95 ${
+            isLight
+              ? 'bg-[#a4aebb] border border-[#7c899a] text-slate-900 hover:bg-[#b6c0cd] shadow-sm'
+              : 'bg-white/10 text-white hover:bg-white/20'
+          }`}
           aria-label="Añadir a lista"
         >
           <PlusCircle className="w-5 h-5" />
@@ -164,18 +185,24 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             <MarqueeTitle
               text={currentTrack.title}
               as="h2"
-              className="font-rock text-lg sm:text-2xl md:text-3xl text-white tracking-widest drop-shadow-md"
+              className={`font-rock text-lg sm:text-2xl md:text-3xl tracking-widest ${
+                isLight ? 'text-slate-950' : 'text-white drop-shadow-md'
+              }`}
             />
             <MarqueeTitle
               text={currentTrack.artist}
               as="p"
-              className="text-xs sm:text-sm text-amber-400 font-mono font-bold tracking-wide mt-0.5"
+              className={`text-xs sm:text-sm font-mono font-bold tracking-wide mt-0.5 ${
+                isLight ? 'text-amber-900 font-extrabold' : 'text-amber-400'
+              }`}
             />
           </div>
 
           <button
             onClick={() => toggleLike(currentTrack)}
-            className="p-1.5 sm:p-2 text-zinc-300 hover:text-amber-400 transition shrink-0 active:scale-95"
+            className={`p-1.5 sm:p-2 transition shrink-0 active:scale-95 ${
+              isLight ? 'text-slate-800 hover:text-amber-800' : 'text-zinc-300 hover:text-amber-400'
+            }`}
             aria-label="Me gusta"
           >
             <Heart
@@ -200,15 +227,31 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               className="retro-slider"
             />
           </div>
-          <div className="flex justify-between items-center text-[11px] sm:text-xs font-mono-retro font-bold text-amber-400/90 tracking-wider px-1 mt-2.5">
+          <div
+            className={`flex justify-between items-center text-[11px] sm:text-xs font-mono-retro font-bold tracking-wider px-1 mt-2.5 ${
+              isLight ? 'text-slate-900 font-extrabold' : 'text-amber-400/90'
+            }`}
+          >
             <span>{formatTime(currentTime)}</span>
             {scrubDirection && scrubSpeed ? (
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-400 font-mono text-[10px] sm:text-[11px] font-black animate-pulse">
+              <span
+                className={`px-2 py-0.5 rounded-full font-mono text-[10px] sm:text-[11px] font-black animate-pulse border ${
+                  isLight
+                    ? 'bg-amber-500/25 border-amber-700/60 text-amber-950'
+                    : 'bg-amber-500/20 border-amber-400/50 text-amber-400'
+                }`}
+              >
                 {scrubDirection === 'forward' ? '⏩' : '⏪'}{' '}
                 {String(scrubSpeed).replace('.', ',')}x • PULSA ▶
               </span>
             ) : (
-              <span className="text-zinc-500 font-mono text-[9px] sm:text-[10px] hidden xs:inline">HI-FI STEREO</span>
+              <span
+                className={`font-mono text-[9px] sm:text-[10px] hidden xs:inline ${
+                  isLight ? 'text-slate-700 font-bold' : 'text-zinc-500'
+                }`}
+              >
+                HI-FI STEREO
+              </span>
             )}
             <span>-{formatTime(remainingTime)}</span>
           </div>
@@ -451,7 +494,9 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         {/* Vintage 80s Hi-Fi Volume Control - Sleek Single Row */}
         <div
           className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1 rounded-xl shadow-inner ${
-            isSteel
+            isLight
+              ? 'bg-[#a4aebb] border border-[#7c899a] text-slate-900'
+              : isSteel
               ? 'bg-slate-900/90 border border-slate-700'
               : 'bg-black/50 border border-white/10'
           }`}
@@ -467,13 +512,17 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             title={volume === 0 ? 'Activar sonido' : 'Silenciar'}
           >
             {volume === 0 ? (
-              <VolumeX className="w-4 h-4 text-rose-400" />
+              <VolumeX className={`w-4 h-4 ${isLight ? 'text-rose-700' : 'text-rose-400'}`} />
             ) : (
               <Volume2 className={`w-4 h-4 ${isSteel ? 'text-slate-900' : 'text-amber-400'}`} />
             )}
           </button>
 
-          <span className="text-[9px] font-mono-retro font-bold text-amber-400 uppercase tracking-wider hidden xs:inline shrink-0">
+          <span
+            className={`text-[9px] font-mono-retro font-bold uppercase tracking-wider hidden xs:inline shrink-0 ${
+              isLight ? 'text-slate-900 font-black' : 'text-amber-400'
+            }`}
+          >
             VOL
           </span>
 
@@ -491,7 +540,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
             />
           </div>
 
-          <span className="text-[10px] sm:text-xs font-mono-retro font-bold text-amber-400 w-8 text-right shrink-0">
+          <span
+            className={`text-[10px] sm:text-xs font-mono-retro font-bold w-8 text-right shrink-0 ${
+              isLight ? 'text-slate-950 font-black' : 'text-amber-400'
+            }`}
+          >
             {Math.round(volume * 100)}%
           </span>
         </div>
@@ -500,7 +553,9 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         {(showPitchControl || playbackRate !== 1) && (
           <div
             className={`flex items-center gap-2 sm:gap-3 px-2 sm:px-3 py-1 rounded-xl shadow-inner animate-in fade-in ${
-              isSteel
+              isLight
+                ? 'bg-[#a4aebb] border border-[#7c899a] text-slate-900'
+                : isSteel
                 ? 'bg-slate-900/90 border border-slate-700'
                 : 'bg-black/50 border border-white/10'
             }`}
@@ -509,7 +564,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               onClick={() => setPlaybackRate(1)}
               className={`px-2 py-1 rounded-lg active:scale-95 transition shrink-0 border text-[10px] font-mono-retro font-bold flex items-center gap-1 ${
                 playbackRate === 1
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  ? isLight
+                    ? 'bg-emerald-700 text-white border-emerald-800'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : isLight
+                  ? 'bg-amber-700 text-white border-amber-800'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
               }`}
               title="Restablecer velocidad original (Quartz Lock 0%)"
@@ -520,7 +579,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               </span>
             </button>
 
-            <span className="text-[9px] font-mono-retro font-bold text-zinc-400 uppercase tracking-wider hidden xs:inline shrink-0">
+            <span
+              className={`text-[9px] font-mono-retro font-bold uppercase tracking-wider hidden xs:inline shrink-0 ${
+                isLight ? 'text-slate-900 font-black' : 'text-zinc-400'
+              }`}
+            >
               PITCH
             </span>
 
@@ -537,7 +600,11 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
               />
             </div>
 
-            <span className="text-[10px] sm:text-xs font-mono-retro font-bold text-emerald-400 w-10 text-right shrink-0">
+            <span
+              className={`text-[10px] sm:text-xs font-mono-retro font-bold w-10 text-right shrink-0 ${
+                isLight ? 'text-emerald-900 font-black' : 'text-emerald-400'
+              }`}
+            >
               {playbackRate >= 1 ? '+' : ''}
               {Math.round((playbackRate - 1) * 100)}%
             </span>
@@ -545,14 +612,22 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         )}
 
         {/* Bottom Switcher: Cinta/Vinilo / Letra / Cola / Pitch */}
-        <div className="flex items-center justify-around pt-1 border-t border-white/10 flex-wrap gap-1">
+        <div
+          className={`flex items-center justify-around flex-wrap gap-1.5 ${
+            isLight
+              ? 'p-1.5 rounded-2xl bg-[#9ea8b7] border border-[#7c899a] shadow-inner'
+              : 'pt-1 border-t border-white/10'
+          }`}
+        >
           <button
             onClick={() => setCenterView('deck')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
               centerView === 'deck'
                 ? isSteel
-                  ? 'retro-btn-aluminum text-slate-900 font-bold border-amber-600/60 shadow-md'
+                  ? 'retro-btn-aluminum text-slate-950 font-extrabold border-amber-600/70 shadow-md'
                   : 'bg-amber-400 text-black shadow-md font-bold'
+                : isLight
+                ? 'bg-[#c5cdd8]/80 hover:bg-[#d7dde6] text-slate-900 border border-[#7c899a]/70 font-bold shadow-xs'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -562,11 +637,13 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
           <button
             onClick={() => setCenterView('lyrics')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
               centerView === 'lyrics'
                 ? isSteel
-                  ? 'retro-btn-aluminum text-slate-900 font-bold shadow-md'
+                  ? 'retro-btn-aluminum text-slate-950 font-extrabold shadow-md'
                   : 'bg-white text-black shadow-md'
+                : isLight
+                ? 'bg-[#c5cdd8]/80 hover:bg-[#d7dde6] text-slate-900 border border-[#7c899a]/70 font-bold shadow-xs'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -576,11 +653,13 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
           <button
             onClick={() => setCenterView('queue')}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
               centerView === 'queue'
                 ? isSteel
-                  ? 'retro-btn-aluminum text-slate-900 font-bold shadow-md'
+                  ? 'retro-btn-aluminum text-slate-950 font-extrabold shadow-md'
                   : 'bg-white text-black shadow-md'
+                : isLight
+                ? 'bg-[#c5cdd8]/80 hover:bg-[#d7dde6] text-slate-900 border border-[#7c899a]/70 font-bold shadow-xs'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
           >
@@ -590,9 +669,13 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
 
           <button
             onClick={() => setShowPitchControl((prev) => !prev)}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold transition ${
               showPitchControl || playbackRate !== 1
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                ? isLight
+                  ? 'bg-emerald-700 text-white border border-emerald-900 font-extrabold shadow-md'
+                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
+                : isLight
+                ? 'bg-[#c5cdd8]/80 hover:bg-[#d7dde6] text-slate-900 border border-[#7c899a]/70 font-bold shadow-xs'
                 : 'text-zinc-400 hover:text-white hover:bg-white/5'
             }`}
             title="Mostrar/ocultar control de velocidad Pitch / BPM"
