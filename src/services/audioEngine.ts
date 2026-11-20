@@ -88,8 +88,8 @@ class AudioEngine {
   private backgroundAudio: HTMLAudioElement | null = null;
   private bgMediaStream: MediaStream | null = null;
   private silentBlobUrl: string | null = null;
-  private preloadAudio: HTMLAudioElement | null = null;
   private preloadedTrackId: string | null = null;
+  private preloadedDeckIndex: 0 | 1 | null = null;
   private wakeLock: any = null;
 
   // Real Web Audio API Analyser for stereo peak metering
@@ -951,9 +951,36 @@ class AudioEngine {
     // Capture outgoing state before switching
     const outgoingDeck = (!this.isUsingYouTube && this.isPlaying()) ? this.audio : null;
     const outgoingIsYouTube = this.isUsingYouTube && this.isPlaying();
+    const otherIdx: 0 | 1 = this.activeDeckIndex === 0 ? 1 : 0;
 
-    // If not crossfading, stop any active crossfade interval and clean up immediately
-    if (!isCrossfade) {
+    // Check if the inactive deck (deckA/deckB) already has this exact track preloaded & buffered!
+    const hasPreloadedHit =
+      this.preloadedTrackId === track.id &&
+      this.preloadedDeckIndex === otherIdx &&
+      !!this.otherAudio.src &&
+      (!startTime || startTime <= 0);
+
+    // Clear preloaded markers now that we're consuming or replacing them
+    this.preloadedTrackId = null;
+    this.preloadedDeckIndex = null;
+
+    if (hasPreloadedHit) {
+      // Instant deck swap: promote the already-buffered deck to active!
+      if (!isCrossfade && this.crossfadeInterval) {
+        clearInterval(this.crossfadeInterval);
+        this.crossfadeInterval = null;
+      }
+      this.activeDeckIndex = otherIdx;
+      if (!isCrossfade) {
+        if (outgoingDeck) {
+          outgoingDeck.pause();
+          outgoingDeck.src = '';
+        }
+        if (outgoingIsYouTube && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+          this.ytPlayer.pauseVideo();
+        }
+      }
+    } else if (!isCrossfade) {
       if (this.crossfadeInterval) {
         clearInterval(this.crossfadeInterval);
         this.crossfadeInterval = null;
@@ -971,7 +998,7 @@ class AudioEngine {
       }
     } else {
       // Crossfade active: switch to the alternate deck for the incoming track
-      this.activeDeckIndex = this.activeDeckIndex === 0 ? 1 : 0;
+      this.activeDeckIndex = otherIdx;
     }
 
     this.currentTrack = track;
@@ -983,17 +1010,19 @@ class AudioEngine {
       navigator.mediaSession.playbackState = 'playing';
     }
 
-    // 1. YouTube playback: First attempt ad-free direct stream via verified companion nodes
+    // 1. YouTube playback: First attempt ad-free direct stream (0ms resolution or instant preloaded deck)
     if (track.source === 'youtube' && track.youtubeId) {
       const ytId = track.youtubeId;
 
       try {
-        const directAudioUrl = await streamResolver.resolveDirectAudioStream(
-          ytId,
-          undefined,
-          track.title,
-          track.artist
-        );
+        const directAudioUrl = hasPreloadedHit
+          ? this.audio.src
+          : await streamResolver.resolveDirectAudioStream(
+              ytId,
+              undefined,
+              track.title,
+              track.artist
+            );
 
         // Guard against race conditions if user changed track while resolving
         if (this.currentTrack?.youtubeId !== ytId) return true;
@@ -1006,7 +1035,10 @@ class AudioEngine {
             this.ytPlayer.pauseVideo();
           }
 
-          this.audio.src = directAudioUrl;
+          if (!hasPreloadedHit) {
+            this.audio.src = directAudioUrl;
+          }
+          this.audio.muted = false;
           this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
           this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
           this.audio.playbackRate = this.playbackRate;
@@ -1030,20 +1062,25 @@ class AudioEngine {
               hasRetriedCompanion = true;
               try {
                 streamResolver.invalidateStreamCache(ytId);
-                // Try backup itag 251 (Opus audio stream)
-                const backupUrl = `https://yt.chocolatemoo53.com/latest_version?id=${ytId}&itag=251&local=true`;
-                this.audio.src = backupUrl;
-                this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
-                this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
-                this.audio.playbackRate = this.playbackRate;
-                await this.audio.play();
-                if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
-                  this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
+                // Only try WebM/Opus (itag 251) on browsers that actually support it (skip on iOS Safari!)
+                const supportsOpus = !!this.audio.canPlayType('audio/webm; codecs="opus"');
+                const backupUrl = supportsOpus
+                  ? streamResolver.getDirectStreamUrl(ytId, 251)
+                  : await streamResolver.resolveDirectAudioStream(ytId, 'chocolatemoo53', track.title, track.artist);
+                if (backupUrl && this.currentTrack?.youtubeId === ytId) {
+                  this.audio.src = backupUrl;
+                  this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
+                  this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
+                  this.audio.playbackRate = this.playbackRate;
+                  await this.audio.play();
+                  if (isCrossfade && (outgoingDeck || outgoingIsYouTube)) {
+                    this.startCrossfadeRamp(outgoingDeck, outgoingIsYouTube, this.audio, false, this.crossfadeDuration);
+                  }
+                  this.notifyState();
+                  return;
                 }
-                this.notifyState();
-                return;
               } catch {
-                // Proceed to fallback
+                // Proceed to YouTube IFrame fallback
               }
             }
 
@@ -1073,13 +1110,17 @@ class AudioEngine {
     // 2. Direct Audius or custom audio stream
     if (track.audioUrl) {
       this.isUsingYouTube = false;
+      this.releaseWakeLock();
       this.stopYouTubeSync();
       if (!isCrossfade && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
         this.ytPlayer.pauseVideo();
       }
 
       try {
-        this.audio.src = track.audioUrl;
+        if (!hasPreloadedHit) {
+          this.audio.src = track.audioUrl;
+        }
+        this.audio.muted = false;
         this.audio.currentTime = startTime && startTime > 0 ? startTime : 0;
         this.audio.volume = isCrossfade && (outgoingDeck || outgoingIsYouTube) ? 0 : this.volume;
         this.audio.playbackRate = this.playbackRate;
@@ -1179,39 +1220,38 @@ class AudioEngine {
   }
 
   /**
-   * Resolves and buffers the next track in memory while the current song is playing (zero disk storage).
+   * Preloads and buffers the next track directly into the inactive deck (deckB / deckA)
+   * so switching tracks happens instantaneously (< 50ms) without re-downloading.
    */
   public preloadNextTrack(track: Track): void {
     if (!track || typeof window === 'undefined') return;
-    if (this.preloadedTrackId === track.id) return;
-    this.preloadedTrackId = track.id;
+    if (this.crossfadeInterval) return; // Don't clobber outgoing deck during an active crossfade
+    const otherIdx: 0 | 1 = this.activeDeckIndex === 0 ? 1 : 0;
+    if (this.preloadedTrackId === track.id && this.preloadedDeckIndex === otherIdx) return;
 
-    const bufferUrlInMemory = (url: string) => {
+    this.preloadedTrackId = track.id;
+    this.preloadedDeckIndex = otherIdx;
+
+    const bufferInInactiveDeck = (url: string) => {
       try {
-        if (!this.preloadAudio) {
-          this.preloadAudio = new Audio();
-          this.preloadAudio.preload = 'auto';
-          this.preloadAudio.muted = true;
-          this.preloadAudio.volume = 0;
-        }
-        this.preloadAudio.src = url;
-        this.preloadAudio.load();
+        // Guard: ensure deck didn't swap while resolving
+        if (this.preloadedTrackId !== track.id || this.crossfadeInterval) return;
+        const targetDeck = otherIdx === 0 ? this.deckA : this.deckB;
+        if (targetDeck === this.audio) return;
+        targetDeck.pause();
+        targetDeck.preload = 'auto';
+        targetDeck.src = url;
+        targetDeck.load();
       } catch {
         // Ignore background preload errors
       }
     };
 
     if (track.source === 'youtube' && track.youtubeId) {
-      streamResolver
-        .resolveDirectAudioStream(track.youtubeId, undefined, track.title, track.artist)
-        .then((directUrl) => {
-          if (directUrl && this.preloadedTrackId === track.id) {
-            bufferUrlInMemory(directUrl);
-          }
-        })
-        .catch(() => {});
+      const directUrl = streamResolver.getDirectStreamUrl(track.youtubeId, 140);
+      bufferInInactiveDeck(directUrl);
     } else if (track.audioUrl) {
-      bufferUrlInMemory(track.audioUrl);
+      bufferInInactiveDeck(track.audioUrl);
     }
   }
 

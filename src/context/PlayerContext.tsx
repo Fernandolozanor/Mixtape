@@ -131,6 +131,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   scrubSpeedRef.current = scrubSpeed;
   const scrubPosRef = useRef<number>(0);
   const scrubLastSeekRef = useRef<number>(0);
+  const precomputedNextIdxRef = useRef<number | null>(null);
+
+  const scheduleNextPreload = (q: Track[], currentIdx: number, shuffle: boolean) => {
+    if (q.length <= 1 || currentIdx < 0) {
+      precomputedNextIdxRef.current = null;
+      return;
+    }
+    let nextIdx: number;
+    if (shuffle) {
+      nextIdx = Math.floor(Math.random() * q.length);
+      if (nextIdx === currentIdx) {
+        nextIdx = (currentIdx + 1) % q.length;
+      }
+    } else {
+      nextIdx = currentIdx + 1 < q.length ? currentIdx + 1 : 0;
+    }
+    precomputedNextIdxRef.current = nextIdx;
+    audioEngine.preloadNextTrack(q[nextIdx]);
+  };
 
   const saveCurrentTapeProgress = () => {
     const tapeId = activeTapeIdRef.current;
@@ -471,10 +490,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }, 150);
     }
 
-    // Preload next track
+    // Preload exact next track (works in sequential, wrap-around, and shuffle modes!)
     const currentIdx = updatedQueue.findIndex((t) => t.id === track.id);
-    if (currentIdx >= 0 && currentIdx + 1 < updatedQueue.length) {
-      audioEngine.preloadNextTrack(updatedQueue[currentIdx + 1]);
+    if (currentIdx >= 0) {
+      scheduleNextPreload(updatedQueue, currentIdx, isShuffleRef.current);
     }
   };
 
@@ -550,8 +569,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     let nextIdx = curIdx + 1;
     if (isShuffleRef.current) {
-      nextIdx = Math.floor(Math.random() * q.length);
+      const pre = precomputedNextIdxRef.current;
+      if (pre !== null && pre >= 0 && pre < q.length && pre !== curIdx) {
+        nextIdx = pre;
+      } else {
+        nextIdx = Math.floor(Math.random() * q.length);
+      }
     }
+    precomputedNextIdxRef.current = null;
 
     if (nextIdx < q.length) {
       playTrack(q[nextIdx], undefined, isCrossfade);
@@ -629,7 +654,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const toggleShuffle = () => {
-    setIsShuffle((prev) => !prev);
+    setIsShuffle((prev) => {
+      const next = !prev;
+      isShuffleRef.current = next;
+      if (queueRef.current.length > 1 && queueIndexRef.current >= 0) {
+        scheduleNextPreload(queueRef.current, queueIndexRef.current, next);
+      }
+      return next;
+    });
   };
 
   const addToQueue = (track: Track) => {

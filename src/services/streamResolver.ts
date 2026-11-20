@@ -307,10 +307,17 @@ class StreamResolver {
   }
 
   /**
+   * Direct ad-free audio stream URL for a YouTube ID (itag 140 = M4A/AAC, compatible with iOS Safari & all browsers).
+   */
+  getDirectStreamUrl(youtubeId: string, itag: 140 | 251 = 140): string {
+    return `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=${itag}&local=true`;
+  }
+
+  /**
    * Resolves direct, ad-free audio stream URL for a YouTube ID.
-   * Uses companion nodes, and if blocked by external restrictions, intelligently falls back
-   * to high-fidelity Audius stream matching track title & artist so playback routes to native
-   * HTMLAudioElement for 100% background audio and lock-screen controls.
+   * Returns the direct progressive M4A stream immediately (0ms pre-probe delay) so native
+   * HTMLAudioElement starts buffering on the very first packet. When excludeOrigin is passed
+   * (after a stream error), falls back to Audius direct stream matching title & artist.
    */
   async resolveDirectAudioStream(
     youtubeId: string,
@@ -328,20 +335,28 @@ class StreamResolver {
       }
     }
 
-    // 2. If this track is already being resolved (e.g. via preloadNextTrack), reuse the in-flight Promise
-    if (!excludeOrigin && this.pendingResolutions.has(youtubeId)) {
+    // 2. Fast path (0ms): hand the direct ad-free M4A stream straight to <audio>
+    // Avoids doing a redundant 2-4.5s fetch(GET) before <audio> opens its own connection.
+    if (!excludeOrigin) {
+      const directUrl = this.getDirectStreamUrl(youtubeId, 140);
+      this.streamCache.set(youtubeId, {
+        url: directUrl,
+        expiresAt: Date.now() + 20 * 60 * 1000,
+      });
+      return directUrl;
+    }
+
+    // 3. Fallback path (only when direct stream failed): try Audius direct audio stream
+    if (this.pendingResolutions.has(youtubeId)) {
       return this.pendingResolutions.get(youtubeId)!;
     }
 
-    const resolutionPromise = this.performStreamResolution(youtubeId, excludeOrigin, title, artist);
-    if (!excludeOrigin) {
-      this.pendingResolutions.set(youtubeId, resolutionPromise);
-    }
+    const resolutionPromise = this.performAudiusFallback(title, artist);
+    this.pendingResolutions.set(youtubeId, resolutionPromise);
 
     try {
       const resolvedUrl = await resolutionPromise;
       if (resolvedUrl) {
-        // Cache verified stream URL for 20 minutes
         this.streamCache.set(youtubeId, {
           url: resolvedUrl,
           expiresAt: Date.now() + 20 * 60 * 1000,
@@ -349,27 +364,14 @@ class StreamResolver {
       }
       return resolvedUrl;
     } finally {
-      if (!excludeOrigin) {
-        this.pendingResolutions.delete(youtubeId);
-      }
+      this.pendingResolutions.delete(youtubeId);
     }
   }
 
-  private async performStreamResolution(
-    youtubeId: string,
-    excludeOrigin?: string,
+  private async performAudiusFallback(
     title?: string,
     artist?: string
   ): Promise<string | null> {
-    // 1. Try companion streaming nodes
-    try {
-      const companionUrl = await this.performCompanionStreamRace(youtubeId, excludeOrigin);
-      if (companionUrl) return companionUrl;
-    } catch {
-      // Ignored
-    }
-
-    // 2. Fallback to Audius direct audio stream matching title and artist
     if (title) {
       try {
         const cleanTitle = title
@@ -389,7 +391,7 @@ class StreamResolver {
           const audiusEndpoint = `https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(
             q
           )}&app_name=mixtape_music&limit=5`;
-          const res = await fetch(audiusEndpoint, { signal: AbortSignal.timeout(3000) });
+          const res = await fetch(audiusEndpoint, { signal: AbortSignal.timeout(2500) });
           if (res.ok) {
             const data = await res.json();
             const items = data.data || [];
@@ -397,8 +399,7 @@ class StreamResolver {
               (item: any) => item.is_streamable !== false && !item.is_delete && item.id
             );
             if (streamable) {
-              const streamUrl = `https://discoveryprovider.audius.co/v1/tracks/${streamable.id}/stream?app_name=mixtape_music`;
-              return streamUrl;
+              return `https://discoveryprovider.audius.co/v1/tracks/${streamable.id}/stream?app_name=mixtape_music`;
             }
           }
         }
@@ -408,84 +409,6 @@ class StreamResolver {
     }
 
     return null;
-  }
-
-  private async performCompanionStreamRace(
-    youtubeId: string,
-    excludeOrigin?: string
-  ): Promise<string | null> {
-    const endpoints = [
-      `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=140&local=true`,
-      `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=251&local=true`,
-    ];
-
-    const controllers: AbortController[] = [];
-
-    try {
-      const winningUrl = await Promise.any(
-        endpoints.map(async (endpoint) => {
-          if (excludeOrigin && endpoint.includes(excludeOrigin)) {
-            throw new Error('Excluded endpoint');
-          }
-
-          const controller = new AbortController();
-          controllers.push(controller);
-          const timeoutId = setTimeout(() => controller.abort(), 4500);
-
-          try {
-            // Dispatcher probe follows 302 to active companion node and gets verified videoplayback URL
-            const res = await fetch(endpoint, {
-              method: 'GET',
-              redirect: 'follow',
-              signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-
-            const contentType = (res.headers.get('content-type') || '').toLowerCase();
-            if (
-              res.ok &&
-              res.url &&
-              (contentType.includes('audio') ||
-                contentType.includes('mp4') ||
-                contentType.includes('webm') ||
-                contentType.includes('octet-stream'))
-            ) {
-              const verifiedUrl = res.url;
-              if (res.body) {
-                res.body.cancel().catch(() => {});
-              }
-              controller.abort();
-              return verifiedUrl;
-            }
-            throw new Error(`Invalid stream response (${res.status}) from ${endpoint}`);
-          } catch (err) {
-            clearTimeout(timeoutId);
-            throw err;
-          }
-        })
-      );
-
-      for (const c of controllers) {
-        try {
-          c.abort();
-        } catch {
-          // Ignored
-        }
-      }
-
-      return winningUrl;
-    } catch {
-      for (const c of controllers) {
-        try {
-          c.abort();
-        } catch {
-          // Ignored
-        }
-      }
-    }
-
-    // Default to direct dispatcher URL for native audio loading
-    return `https://yt.chocolatemoo53.com/latest_version?id=${youtubeId}&itag=140&local=true`;
   }
 
   /**
