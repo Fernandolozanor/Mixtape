@@ -494,6 +494,43 @@ html[data-theme-mode="light"] .text-amber-300 {
   color: #92400e !important;
 }
 
+/* Emerald / Green pills & texts with high contrast on Light Mode */
+html[data-theme-mode="light"] .text-emerald-400,
+html[data-theme-mode="light"] .text-green-400 {
+  color: #047857 !important;
+}
+
+html[data-theme-mode="light"] .text-emerald-300,
+html[data-theme-mode="light"] .text-emerald-200,
+html[data-theme-mode="light"] .text-green-300,
+html[data-theme-mode="light"] .text-green-200 {
+  color: #065f46 !important;
+}
+
+html[data-theme-mode="light"] [class*="bg-emerald-500/"],
+html[data-theme-mode="light"] [class*="bg-emerald-600/"],
+html[data-theme-mode="light"] [class*="bg-green-500/"],
+html[data-theme-mode="light"] [class*="bg-green-600/"] {
+  background-color: rgba(5, 150, 105, 0.18) !important;
+  border-color: rgba(4, 120, 87, 0.5) !important;
+  color: #064e3b !important;
+}
+
+html[data-theme-mode="light"] [class*="bg-emerald-500/"] span,
+html[data-theme-mode="light"] [class*="bg-emerald-500/"] p,
+html[data-theme-mode="light"] [class*="bg-emerald-600/"] span,
+html[data-theme-mode="light"] [class*="bg-emerald-600/"] p,
+html[data-theme-mode="light"] [class*="bg-green-500/"] span,
+html[data-theme-mode="light"] [class*="bg-green-500/"] p {
+  color: #064e3b !important;
+}
+
+html[data-theme-mode="light"] [class*="bg-emerald-500/"] svg,
+html[data-theme-mode="light"] [class*="bg-emerald-600/"] svg,
+html[data-theme-mode="light"] [class*="bg-green-500/"] svg {
+  color: #047857 !important;
+}
+
 /* Glass panels and cards adapted to satin aluminum faceplates */
 html[data-theme-mode="light"] .glass-nav {
   background: linear-gradient(180deg, rgba(230, 235, 243, 0.98) 0%, rgba(216, 222, 232, 0.98) 100%) !important;
