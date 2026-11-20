@@ -105,7 +105,7 @@ export const FullScreenPlayer: React.FC<FullScreenPlayerProps> = ({ onOpenAddToP
         <img
           src={currentTrack.thumbnail}
           alt=""
-          className={`w-full h-full object-cover scale-150 blur-3xl ${
+          className={`w-full h-full object-cover scale-125 blur-2xl ${
             isLight ? 'opacity-25 brightness-105' : 'opacity-40 brightness-75'
           }`}
         />

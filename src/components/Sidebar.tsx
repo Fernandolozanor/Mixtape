@@ -31,8 +31,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { playlists, syncState, settings } = useLibrary();
   const isLight = settings.themeMode === 'light';
   const { currentTheme } = useTheme();
-  const { setFullScreenPlayerOpen } = usePlayer();
+  const { isFullScreenPlayerOpen, setFullScreenPlayerOpen } = usePlayer();
   const { isKidsMode } = useKidsMode();
+
+  // Only mount the sidebar RetroTapeDeck on desktop (>= 768px) to avoid invisible video/rAF battery drain on mobile
+  const [isDesktop, setIsDesktop] = React.useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const {
     session,
     deviceId,
@@ -203,13 +215,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* 80s Rock Cassette Deck in Lateral Sidebar */}
-        <div className="py-2">
-          <RetroTapeDeck
-            variant="sidebar"
-            onExpand={() => setFullScreenPlayerOpen(true)}
-          />
-        </div>
+        {/* 80s Rock Cassette Deck in Lateral Sidebar (mounted only on desktop when fullscreen deck is closed) */}
+        {isDesktop && !isFullScreenPlayerOpen && (
+          <div className="py-2">
+            <RetroTapeDeck
+              variant="sidebar"
+              onExpand={() => setFullScreenPlayerOpen(true)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Settings & Auth Footer - Permanently Anchored at Bottom */}

@@ -289,10 +289,14 @@ class AudioEngine {
   }
 
   /**
-   * Screen Wake Lock API: Prevents mobile & desktop displays from going to sleep or locking automatically
-   * while audio playback is active.
+   * Screen Wake Lock API: Only used when falling back to YouTube IFrame playback
+   * (native HTML5 <audio> plays cleanly with the screen locked without keeping the display on).
    */
   private async requestWakeLock() {
+    if (!this.isUsingYouTube) {
+      this.releaseWakeLock();
+      return;
+    }
     if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) return;
     try {
       if (!this.wakeLock) {
@@ -996,6 +1000,7 @@ class AudioEngine {
 
         if (directAudioUrl) {
           this.isUsingYouTube = false;
+          this.releaseWakeLock();
           this.stopYouTubeSync();
           if (!isCrossfade && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
             this.ytPlayer.pauseVideo();

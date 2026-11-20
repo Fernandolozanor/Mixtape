@@ -253,7 +253,7 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         velR = -velR * 0.35;
       }
 
-      // Direct DOM update: ultra-smooth 60fps/120fps with zero React re-render!
+      // Direct DOM update: ultra-smooth with zero React re-render!
       if (needleLeftRef.current) {
         needleLeftRef.current.style.transform = `translateX(-50%) rotate(${angleL.toFixed(2)}deg)`;
       }
@@ -261,25 +261,61 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         needleRightRef.current.style.transform = `translateX(-50%) rotate(${angleR.toFixed(2)}deg)`;
       }
 
+      // Battery saver: when paused/muted and both needles have settled at rest, stop the rAF loop completely
+      const isSettledAtRest =
+        (!isPlaying || volume === 0) &&
+        Math.abs(angleL - MIN_ANGLE) < 0.15 &&
+        Math.abs(angleR - MIN_ANGLE) < 0.15 &&
+        Math.abs(velL) < 0.5 &&
+        Math.abs(velR) < 0.5;
+
+      if (isSettledAtRest || document.hidden) {
+        animId = 0;
+        return;
+      }
+
       animId = requestAnimationFrame(updatePhysics);
     };
 
-    animId = requestAnimationFrame(updatePhysics);
+    const startLoop = () => {
+      if (!animId && !document.hidden) {
+        lastTime = performance.now();
+        animId = requestAnimationFrame(updatePhysics);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (animId) {
+          cancelAnimationFrame(animId);
+          animId = 0;
+        }
+      } else if (isPlaying && volume > 0) {
+        startLoop();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    if (vuStyle === 'analog') {
+      startLoop();
+    }
 
     return () => {
-      cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (animId) cancelAnimationFrame(animId);
     };
-  }, [isPlaying, volume]);
+  }, [isPlaying, volume, vuStyle]);
 
-  // Periodic update for LED Segment Meters (Sidebar, Lateral and Fullscreen variants)
+  // Periodic update for LED Segment Meters (only active when LED style is selected and playing)
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying || vuStyle !== 'led') {
       setVuLeft(0);
       setVuRight(0);
       return;
     }
 
     const interval = setInterval(() => {
+      if (document.hidden) return;
       const realLevels = audioEngine.getRealAudioLevels();
       if (realLevels.left >= 0 && realLevels.right >= 0) {
         // REAL AUDIO: 12 discrete LED levels directly driven by measured decibels!
@@ -294,10 +330,10 @@ export const RetroTapeDeck: React.FC<RetroTapeDeckProps> = ({
         setVuLeft(l);
         setVuRight(r);
       }
-    }, 75); // 75ms fast audio refresh for crisp LED transients
+    }, 100); // 10 FPS crisp LED refresh with lower battery footprint
 
     return () => clearInterval(interval);
-  }, [isPlaying]);
+  }, [isPlaying, vuStyle]);
 
   // Format 4-digit mechanical tape counter
   const counterStr = Math.floor(currentTime).toString().padStart(4, '0');

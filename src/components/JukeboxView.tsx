@@ -205,10 +205,19 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
 
     let running = true;
     let lastTime = performance.now();
+    let lastDrawTime = 0;
 
     const render = (time: number) => {
       if (!running) return;
-      const dt = Math.min(32, time - lastTime);
+
+      // Throttle to ~30 FPS when playing (visually smooth for floating bubbles, cuts GPU battery drain in half)
+      if (isPlaying && time - lastDrawTime < 33) {
+        animFrameRef.current = requestAnimationFrame(render);
+        return;
+      }
+      lastDrawTime = time;
+
+      const dt = Math.min(48, time - lastTime);
       lastTime = time;
 
       const ctx = canvas.getContext('2d');
@@ -292,13 +301,32 @@ export const JukeboxView: React.FC<JukeboxViewProps> = ({
         ctx.restore();
       }
 
-      animFrameRef.current = requestAnimationFrame(render);
+      // Only keep animating while actively playing and tab is visible (draws 1 static frame when paused)
+      if (isPlaying && !document.hidden) {
+        animFrameRef.current = requestAnimationFrame(render);
+      } else {
+        animFrameRef.current = null;
+      }
     };
 
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+      } else if (running && isPlaying && !animFrameRef.current) {
+        lastTime = performance.now();
+        animFrameRef.current = requestAnimationFrame(render);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
     animFrameRef.current = requestAnimationFrame(render);
 
     return () => {
       running = false;
+      document.removeEventListener('visibilitychange', handleVisibility);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
   }, [isPlaying]);
