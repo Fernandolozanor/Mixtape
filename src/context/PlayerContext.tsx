@@ -535,9 +535,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const curIdx = queueIndexRef.current;
     const rMode = repeatModeRef.current;
 
-    if (rMode === 'one' && currentTrack) {
+    const activeTrack = currentTrackRef.current;
+    if (rMode === 'one' && activeTrack) {
       if (isCrossfade) {
-        playTrack(currentTrack, undefined, true);
+        playTrack(activeTrack, undefined, true);
       } else {
         audioEngine.seek(0);
         audioEngine.play();

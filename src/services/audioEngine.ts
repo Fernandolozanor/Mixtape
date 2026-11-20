@@ -67,6 +67,7 @@ class AudioEngine {
   private crossfadeEnabled: boolean = false;
   private crossfadeDuration: number = 5;
   private crossfadeTriggeredForCurrent: boolean = false;
+  private effectiveEndTriggeredForCurrent: boolean = false;
   private crossfadeInterval: any = null;
   private onCrossfadeCallbacks: PlaybackCallback[] = [];
 
@@ -463,7 +464,8 @@ class AudioEngine {
         this.notifyState();
       }
       const cur = deck.currentTime;
-      const dur = this.resolveEffectiveDuration(deck.duration || 0, cur);
+      const rawDur = deck.duration || 0;
+      const dur = this.resolveEffectiveDuration(rawDur);
       this.checkSponsorSkip(cur);
       let buf = 0;
       if (deck.buffered.length > 0) {
@@ -472,6 +474,25 @@ class AudioEngine {
       this.updateMediaSessionPosition(cur, dur);
       this.onTimeUpdateCallbacks.forEach((cb) => cb(cur, dur, buf));
       this.checkCrossfadeTrigger(cur, dur);
+
+      // iOS Safari 2x M4A/DASH bug: deck.duration is ~2x real duration, so the native
+      // 'ended' event never fires at the real end and playback continues in silence.
+      // Detect when we reach the true end and trigger track transition immediately.
+      const isDoubledDurationBug = Number.isFinite(rawDur) && rawDur > dur + 5;
+      if (
+        isDoubledDurationBug &&
+        this.shouldBePlaying &&
+        !this.effectiveEndTriggeredForCurrent &&
+        dur > 10 &&
+        cur >= dur - 0.35
+      ) {
+        this.effectiveEndTriggeredForCurrent = true;
+        try {
+          deck.pause();
+        } catch {}
+        this.notifyState();
+        this.onTrackEndCallbacks.forEach((cb) => cb());
+      }
     });
 
     deck.addEventListener('error', (e) => {
@@ -763,7 +784,7 @@ class AudioEngine {
         this.notifyState();
 
         const cur = this.ytPlayer.getCurrentTime() || 0;
-        const dur = this.resolveEffectiveDuration(this.ytPlayer.getDuration() || 0, cur);
+        const dur = this.resolveEffectiveDuration(this.ytPlayer.getDuration() || 0);
         this.checkSponsorSkip(cur);
         const loaded = this.ytPlayer.getVideoLoadedFraction() || 0;
         const buf = dur * loaded;
@@ -921,6 +942,7 @@ class AudioEngine {
    */
   public async playTrack(track: Track, isCrossfade: boolean = false, startTime?: number): Promise<boolean> {
     this.crossfadeTriggeredForCurrent = false;
+    this.effectiveEndTriggeredForCurrent = false;
 
     // Capture outgoing state before switching
     const outgoingDeck = (!this.isUsingYouTube && this.isPlaying()) ? this.audio : null;
@@ -1271,6 +1293,9 @@ class AudioEngine {
     const effectiveDur = this.getDuration();
     if (effectiveDur > 0) {
       this.audio.currentTime = Math.max(0, Math.min(seconds, effectiveDur));
+      if (this.audio.currentTime < effectiveDur - 1.5) {
+        this.effectiveEndTriggeredForCurrent = false;
+      }
       if (this.audio.currentTime < effectiveDur - this.crossfadeDuration) {
         this.crossfadeTriggeredForCurrent = false;
       }
@@ -1341,7 +1366,7 @@ class AudioEngine {
    * bug where proxied DASH M4A/AAC streams (e.g. YouTube itag=140) report
    * audio.duration as ~2x the actual duration while currentTime runs at 1x.
    */
-  private resolveEffectiveDuration(rawDur: number, cur: number): number {
+  private resolveEffectiveDuration(rawDur: number): number {
     const expectedDur = this.currentTrack?.duration || 0;
     const validRaw = Number.isFinite(rawDur) && rawDur > 0 ? rawDur : 0;
 
@@ -1352,11 +1377,11 @@ class AudioEngine {
     if (!this.isUsingYouTube && expectedDur > 20) {
       const ratio = validRaw / expectedDur;
       // Classic iOS Safari 2x duration doubling on M4A/AAC/VBR proxy streams
-      if (ratio >= 1.85 && ratio <= 2.15 && cur <= expectedDur + 5) {
+      if (ratio >= 1.85 && ratio <= 2.15) {
         return Math.round(validRaw / 2);
       }
       // Fallback: wildly inflated duration on proxied local=true streams
-      if (ratio > 1.8 && cur <= expectedDur + 5 && this.audio.src.includes('local=true')) {
+      if (ratio > 1.8 && this.audio.src.includes('local=true')) {
         return expectedDur;
       }
     }
@@ -1366,9 +1391,9 @@ class AudioEngine {
 
   public getDuration(): number {
     if (this.isUsingYouTube && this.ytPlayer && typeof this.ytPlayer.getDuration === 'function') {
-      return this.resolveEffectiveDuration(this.ytPlayer.getDuration() || 0, this.getCurrentTime());
+      return this.resolveEffectiveDuration(this.ytPlayer.getDuration() || 0);
     }
-    return this.resolveEffectiveDuration(this.audio.duration || 0, this.getCurrentTime());
+    return this.resolveEffectiveDuration(this.audio.duration || 0);
   }
 
   public getCurrentTrack(): Track | null {
