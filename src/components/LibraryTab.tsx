@@ -37,6 +37,8 @@ import { JukeboxView } from './JukeboxView';
 import { bpmService } from '../services/bpmService';
 import { tapeProgressService, type TapeProgress } from '../services/tapeProgressService';
 import { SourceBadge } from './SourceBadge';
+import { LetterSeparator } from './LetterSeparator';
+import { compareAlphabetical, getAlphabetLetter, groupByLetter } from '../utils/alphabetical';
 import type { Playlist, PodcastShow, Track } from '../types/music';
 
 interface GenreDefinition {
@@ -213,6 +215,9 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
   // Library view mode: 'shelves' (Estanterías 3D de Cintas arriba y Vinilos Cover Flow abajo) vs 'lists'
   const [libraryViewMode, setLibraryViewMode] = useState<'shelves' | 'lists'>('shelves');
   const [listFilter, setListFilter] = useState<'all' | 'tapes' | 'vinyls'>('all');
+  const [favoritesSortBy, setFavoritesSortBy] = useState<'default' | 'title' | 'artist'>('default');
+  const [playlistSortBy, setPlaylistSortBy] = useState<'default' | 'title' | 'artist'>('default');
+  const [listSortBy, setListSortBy] = useState<'name' | 'artist' | 'recent'>('name');
 
   // Helper to identify saved vinyl albums
   const isVinylPlaylist = (p: Playlist) => {
@@ -253,8 +258,13 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         }
       }
     }
-    return Array.from(artistSet).sort((a, b) => a.localeCompare(b));
+    return Array.from(artistSet).sort((a, b) => compareAlphabetical(a, b));
   }, [playlists, likedTracks]);
+
+  const groupedArtists = useMemo(
+    () => groupByLetter(availableArtists, (artist) => artist),
+    [availableArtists]
+  );
 
   const matchesPlaylistFilter = (playlist: Playlist): boolean => {
     const normQuery = normalizeText(searchQuery);
@@ -373,7 +383,7 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
       if (results.length >= 24) break;
     }
 
-    return results;
+    return results.sort((a, b) => compareAlphabetical(a.track.title, b.track.title));
   }, [playlists, hasActiveFilter, searchQuery, selectedGenre, selectedArtist]);
 
   // Filtered favorite tracks for the Favorites view
@@ -823,101 +833,159 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {filteredLikedTracks.map((track, idx) => {
-              const bpm = bpmService.getTrackBpm(track);
-              const tier = bpmService.getRpmTier(bpm);
-              return (
-              <div
-                key={track.id}
-                onClick={() => !isEditingMode && playTrack(track, filteredLikedTracks, false, undefined, 'favorites')}
-                className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
-                  isEditingMode ? 'cursor-default' : 'cursor-pointer'
-                } ${
-                  currentTrack?.id === track.id && !isEditingMode
-                    ? 'border shadow-md'
-                    : 'glass-card glass-card-hover'
-                }`}
-                style={
-                  currentTrack?.id === track.id && !isEditingMode
-                    ? {
-                        backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
-                        borderColor: `rgba(${currentTheme.rgb}, 0.3)`,
-                      }
-                    : {}
-                }
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <span className="text-xs text-zinc-500 w-5 text-center font-mono">
-                    {idx + 1}
-                  </span>
-                  <img
-                    src={track.thumbnail}
-                    alt={track.title}
-                    className="w-11 h-11 rounded-xl object-cover shrink-0"
-                  />
-                  <div className="overflow-hidden">
-                    <p
-                      className="text-sm font-semibold truncate"
-                      style={{
-                        color:
-                          currentTrack?.id === track.id && !isEditingMode
-                            ? isLight
-                              ? '#b45309'
-                              : currentTheme.accent
-                            : isLight
-                            ? '#0f172a'
-                            : '#ffffff',
-                      }}
-                    >
-                      {track.title}
-                    </p>
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                      <span className="truncate">{track.artist}</span>
-                      <span className="text-zinc-600">•</span>
-                      <SourceBadge source={track.source} size="xs" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-mono-retro font-bold px-2 py-0.5 rounded border hidden sm:inline-block ${tier.badgeClass}`}>
-                    {bpm} BPM • {tier.rpmLabel}
-                  </span>
-                  {isEditingMode ? (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        disabled={idx === 0}
-                        onClick={() => reorderLikedTracks(idx, idx - 1)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-20 transition"
-                        title="Subir"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        disabled={idx === likedTracks.length - 1}
-                        onClick={() => reorderLikedTracks(idx, idx + 1)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-20 transition"
-                        title="Bajar"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => removeLikedTrack(track.id)}
-                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition ml-1"
-                        title="Quitar de favoritos"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-zinc-500 mr-2">
-                      {formatDuration(track.duration)}
-                    </span>
-                  )}
-                </div>
+            {!isEditingMode && filteredLikedTracks.length > 1 && (
+              <div className="flex items-center justify-end gap-1.5 pb-1">
+                <span className={`text-[10px] font-mono uppercase font-bold ${isLight ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  Orden:
+                </span>
+                {([
+                  { id: 'default', label: 'Guardado' },
+                  { id: 'title', label: 'Título A-Z' },
+                  { id: 'artist', label: 'Artista A-Z' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setFavoritesSortBy(opt.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition cursor-pointer border ${
+                      favoritesSortBy === opt.id
+                        ? 'bg-amber-400 text-black border-amber-400 shadow-sm'
+                        : isLight
+                        ? 'bg-[#a4aebb] text-slate-800 border-[#7c899a] hover:bg-[#b0bac7]'
+                        : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
               </div>
-            );
-            })}
+            )}
+
+            {(() => {
+              const activeFavSort = isEditingMode ? 'default' : favoritesSortBy;
+              const orderedFavorites =
+                activeFavSort === 'title'
+                  ? [...filteredLikedTracks].sort((a, b) => compareAlphabetical(a.title, b.title))
+                  : activeFavSort === 'artist'
+                  ? [...filteredLikedTracks].sort(
+                      (a, b) => compareAlphabetical(a.artist, b.artist) || compareAlphabetical(a.title, b.title)
+                    )
+                  : filteredLikedTracks;
+
+              return orderedFavorites.map((track, idx) => {
+                const bpm = bpmService.getTrackBpm(track);
+                const tier = bpmService.getRpmTier(bpm);
+                const isAlpha = activeFavSort === 'title' || activeFavSort === 'artist';
+                const currentLetter = isAlpha
+                  ? getAlphabetLetter(activeFavSort === 'artist' ? track.artist : track.title)
+                  : '';
+                const prevLetter =
+                  isAlpha && idx > 0
+                    ? getAlphabetLetter(
+                        activeFavSort === 'artist'
+                          ? orderedFavorites[idx - 1].artist
+                          : orderedFavorites[idx - 1].title
+                      )
+                    : '';
+                const showLetterHeader = isAlpha && currentLetter !== prevLetter;
+
+                return (
+                  <React.Fragment key={track.id}>
+                    {showLetterHeader && (
+                      <LetterSeparator letter={currentLetter} isLight={isLight} />
+                    )}
+                    <div
+                      onClick={() => !isEditingMode && playTrack(track, orderedFavorites, false, undefined, 'favorites')}
+                      className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
+                        isEditingMode ? 'cursor-default' : 'cursor-pointer'
+                      } ${
+                        currentTrack?.id === track.id && !isEditingMode
+                          ? 'border shadow-md'
+                          : 'glass-card glass-card-hover'
+                      }`}
+                      style={
+                        currentTrack?.id === track.id && !isEditingMode
+                          ? {
+                              backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
+                              borderColor: `rgba(${currentTheme.rgb}, 0.3)`,
+                            }
+                          : {}
+                      }
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <span className="text-xs text-zinc-500 w-5 text-center font-mono">
+                          {idx + 1}
+                        </span>
+                        <img
+                          src={track.thumbnail}
+                          alt={track.title}
+                          className="w-11 h-11 rounded-xl object-cover shrink-0"
+                        />
+                        <div className="overflow-hidden">
+                          <p
+                            className="text-sm font-semibold truncate"
+                            style={{
+                              color:
+                                currentTrack?.id === track.id && !isEditingMode
+                                  ? isLight
+                                    ? '#b45309'
+                                    : currentTheme.accent
+                                  : isLight
+                                  ? '#0f172a'
+                                  : '#ffffff',
+                            }}
+                          >
+                            {track.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                            <span className="truncate">{track.artist}</span>
+                            <span className="text-zinc-600">•</span>
+                            <SourceBadge source={track.source} size="xs" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-mono-retro font-bold px-2 py-0.5 rounded border hidden sm:inline-block ${tier.badgeClass}`}>
+                          {bpm} BPM • {tier.rpmLabel}
+                        </span>
+                        {isEditingMode ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              disabled={idx === 0}
+                              onClick={() => reorderLikedTracks(idx, idx - 1)}
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-20 transition"
+                              title="Subir"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              disabled={idx === likedTracks.length - 1}
+                              onClick={() => reorderLikedTracks(idx, idx + 1)}
+                              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 disabled:opacity-20 transition"
+                              title="Bajar"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => removeLikedTrack(track.id)}
+                              className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition ml-1"
+                              title="Quitar de favoritos"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-zinc-500 mr-2">
+                            {formatDuration(track.duration)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              });
+            })()}
           </div>
         )}
       </div>
@@ -1075,14 +1143,40 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
         })()}
 
         {selectedPlaylist.tracks.length > 0 && (
-          <div className="flex items-center justify-between text-xs text-zinc-400 font-mono px-1">
+          <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-zinc-400 font-mono px-1">
             <span>{selectedPlaylist.tracks.length} canciones</span>
-            {isEditingMode && (
+            {isEditingMode ? (
               <span className="text-amber-300 flex items-center gap-1 font-semibold">
                 <GripVertical className="w-3.5 h-3.5 text-amber-400" />
                 Arrastra las canciones o usa las flechas para colocarlas
               </span>
-            )}
+            ) : selectedPlaylist.tracks.length > 1 ? (
+              <div className="flex items-center gap-1.5">
+                <span className={`text-[10px] uppercase font-bold ${isLight ? 'text-slate-600' : 'text-zinc-500'}`}>
+                  Orden:
+                </span>
+                {([
+                  { id: 'default', label: 'Original' },
+                  { id: 'title', label: 'Título A-Z' },
+                  { id: 'artist', label: 'Artista A-Z' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setPlaylistSortBy(opt.id)}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition cursor-pointer border ${
+                      playlistSortBy === opt.id
+                        ? 'bg-amber-400 text-black border-amber-400 shadow-sm'
+                        : isLight
+                        ? 'bg-[#a4aebb] text-slate-800 border-[#7c899a] hover:bg-[#b0bac7]'
+                        : 'bg-white/5 text-zinc-400 border-white/10 hover:text-white'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -1094,158 +1188,187 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
           </div>
         ) : (
           <div className="space-y-1.5">
-            {selectedPlaylist.tracks.map((track, idx) => {
-              const bpm = bpmService.getTrackBpm(track);
-              const tier = bpmService.getRpmTier(bpm);
-              const isDragging = draggedIndex === idx;
-              const isOver = dragOverIndex === idx;
+            {(() => {
+              const activePlSort = isEditingMode ? 'default' : playlistSortBy;
+              const orderedPlaylistTracks =
+                activePlSort === 'title'
+                  ? [...selectedPlaylist.tracks].sort((a, b) => compareAlphabetical(a.title, b.title))
+                  : activePlSort === 'artist'
+                  ? [...selectedPlaylist.tracks].sort(
+                      (a, b) => compareAlphabetical(a.artist, b.artist) || compareAlphabetical(a.title, b.title)
+                    )
+                  : selectedPlaylist.tracks;
 
-              return (
-              <div
-                key={`${track.id}-${idx}`}
-                draggable={isEditingMode}
-                onDragStart={() => {
-                  if (isEditingMode) setDraggedIndex(idx);
-                }}
-                onDragOver={(e) => {
-                  if (isEditingMode) {
-                    e.preventDefault();
-                    setDragOverIndex(idx);
-                  }
-                }}
-                onDragLeave={() => {
-                  if (dragOverIndex === idx) setDragOverIndex(null);
-                }}
-                onDrop={(e) => {
-                  if (isEditingMode && draggedIndex !== null) {
-                    e.preventDefault();
-                    if (draggedIndex !== idx) {
-                      reorderPlaylistTracks(selectedPlaylist.id, draggedIndex, idx);
-                    }
-                    setDraggedIndex(null);
-                    setDragOverIndex(null);
-                  }
-                }}
-                onDragEnd={() => {
-                  setDraggedIndex(null);
-                  setDragOverIndex(null);
-                }}
-                onClick={() =>
-                  !isEditingMode &&
-                  playTrack(
-                    track,
-                    selectedPlaylist.tracks,
-                    false,
-                    isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape',
-                    null,
-                    selectedPlaylist.id
-                  )
-                }
-                className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
-                  isEditingMode ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-pointer'
-                } ${
-                  isDragging ? 'opacity-40 scale-[0.98]' : ''
-                } ${
-                  isOver ? 'border-2 border-amber-400 bg-amber-400/10' : ''
-                } ${
-                  currentTrack?.id === track.id && !isEditingMode
-                    ? 'border shadow-md'
-                    : 'glass-card glass-card-hover'
-                }`}
-                style={
-                  currentTrack?.id === track.id && !isEditingMode
-                    ? {
-                        backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
-                        borderColor: `rgba(${currentTheme.rgb}, 0.3)`,
-                      }
-                    : {}
-                }
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  {isEditingMode ? (
-                    <div className="flex items-center gap-1 text-amber-400 cursor-grab shrink-0">
-                      <GripVertical className="w-5 h-5 text-amber-400/80" />
-                      <span className="text-xs text-amber-300 font-mono font-bold w-4 text-center">
-                        {idx + 1}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-zinc-500 w-5 text-center font-mono shrink-0">
-                      {idx + 1}
-                    </span>
-                  )}
+              return orderedPlaylistTracks.map((track, idx) => {
+                const bpm = bpmService.getTrackBpm(track);
+                const tier = bpmService.getRpmTier(bpm);
+                const isDragging = draggedIndex === idx;
+                const isOver = dragOverIndex === idx;
+                const isAlpha = activePlSort === 'title' || activePlSort === 'artist';
+                const currentLetter = isAlpha
+                  ? getAlphabetLetter(activePlSort === 'artist' ? track.artist : track.title)
+                  : '';
+                const prevLetter =
+                  isAlpha && idx > 0
+                    ? getAlphabetLetter(
+                        activePlSort === 'artist'
+                          ? orderedPlaylistTracks[idx - 1].artist
+                          : orderedPlaylistTracks[idx - 1].title
+                      )
+                    : '';
+                const showLetterHeader = isAlpha && currentLetter !== prevLetter;
 
-                  <img
-                    src={track.thumbnail}
-                    alt={track.title}
-                    className="w-11 h-11 rounded-xl object-cover shrink-0 pointer-events-none"
-                  />
-                  <div className="overflow-hidden">
-                    <p
-                      className="text-sm font-semibold truncate"
-                      style={{
-                        color:
-                          currentTrack?.id === track.id && !isEditingMode
-                            ? isLight
-                              ? '#b45309'
-                              : currentTheme.accent
-                            : isLight
-                            ? '#0f172a'
-                            : '#ffffff',
+                return (
+                  <React.Fragment key={`${track.id}-${idx}`}>
+                    {showLetterHeader && (
+                      <LetterSeparator letter={currentLetter} isLight={isLight} />
+                    )}
+                    <div
+                      draggable={isEditingMode}
+                      onDragStart={() => {
+                        if (isEditingMode) setDraggedIndex(idx);
                       }}
+                      onDragOver={(e) => {
+                        if (isEditingMode) {
+                          e.preventDefault();
+                          setDragOverIndex(idx);
+                        }
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverIndex === idx) setDragOverIndex(null);
+                      }}
+                      onDrop={(e) => {
+                        if (isEditingMode && draggedIndex !== null) {
+                          e.preventDefault();
+                          if (draggedIndex !== idx) {
+                            reorderPlaylistTracks(selectedPlaylist.id, draggedIndex, idx);
+                          }
+                          setDraggedIndex(null);
+                          setDragOverIndex(null);
+                        }
+                      }}
+                      onDragEnd={() => {
+                        setDraggedIndex(null);
+                        setDragOverIndex(null);
+                      }}
+                      onClick={() =>
+                        !isEditingMode &&
+                        playTrack(
+                          track,
+                          orderedPlaylistTracks,
+                          false,
+                          isVinylPlaylist(selectedPlaylist) ? 'vinyl' : 'tape',
+                          null,
+                          selectedPlaylist.id
+                        )
+                      }
+                      className={`flex items-center justify-between p-2.5 rounded-2xl transition ${
+                        isEditingMode ? 'cursor-grab active:cursor-grabbing select-none' : 'cursor-pointer'
+                      } ${
+                        isDragging ? 'opacity-40 scale-[0.98]' : ''
+                      } ${
+                        isOver ? 'border-2 border-amber-400 bg-amber-400/10' : ''
+                      } ${
+                        currentTrack?.id === track.id && !isEditingMode
+                          ? 'border shadow-md'
+                          : 'glass-card glass-card-hover'
+                      }`}
+                      style={
+                        currentTrack?.id === track.id && !isEditingMode
+                          ? {
+                              backgroundColor: `rgba(${currentTheme.rgb}, 0.15)`,
+                              borderColor: `rgba(${currentTheme.rgb}, 0.3)`,
+                            }
+                          : {}
+                      }
                     >
-                      {track.title}
-                    </p>
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
-                      <span className="truncate">{track.artist}</span>
-                      <span className="text-zinc-600">•</span>
-                      <SourceBadge source={track.source} size="xs" />
-                    </div>
-                  </div>
-                </div>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {isEditingMode ? (
+                          <div className="flex items-center gap-1 text-amber-400 cursor-grab shrink-0">
+                            <GripVertical className="w-5 h-5 text-amber-400/80" />
+                            <span className="text-xs text-amber-300 font-mono font-bold w-4 text-center">
+                              {idx + 1}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-zinc-500 w-5 text-center font-mono shrink-0">
+                            {idx + 1}
+                          </span>
+                        )}
 
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] font-mono-retro font-bold px-2 py-0.5 rounded border hidden sm:inline-block ${tier.badgeClass}`}>
-                    {bpm} BPM • {tier.rpmLabel}
-                  </span>
-                  {isEditingMode ? (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => reorderPlaylistTracks(selectedPlaylist.id, idx, idx - 1)}
-                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-20 transition active:scale-95"
-                        title="Mover arriba"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={idx === selectedPlaylist.tracks.length - 1}
-                        onClick={() => reorderPlaylistTracks(selectedPlaylist.id, idx, idx + 1)}
-                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-20 transition active:scale-95"
-                        title="Mover abajo"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeTrackFromPlaylist(selectedPlaylist.id, track.id)}
-                        className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/30 text-red-400 transition ml-1 active:scale-95"
-                        title="Quitar de la lista"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <img
+                          src={track.thumbnail}
+                          alt={track.title}
+                          className="w-11 h-11 rounded-xl object-cover shrink-0 pointer-events-none"
+                        />
+                        <div className="overflow-hidden">
+                          <p
+                            className="text-sm font-semibold truncate"
+                            style={{
+                              color:
+                                currentTrack?.id === track.id && !isEditingMode
+                                  ? isLight
+                                    ? '#b45309'
+                                    : currentTheme.accent
+                                  : isLight
+                                  ? '#0f172a'
+                                  : '#ffffff',
+                            }}
+                          >
+                            {track.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-400 truncate">
+                            <span className="truncate">{track.artist}</span>
+                            <span className="text-zinc-600">•</span>
+                            <SourceBadge source={track.source} size="xs" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-mono-retro font-bold px-2 py-0.5 rounded border hidden sm:inline-block ${tier.badgeClass}`}>
+                          {bpm} BPM • {tier.rpmLabel}
+                        </span>
+                        {isEditingMode ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              disabled={idx === 0}
+                              onClick={() => reorderPlaylistTracks(selectedPlaylist.id, idx, idx - 1)}
+                              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-20 transition active:scale-95"
+                              title="Mover arriba"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx === selectedPlaylist.tracks.length - 1}
+                              onClick={() => reorderPlaylistTracks(selectedPlaylist.id, idx, idx + 1)}
+                              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-20 transition active:scale-95"
+                              title="Mover abajo"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeTrackFromPlaylist(selectedPlaylist.id, track.id)}
+                              className="p-1.5 rounded-lg bg-red-500/15 hover:bg-red-500/30 text-red-400 transition ml-1 active:scale-95"
+                              title="Quitar de la lista"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-zinc-500 mr-2 font-mono">
+                            {formatDuration(track.duration)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <span className="text-xs text-zinc-500 mr-2 font-mono">
-                      {formatDuration(track.duration)}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-            })}
+                  </React.Fragment>
+                );
+              });
+            })()}
           </div>
         )}
 
@@ -1551,10 +1674,14 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
                 }`}
               >
                 <option value="all">Todos los artistas ({availableArtists.length})</option>
-                {availableArtists.map((artist) => (
-                  <option key={artist} value={artist}>
-                    {artist}
-                  </option>
+                {groupedArtists.map((group) => (
+                  <optgroup key={group.letter} label={`── ${group.letter} ──`}>
+                    {group.items.map((artist) => (
+                      <option key={artist} value={artist}>
+                        {artist}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -1616,29 +1743,42 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
 
           {showMatchingTracks && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
-              {matchingTracks.map(({ track, playlistName, mediaType }, idx) => (
-                <div
-                  key={`${track.id}_${idx}`}
-                  onClick={() => playTrack(track, undefined, false, mediaType)}
-                  className="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-amber-500/30 transition cursor-pointer group"
-                >
-                  <div className="min-w-0 pr-2">
-                    <p className="text-xs font-bold text-white truncate group-hover:text-amber-300">
-                      {track.title}
-                    </p>
-                    <p className="text-[10px] text-zinc-400 truncate">
-                      {track.artist}
-                    </p>
-                    <span className="inline-block text-[9px] font-mono text-amber-400/80 truncate">
-                      {mediaType === 'vinyl' ? '💽 ' : '📼 '} {playlistName}
-                    </span>
-                  </div>
+              {matchingTracks.map(({ track, playlistName, mediaType }, idx) => {
+                const currentLetter = getAlphabetLetter(track.title);
+                const prevLetter =
+                  idx > 0 ? getAlphabetLetter(matchingTracks[idx - 1].track.title) : '';
+                return (
+                  <React.Fragment key={`${track.id}_${idx}`}>
+                    {currentLetter !== prevLetter && (
+                      <LetterSeparator
+                        letter={currentLetter}
+                        isLight={isLight}
+                        className="col-span-full"
+                      />
+                    )}
+                    <div
+                      onClick={() => playTrack(track, undefined, false, mediaType)}
+                      className="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-amber-500/30 transition cursor-pointer group"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="text-xs font-bold text-white truncate group-hover:text-amber-300">
+                          {track.title}
+                        </p>
+                        <p className="text-[10px] text-zinc-400 truncate">
+                          {track.artist}
+                        </p>
+                        <span className="inline-block text-[9px] font-mono text-amber-400/80 truncate">
+                          {mediaType === 'vinyl' ? '💽 ' : '📼 '} {playlistName}
+                        </span>
+                      </div>
 
-                  <div className="w-7 h-7 rounded-lg bg-amber-400 text-black flex items-center justify-center shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-105 transition shadow">
-                    <Play className="w-3.5 h-3.5 fill-black ml-0.5" />
-                  </div>
-                </div>
-              ))}
+                      <div className="w-7 h-7 rounded-lg bg-amber-400 text-black flex items-center justify-center shrink-0 opacity-80 group-hover:opacity-100 group-hover:scale-105 transition shadow">
+                        <Play className="w-3.5 h-3.5 fill-black ml-0.5" />
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1775,15 +1915,38 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               </button>
             </div>
 
-            {vinylPlaylists.length === 0 && listFilter === 'vinyls' && (
-              <button
-                type="button"
-                onClick={handleLoadDemoVinyls}
-                className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
-              >
-                + Cargar 3 Vinilos Clásicos (Demo)
-              </button>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
+                {([
+                  { id: 'name', label: 'A-Z' },
+                  { id: 'artist', label: 'Artista A-Z' },
+                  { id: 'recent', label: 'Recientes' },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setListSortBy(opt.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition cursor-pointer ${
+                      listSortBy === opt.id
+                        ? 'bg-amber-400 text-black shadow-sm'
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {vinylPlaylists.length === 0 && listFilter === 'vinyls' && (
+                <button
+                  type="button"
+                  onClick={handleLoadDemoVinyls}
+                  className="text-xs font-mono font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                >
+                  + Cargar 3 Vinilos Clásicos (Demo)
+                </button>
+              )}
+            </div>
           </div>
 
           {displayedListPlaylists.length === 0 ? (
@@ -1823,65 +1986,105 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {displayedListPlaylists.map((playlist) => {
-                const isItemVinyl = isVinylPlaylist(playlist);
-                return (
-                  <div
-                    key={playlist.id}
-                    onClick={() => setSelectedPlaylistId(playlist.id)}
-                    className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
-                  >
-                    {/* Media Cover Window */}
-                    <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
-                      {playlist.coverUrl ? (
-                        <img
-                          src={playlist.coverUrl}
-                          alt={playlist.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                      ) : playlist.tracks[0]?.thumbnail ? (
-                        <img
-                          src={playlist.tracks[0].thumbnail}
-                          alt={playlist.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                      ) : (
-                        <ListMusic className="w-10 h-10 text-zinc-600" />
-                      )}
+            <div className="space-y-4">
+              {(() => {
+                const orderedPlaylists =
+                  listSortBy === 'name'
+                    ? [...displayedListPlaylists].sort((a, b) => compareAlphabetical(a.name, b.name))
+                    : listSortBy === 'artist'
+                    ? [...displayedListPlaylists].sort(
+                        (a, b) =>
+                          compareAlphabetical(
+                            a.artist || a.tracks[0]?.artist || a.name,
+                            b.artist || b.tracks[0]?.artist || b.name
+                          ) || compareAlphabetical(a.name, b.name)
+                      )
+                    : displayedListPlaylists;
 
-                      {/* Format Badge */}
-                      <div className="absolute top-1.5 left-1.5 bg-black/85 text-amber-300 font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow border border-amber-400/30">
-                        {isItemVinyl ? '💽 VINILO' : '📼 CINTA'}
+                const renderCard = (playlist: Playlist) => {
+                  const isItemVinyl = isVinylPlaylist(playlist);
+                  return (
+                    <div
+                      key={playlist.id}
+                      onClick={() => setSelectedPlaylistId(playlist.id)}
+                      className="retro-tape-chassis p-3.5 rounded-2xl cursor-pointer hover:border-amber-500/40 transition flex flex-col group relative overflow-hidden border border-white/10"
+                    >
+                      {/* Media Cover Window */}
+                      <div className="w-full aspect-[4/3] rounded-xl bg-black/60 mb-2.5 overflow-hidden flex items-center justify-center relative shadow-inner border border-white/10">
+                        {playlist.coverUrl ? (
+                          <img
+                            src={playlist.coverUrl}
+                            alt={playlist.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                        ) : playlist.tracks[0]?.thumbnail ? (
+                          <img
+                            src={playlist.tracks[0].thumbnail}
+                            alt={playlist.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                        ) : (
+                          <ListMusic className="w-10 h-10 text-zinc-600" />
+                        )}
+
+                        {/* Format Badge */}
+                        <div className="absolute top-1.5 left-1.5 bg-black/85 text-amber-300 font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow border border-amber-400/30">
+                          {isItemVinyl ? '💽 VINILO' : '📼 CINTA'}
+                        </div>
+
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                          <Play className="w-6 h-6 fill-white text-white" />
+                        </div>
                       </div>
 
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                        <Play className="w-6 h-6 fill-white text-white" />
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="overflow-hidden">
+                          <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
+                          <p className="text-xs text-zinc-400 truncate">
+                            {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPlaylistToEdit(playlist);
+                          }}
+                          className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition shrink-0"
+                          title="Editar lista"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
+                  );
+                };
 
-                    <div className="flex items-start justify-between gap-1">
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-semibold text-white truncate">{playlist.name}</p>
-                        <p className="text-xs text-zinc-400 truncate">
-                          {playlist.tracks.length} {playlist.tracks.length === 1 ? 'canción' : 'canciones'}
-                        </p>
-                      </div>
+                if (listSortBy === 'recent') {
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {orderedPlaylists.map(renderCard)}
+                    </div>
+                  );
+                }
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setPlaylistToEdit(playlist);
-                        }}
-                        className="p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition shrink-0"
-                        title="Editar lista"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
+                const groups = groupByLetter(orderedPlaylists, (p) =>
+                  listSortBy === 'artist' ? p.artist || p.tracks[0]?.artist || p.name : p.name
+                );
+
+                return groups.map((group) => (
+                  <div key={group.letter} className="space-y-2.5">
+                    <LetterSeparator
+                      letter={group.letter}
+                      count={group.items.length}
+                      isLight={isLight}
+                    />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {group.items.map(renderCard)}
                     </div>
                   </div>
-                );
-              })}
+                ));
+              })()}
             </div>
           )}
         </div>
@@ -1908,43 +2111,63 @@ export const LibraryTab: React.FC<LibraryTabProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-            {followedPodcasts.map((show) => (
-              <div
-                key={show.id}
-                onClick={() => setSelectedPodcastShow(show)}
-                className={`group cursor-pointer p-3 rounded-2xl border transition flex flex-col select-none ${
-                  isLight
-                    ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] hover:from-[#c5cdd8] hover:to-[#b6c0cd] border-[#8591a2] text-slate-900 hover:border-indigo-600 shadow-md'
-                    : 'retro-tape-chassis border-white/10 hover:border-indigo-400/50 shadow-lg'
-                }`}
-              >
-                <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow bg-black/40 mb-2">
-                  {show.artwork ? (
-                    <img
-                      src={show.artwork}
-                      alt={show.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+          <div className="space-y-3">
+            {(() => {
+              const sortedPodcasts = [...followedPodcasts].sort((a, b) =>
+                compareAlphabetical(a.title, b.title)
+              );
+              const groups = groupByLetter(sortedPodcasts, (show) => show.title);
+
+              return groups.map((group) => (
+                <div key={group.letter} className="space-y-2.5">
+                  {sortedPodcasts.length > 1 && (
+                    <LetterSeparator
+                      letter={group.letter}
+                      count={group.items.length}
+                      isLight={isLight}
                     />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-indigo-950/60">
-                      <Podcast className="w-8 h-8 text-indigo-400" />
-                    </div>
                   )}
-                  <div className="absolute top-1.5 left-1.5 bg-indigo-600/95 text-white font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow">
-                    🎙️ PODCAST
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+                    {group.items.map((show) => (
+                      <div
+                        key={show.id}
+                        onClick={() => setSelectedPodcastShow(show)}
+                        className={`group cursor-pointer p-3 rounded-2xl border transition flex flex-col select-none ${
+                          isLight
+                            ? 'bg-gradient-to-b from-[#bcc4d0] to-[#afb8c5] hover:from-[#c5cdd8] hover:to-[#b6c0cd] border-[#8591a2] text-slate-900 hover:border-indigo-600 shadow-md'
+                            : 'retro-tape-chassis border-white/10 hover:border-indigo-400/50 shadow-lg'
+                        }`}
+                      >
+                        <div className="w-full aspect-square rounded-xl overflow-hidden relative shadow bg-black/40 mb-2">
+                          {show.artwork ? (
+                            <img
+                              src={show.artwork}
+                              alt={show.title}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-indigo-950/60">
+                              <Podcast className="w-8 h-8 text-indigo-400" />
+                            </div>
+                          )}
+                          <div className="absolute top-1.5 left-1.5 bg-indigo-600/95 text-white font-mono text-[8px] font-black px-1.5 py-0.5 rounded shadow">
+                            🎙️ PODCAST
+                          </div>
+                        </div>
+                        <p className={`text-xs sm:text-sm font-bold truncate ${isLight ? 'text-slate-950' : 'text-white'}`}>
+                          {show.title}
+                        </p>
+                        <p className={`text-[11px] font-mono truncate ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
+                          {show.author}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <p className={`text-xs sm:text-sm font-bold truncate ${isLight ? 'text-slate-950' : 'text-white'}`}>
-                  {show.title}
-                </p>
-                <p className={`text-[11px] font-mono truncate ${isLight ? 'text-slate-700' : 'text-zinc-400'}`}>
-                  {show.author}
-                </p>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
       )}

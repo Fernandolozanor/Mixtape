@@ -39,6 +39,8 @@ import { ReggaetonPrankModal } from './ReggaetonPrankModal';
 import { AlbumDetailModal } from './AlbumDetailModal';
 import { MultiAlbumRecordModal } from './MultiAlbumRecordModal';
 import { PodcastDetailModal } from './PodcastDetailModal';
+import { LetterSeparator } from './LetterSeparator';
+import { compareAlphabetical, getAlphabetLetter } from '../utils/alphabetical';
 import { isReggaetonTag, shouldTriggerReggaetonJoke } from '../services/prankService';
 
 const PODCAST_TAGS = [
@@ -81,7 +83,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
 }) => {
   const [query, setQuery] = useState(initialQuery);
   const [filterSource, setFilterSource] = useState<AudioSourceType | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title'>('views');
+  const [sortBy, setSortBy] = useState<'views' | 'duration' | 'title' | 'artist'>('views');
   const [results, setResults] = useState<Track[]>([]);
   const [brokenIds, setBrokenIds] = useState<Set<string>>(new Set());
   const [isSearching, setIsSearching] = useState(false);
@@ -391,7 +393,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         return (b.duration || 0) - (a.duration || 0);
       }
       if (sortBy === 'title') {
-        return a.title.localeCompare(b.title);
+        return compareAlphabetical(a.title, b.title);
+      }
+      if (sortBy === 'artist') {
+        return compareAlphabetical(a.artist, b.artist) || compareAlphabetical(a.title, b.title);
       }
       return 0;
     });
@@ -725,6 +730,9 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               </option>
               <option value="title" className={isLight ? 'bg-[#cbd2dc] text-slate-900' : 'bg-zinc-900 text-white'}>
                 Título (A-Z)
+              </option>
+              <option value="artist" className={isLight ? 'bg-[#cbd2dc] text-slate-900' : 'bg-zinc-900 text-white'}>
+                Artista / Grupo (A-Z)
               </option>
             </select>
           </div>
@@ -1211,11 +1219,27 @@ export const SearchTab: React.FC<SearchTabProps> = ({
               const isSelected = selectedIds.has(track.id);
               const liked = isLiked(track.id);
               const isTop3 = index < 3 && sortBy === 'views';
+              const isAlphaSort = sortBy === 'title' || sortBy === 'artist';
+              const currentLetter = isAlphaSort
+                ? getAlphabetLetter(sortBy === 'artist' ? track.artist : track.title)
+                : '';
+              const prevLetter =
+                isAlphaSort && index > 0
+                  ? getAlphabetLetter(
+                      sortBy === 'artist'
+                        ? visibleResults[index - 1].artist
+                        : visibleResults[index - 1].title
+                    )
+                  : '';
+              const showLetterHeader = isAlphaSort && currentLetter !== prevLetter;
 
               return (
-                <div
-                  key={`${track.id}-${index}`}
-                  onClick={() => {
+                <React.Fragment key={`${track.id}-${index}`}>
+                  {showLetterHeader && (
+                    <LetterSeparator letter={currentLetter} isLight={isLight} />
+                  )}
+                  <div
+                    onClick={() => {
                     if (isMultiSelectMode) {
                       toggleSelectTrack(track.id);
                     } else {
@@ -1384,7 +1408,8 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                       {formatDuration(track.duration)}
                     </span>
                   )}
-                </div>
+                  </div>
+                </React.Fragment>
               );
             })}
           </div>
