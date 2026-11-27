@@ -10,8 +10,12 @@ import {
   Smartphone,
   Clock,
   Sparkles,
+  MessageSquareText,
+  ClipboardPaste,
+  Wand2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { parseWhatsAppLicenseRequest } from '../utils/whatsappLicenseParser';
 
 const DURATION_OPTIONS: { label: string; hours: number | null }[] = [
   { label: 'Permanente (Sin caducidad)', hours: null },
@@ -30,6 +34,11 @@ export const AdminLicenseModal: React.FC = () => {
     deleteLicenseRecord,
   } = useAuth();
 
+  const [whatsappInput, setWhatsappInput] = useState('');
+  const [parseFeedback, setParseFeedback] = useState<{
+    type: 'ready' | 'partial' | 'none';
+    text: string;
+  } | null>(null);
   const [targetUser, setTargetUser] = useState('');
   const [targetDevice, setTargetDevice] = useState('');
   const [selectedDurationIdx, setSelectedDurationIdx] = useState(0);
@@ -45,6 +54,78 @@ export const AdminLicenseModal: React.FC = () => {
   if (!isAdminModalOpen || session?.role !== 'admin') {
     return null;
   }
+
+  const applyWhatsAppParse = (raw: string, autoGenerate: boolean = false) => {
+    setWhatsappInput(raw);
+    setError(null);
+
+    if (!raw.trim()) {
+      setParseFeedback(null);
+      return;
+    }
+
+    const parsed = parseWhatsAppLicenseRequest(raw);
+    const nextUser = parsed.username || targetUser;
+    const nextDevice = parsed.deviceId || targetDevice;
+    const nextDurationIdx =
+      parsed.durationIdx !== null ? parsed.durationIdx : selectedDurationIdx;
+
+    if (parsed.username) setTargetUser(parsed.username);
+    if (parsed.deviceId) setTargetDevice(parsed.deviceId);
+    if (parsed.durationIdx !== null) setSelectedDurationIdx(parsed.durationIdx);
+
+    if (parsed.rawUserFound && parsed.rawDeviceFound) {
+      setParseFeedback({
+        type: 'ready',
+        text: `Detectado: ${parsed.username} • ${parsed.deviceId}`,
+      });
+    } else if (parsed.rawDeviceFound) {
+      setParseFeedback({
+        type: 'partial',
+        text: `ID detectado (${parsed.deviceId}). Falta el nombre de usuario.`,
+      });
+    } else if (parsed.rawUserFound) {
+      setParseFeedback({
+        type: 'partial',
+        text: `Usuario detectado (${parsed.username}). Falta el ID EQ-XXXX-XXXX.`,
+      });
+    } else {
+      setParseFeedback({
+        type: 'none',
+        text: 'No se detectó un ID EQ-XXXX-XXXX en el mensaje.',
+      });
+    }
+
+    if (autoGenerate && nextUser.trim() && nextDevice.trim()) {
+      const opt = DURATION_OPTIONS[nextDurationIdx];
+      const res = generateUserPassword(nextUser, nextDevice, opt.hours, opt.label);
+      if ('error' in res) {
+        setError(res.error);
+        return;
+      }
+      setLastGenerated({
+        username: nextUser.trim(),
+        deviceId: res.normalizedDeviceId,
+        password: res.password,
+        durationLabel: opt.label,
+      });
+      setWhatsappInput('');
+      setParseFeedback(null);
+      setTargetUser('');
+      setTargetDevice('');
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const clipText = await navigator.clipboard.readText();
+      if (clipText) {
+        applyWhatsAppParse(clipText, false);
+      }
+    } catch {
+      setError('No se pudo leer el portapapeles. Pega el mensaje manualmente con Ctrl+V.');
+    }
+  };
 
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +143,8 @@ export const AdminLicenseModal: React.FC = () => {
       password: res.password,
       durationLabel: opt.label,
     });
+    setWhatsappInput('');
+    setParseFeedback(null);
     setTargetUser('');
     setTargetDevice('');
   };
@@ -111,6 +194,59 @@ export const AdminLicenseModal: React.FC = () => {
               GENERADOR DE CLAVES POR EQUIPO
             </h2>
           </div>
+        </div>
+
+        {/* Quick WhatsApp Smart Import Box */}
+        <div className="mb-4 p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <label className="text-[11px] font-mono-retro font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+              <MessageSquareText className="w-3.5 h-3.5 text-emerald-400" />
+              Pegar mensaje de WhatsApp
+            </label>
+            <button
+              type="button"
+              onClick={handlePasteFromClipboard}
+              className="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-400/30 text-[10px] font-mono-retro font-bold uppercase flex items-center gap-1 transition active:scale-95"
+            >
+              <ClipboardPaste className="w-3 h-3" />
+              <span>Pegar</span>
+            </button>
+          </div>
+
+          <textarea
+            rows={3}
+            value={whatsappInput}
+            onChange={(e) => applyWhatsAppParse(e.target.value, false)}
+            placeholder="Pega aquí el mensaje completo de WhatsApp (ej: [27/11/26, 23:15] Carlos: Hola, mi ID es EQ-A1B2-C3D4)"
+            className="w-full px-3 py-2 rounded-xl bg-black/70 border border-white/15 focus:border-emerald-400 focus:outline-none text-xs text-white placeholder-zinc-500 font-mono resize-none select-text"
+          />
+
+          {parseFeedback && (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span
+                className={`text-[11px] font-mono ${
+                  parseFeedback.type === 'ready'
+                    ? 'text-emerald-300 font-bold'
+                    : parseFeedback.type === 'partial'
+                    ? 'text-amber-300'
+                    : 'text-zinc-400'
+                }`}
+              >
+                {parseFeedback.text}
+              </span>
+
+              {parseFeedback.type === 'ready' && (
+                <button
+                  type="button"
+                  onClick={() => applyWhatsAppParse(whatsappInput, true)}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-mono-retro font-black text-[10px] uppercase tracking-wider flex items-center gap-1.5 shadow transition active:scale-95"
+                >
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>Generar ya</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Generator Form */}
